@@ -32,7 +32,14 @@ export default function login() {
           } else if (data.accessToken) {
             localStorage.setItem("user", data.accessToken);
             localStorage.setItem("companyId", data.user.companyId);
-            localStorage.setItem("userData", JSON.stringify(data));
+
+            const userData = {
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              user: data.user,
+            };
+
+            localStorage.setItem("userData", JSON.stringify(userData));
           }
           console.log(data);
           navigate("/");
@@ -43,8 +50,8 @@ export default function login() {
         }),
       {
         loading: "Ma`lumotlar yuborilmoqda...",
-        success: "Welcome back!",
-        error: "Qo‘shishda xato ❌",
+        success: "Xush kelibsiz!",
+        error: "Kirishda xatolik",
       },
     );
   };
@@ -54,54 +61,64 @@ export default function login() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-[#f5f7fa]">
-      <div className="flex w-96 flex-col gap-6 rounded-lg bg-white p-8 shadow-lg">
-        <h1 className="text-center text-2xl font-bold text-[#2c3e50]">
-          PRO HOME
-        </h1>
-        <p className="text-center text-[#7f8c8d]">
-          Welcome back! Please login.
-        </p>
+    <div className="flex min-h-screen">
+      <div className="hidden items-center justify-center p-8 md:flex md:w-1/2">
+        <img
+          src="/login_img.svg"
+          alt="ProCRM Illustration"
+          className="max-h-[80vh] max-w-full object-contain"
+        />
+      </div>
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-[#bdc3c7] p-3 placeholder-[#95a5a6] focus:ring-2 focus:ring-[#3498db] focus:outline-none"
-          />
+      <div className="mx-auto flex h-screen items-center justify-center">
+        <div className="flex w-96 flex-col gap-6 rounded-lg bg-white p-8 shadow-lg">
+          <h1 className="text-center text-2xl font-bold text-[#2c3e50]">
+            PRO HOME
+          </h1>
+          <p className="text-center text-[#7f8c8d]">
+            Welcome back! Please login.
+          </p>
 
-          <input
-            type={isChecked ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-[#bdc3c7] p-3 placeholder-[#95a5a6] focus:ring-2 focus:ring-[#3498db] focus:outline-none"
-          />
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded border border-[#bdc3c7] p-3 placeholder-[#95a5a6] focus:ring-2 focus:ring-[#3498db] focus:outline-none"
+            />
 
-          <div className="flex items-center justify-between text-sm text-[#7f8c8d]">
-            <label className="flex items-center gap-2">
-              <input
-                checked={isChecked}
-                onChange={handleChange}
-                type="checkbox"
-              />
-              Show password
-            </label>
-            <span className="hover:text-[#3498db]">Forgot password?</span>
-          </div>
+            <input
+              type={isChecked ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded border border-[#bdc3c7] p-3 placeholder-[#95a5a6] focus:ring-2 focus:ring-[#3498db] focus:outline-none"
+            />
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className={`rounded py-3 font-semibold text-white ${
-              loading ? "cursor-not-allowed bg-[#95a5a6]" : ""
-            }`}
-          >
-            {loading ? "Loading..." : "Login"}
-          </Button>
-        </form>
+            <div className="flex items-center justify-between text-sm text-[#7f8c8d]">
+              <label className="flex items-center gap-2">
+                <input
+                  checked={isChecked}
+                  onChange={handleChange}
+                  type="checkbox"
+                />
+                Show password
+              </label>
+              <span className="hover:text-[#3498db]">Forgot password?</span>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className={`rounded py-3 font-semibold text-white ${
+                loading ? "cursor-not-allowed bg-[#95a5a6]" : ""
+              }`}
+            >
+              {loading ? "Loading..." : "Login"}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

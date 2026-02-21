@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Plus,
   CheckCircle2,
   Circle,
   AlertCircle,
@@ -10,7 +9,6 @@ import {
   X,
   Check,
   Loader2,
-  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -348,10 +346,10 @@ export default function Tasks() {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
 
+  const [showAdd, setShowAdd] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -446,11 +444,6 @@ export default function Tasks() {
     }
   };
 
-  // ── Add ──────────────────────────────────────────────────────────────
-  const handleAdd = (task) => {
-    setTasks((prev) => [task, ...prev]);
-  };
-
   // ── Filter ───────────────────────────────────────────────────────────
   const today = new Date().toISOString().slice(0, 10);
 
@@ -468,7 +461,7 @@ export default function Tasks() {
 
   // ── Stats ────────────────────────────────────────────────────────────
   const stats = {
-    all: tasks.length,
+    yesterday: tasks.length,
     today: tasks.filter(
       (t) => t.taskDate?.slice(0, 10) === today && t.status !== "DONE",
     ).length,
@@ -530,21 +523,17 @@ export default function Tasks() {
               className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none"
             />
           </div>
-
-          {/* <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500"
-            style={{ boxShadow: "0 4px 14px rgba(59,130,246,.3)" }}
-          >
-            <Plus size={16} />
-            Vazifa qo'shish
-          </button> */}
         </div>
 
         {/* Tabs + Filters */}
         <div className="mt-3 flex flex-wrap items-center gap-1">
           {[
-            { key: "all", label: "Barchasi", count: stats.all, alert: false },
+            {
+              key: "overdue",
+              label: "Muddati o'tgan",
+              count: stats.overdue,
+              alert: stats.overdue > 0,
+            },
             {
               key: "today",
               label: "Bugun",
@@ -552,10 +541,10 @@ export default function Tasks() {
               alert: stats.today > 0,
             },
             {
-              key: "overdue",
-              label: "Muddati o'tgan",
-              count: stats.overdue,
-              alert: stats.overdue > 0,
+              key: "yesterday",
+              label: "Ertangi",
+              count: stats.yesterday,
+              alert: status.yesterday > 0,
             },
           ].map((tab) => (
             <button
@@ -597,7 +586,7 @@ export default function Tasks() {
           </select>
 
           {/* Type filter */}
-          <select
+          {/* <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
             className="rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1.5 text-xs text-gray-400 [color-scheme:dark] outline-none"
@@ -608,7 +597,7 @@ export default function Tasks() {
                 {v.label}
               </option>
             ))}
-          </select>
+          </select> */}
         </div>
       </div>
 
