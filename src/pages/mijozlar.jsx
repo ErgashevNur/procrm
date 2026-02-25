@@ -4,7 +4,7 @@ import {
   FolderOpen,
   AlertCircle,
   Loader2,
-  MessageCircle,
+  CalendarCheck2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "../components/ui/skeleton";
@@ -29,6 +29,12 @@ import { Input } from "@/components/ui/input";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
+const maxBirthDate = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d.toISOString().slice(0, 10);
+})();
+
 // ─── API helper ───────────────────────────────────────────────────────────────
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
@@ -45,7 +51,6 @@ async function apiFetch(url, options = {}) {
     window.location.href = "/login";
     return null;
   }
-
   return res;
 }
 
@@ -57,7 +62,9 @@ function Toast({ message, type, onClose }) {
   }, [onClose]);
   return (
     <div
-      className={`fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3 text-sm text-white shadow-xl ${type === "error" ? "bg-red-600" : "bg-green-600"}`}
+      className={`fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3 text-sm text-white shadow-xl ${
+        type === "error" ? "bg-red-600" : "bg-green-600"
+      }`}
     >
       {message}
       <button onClick={onClose} className="opacity-60 hover:opacity-100">
@@ -67,27 +74,43 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-// ─── applyDrag — Optimistic ───────────────────────────────────────────────────
-function applyDrag(leads, source, destination, draggableId) {
-  const copy = leads.map((l) => ({ ...l }));
-  const idx = copy.findIndex((l) => String(l.id) === draggableId);
-  if (idx === -1) return leads;
+// ─── applyDrag ────────────────────────────────────────────────────────────────
+function applyDrag(statuses, source, destination, draggableId) {
+  const srcId = Number(source.droppableId);
+  const dstId = Number(destination.droppableId);
 
-  const [dragged] = copy.splice(idx, 1);
-  dragged.statusId = Number(destination.droppableId);
-
-  const destItems = copy.filter(
-    (l) => Number(l.statusId) === Number(destination.droppableId),
-  );
-  destItems.splice(destination.index, 0, dragged);
-
-  let d = 0;
-  const merged = copy.map((l) =>
-    Number(l.statusId) === Number(destination.droppableId) ? destItems[d++] : l,
-  );
-  if (!copy.some((l) => l.id === dragged.id)) merged.push(dragged);
-  return merged;
+  return statuses.map((status) => {
+    if (status.id === srcId) {
+      // Manbadan leadni olib tashlaymiz
+      const items = status.leads.filter((l) => String(l.id) !== draggableId);
+      return { ...status, leads: items };
+    }
+    if (status.id === dstId) {
+      // Maqsadga qo'shamiz
+      const dragged = statuses
+        .flatMap((s) => s.leads)
+        .find((l) => String(l.id) === draggableId);
+      if (!dragged) return status;
+      const items = [...status.leads];
+      items.splice(destination.index, 0, { ...dragged, statusId: dstId });
+      return { ...status, leads: items };
+    }
+    return status;
+  });
 }
+
+// ─── EMPTY FORM ───────────────────────────────────────────────────────────────
+const EMPTY_FORM = {
+  leadSourceId: "",
+  budjet: "",
+  firstName: "",
+  lastName: "",
+  phone: "",
+  extraPhone: "",
+  adress: "",
+  tag: "",
+  birthDate: "",
+};
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Pipeline() {
@@ -95,31 +118,20 @@ export default function Pipeline() {
   const scrollRef = useRef(null);
   const scrollInterval = useRef(null);
 
-  const [appState, setAppState] = useState("loading"); // loading | no-project | ready
+  const [appState, setAppState] = useState("loading");
   const [projects, setProjects] = useState([]);
+  // statuses ichida har birida .leads array bor
   const [statuses, setStatuses] = useState([]);
-  const [leads, setLeads] = useState([]);
   const [leadSource, setLeadSource] = useState([]);
-  const [currentProject, setCurrentProject] = useState(null); // { id, name }
-
-  console.log(leads);
-
+  const [currentProject, setCurrentProject] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
-  const [formData, setFormData] = useState({
-    leadSourceId: "",
-    budjet: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    extraPhone: "",
-    adress: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const showToast = (message, type = "error") => setToast({ message, type });
 
-  // ── BITTA INIT — barcha kerakli ma'lumotlar parallel yuklanadi ─────────────
+  // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("user");
     if (!token) {
@@ -133,41 +145,38 @@ export default function Pipeline() {
     const init = async () => {
       try {
         if (savedId) {
-          // Loyiha saqlangan — projects + board ma'lumotlarini PARALLEL yuk
-          const [projectsRes, statusesRes, leadsRes, sourcesRes] =
-            await Promise.all([
-              apiFetch(`${API}/projects`),
-              apiFetch(`${API}/status/${savedId}`),
-              apiFetch(`${API}/leeds?projectId=${savedId}`),
-              apiFetch(`${API}/lead-source/${savedId}`),
-            ]);
+          const [projectsRes, statusesRes, sourcesRes] = await Promise.all([
+            apiFetch(`${API}/projects`),
+            apiFetch(`${API}/status/${savedId}`),
+            apiFetch(`${API}/lead-source/${savedId}`),
+          ]);
+          if (!projectsRes || !statusesRes) return;
 
-          if (!projectsRes || !statusesRes || !leadsRes) return;
-
-          const [projectsData, statusesData, leadsData, sourcesData] =
-            await Promise.all([
-              projectsRes.json(),
-              statusesRes.json(),
-              leadsRes.json(),
-              sourcesRes?.json().catch(() => []),
-            ]);
+          const [projectsData, statusesData, sourcesData] = await Promise.all([
+            projectsRes.json(),
+            statusesRes.json(),
+            sourcesRes?.json().catch(() => []),
+          ]);
 
           setProjects(Array.isArray(projectsData) ? projectsData : []);
-          setStatuses(statusesData.map((s) => ({ ...s, id: Number(s.id) })));
-          setLeads(leadsData.data ?? []);
+          // statusesData ichida har birida leads array bor
+          setStatuses(
+            statusesData.map((s) => ({
+              ...s,
+              id: Number(s.id),
+              leads: Array.isArray(s.leads) ? s.leads : [],
+            })),
+          );
           setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
           setCurrentProject({ id: savedId, name: savedName });
           setAppState("ready");
         } else {
-          // Yangi foydalanuvchi — faqat projects yuklanadi
           const res = await apiFetch(`${API}/projects`);
           if (!res) return;
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];
           setProjects(list);
-
           if (list.length === 1) {
-            // Bitta loyiha — avtomatik tanlash
             await loadProject(list[0]);
           } else {
             setAppState("no-project");
@@ -179,35 +188,34 @@ export default function Pipeline() {
         setAppState("no-project");
       }
     };
-
     init();
-  }, []); // faqat bir marta — mount da
+  }, []);
 
-  // ── Loyiha tanlash — board ma'lumotlarini parallel yuk ───────────────────
+  // ── Load project ──────────────────────────────────────────────────────────
   const loadProject = async (project) => {
     setAppState("loading");
-
     localStorage.setItem("projectId", project.id);
     localStorage.setItem("projectName", project.name);
     setCurrentProject({ id: project.id, name: project.name });
-
     try {
-      const [statusesRes, leadsRes, sourcesRes] = await Promise.all([
+      const [statusesRes, sourcesRes] = await Promise.all([
         apiFetch(`${API}/status/${project.id}`),
-        apiFetch(`${API}/leeds?projectId=${project.id}`),
         apiFetch(`${API}/lead-source/${project.id}`),
       ]);
+      if (!statusesRes) return;
 
-      if (!statusesRes || !leadsRes) return;
-
-      const [statusesData, leadsData, sourcesData] = await Promise.all([
+      const [statusesData, sourcesData] = await Promise.all([
         statusesRes.json(),
-        leadsRes.json(),
         sourcesRes?.json().catch(() => []),
       ]);
 
-      setStatuses(statusesData.map((s) => ({ ...s, id: Number(s.id) })));
-      setLeads(leadsData.data ?? []);
+      setStatuses(
+        statusesData.map((s) => ({
+          ...s,
+          id: Number(s.id),
+          leads: Array.isArray(s.leads) ? s.leads : [],
+        })),
+      );
       setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
       setAppState("ready");
     } catch (err) {
@@ -216,14 +224,6 @@ export default function Pipeline() {
       setAppState("no-project");
     }
   };
-
-  // ── Columns ───────────────────────────────────────────────────────────────
-  const columns = statuses.map((status) => ({
-    ...status,
-    items: leads
-      .filter((l) => Number(l.statusId) === status.id)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-  }));
 
   // ── Drag & Drop ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -264,8 +264,8 @@ export default function Pipeline() {
     )
       return;
 
-    const prev = leads;
-    setLeads((l) => applyDrag(l, source, destination, draggableId));
+    const prev = statuses;
+    setStatuses((s) => applyDrag(s, source, destination, draggableId));
 
     const destId = Number(destination.droppableId);
     try {
@@ -276,7 +276,7 @@ export default function Pipeline() {
       if (res && !res.ok) throw new Error(`PATCH ${res.status}`);
     } catch (err) {
       console.error(err);
-      setLeads(prev);
+      setStatuses(prev);
       showToast("Xatolik: o'zgarish saqlanmadi", "error");
     }
   };
@@ -291,28 +291,36 @@ export default function Pipeline() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const body = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        projectId: Number(currentProject.id),
+        ...(formData.extraPhone && { extraPhone: formData.extraPhone }),
+        ...(formData.adress && { adress: formData.adress }),
+        ...(formData.budjet && { budjet: Number(formData.budjet) }),
+        ...(formData.leadSourceId && {
+          leadSourceId: Number(formData.leadSourceId),
+        }),
+        ...(formData.tag && { tag: formData.tag }),
+        ...(formData.birthDate && { birthDate: formData.birthDate }),
+      };
+
       const res = await apiFetch(`${API}/leeds`, {
         method: "POST",
-        body: JSON.stringify({
-          ...formData,
-          leadSourceId: Number(formData.leadSourceId),
-          projectId: Number(currentProject.id),
-          budjet: Number(formData.budjet),
-        }),
+        body: JSON.stringify(body),
       });
       if (!res || !res.ok) throw new Error();
       const newLead = await res.json();
-      setLeads((p) => [newLead, ...p]);
+
+      // Yangi leadni birinchi statusga qo'shamiz
+      setStatuses((prev) =>
+        prev.map((s, i) =>
+          i === 0 ? { ...s, leads: [newLead, ...s.leads] } : s,
+        ),
+      );
       setSheetOpen(false);
-      setFormData({
-        leadSourceId: "",
-        budjet: "",
-        firstName: "",
-        lastName: "",
-        phone: "",
-        extraPhone: "",
-        adress: "",
-      });
+      setFormData(EMPTY_FORM);
       showToast("Lead qo'shildi!", "success");
     } catch {
       showToast("Lead qo'shishda xatolik", "error");
@@ -321,7 +329,7 @@ export default function Pipeline() {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── LOADING ───────────────────────────────────────────────────────────────
   if (appState === "loading") {
     return (
       <div className="flex flex-1 flex-col bg-[#0d1e35]">
@@ -342,6 +350,7 @@ export default function Pipeline() {
     );
   }
 
+  // ── NO PROJECT ────────────────────────────────────────────────────────────
   if (appState === "no-project") {
     return (
       <>
@@ -365,7 +374,6 @@ export default function Pipeline() {
             </SelectContent>
           </Select>
         </div>
-
         <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[#0d1e35]">
           {projects.length === 0 ? (
             <>
@@ -401,11 +409,12 @@ export default function Pipeline() {
     );
   }
 
-  // appState === "ready"
+  // ── READY ─────────────────────────────────────────────────────────────────
   return (
     <>
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
+      {/* Header */}
       <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-[#284860] bg-[#0f2231] p-6 text-white">
         <Select
           value={currentProject?.name}
@@ -426,24 +435,28 @@ export default function Pipeline() {
           </SelectContent>
         </Select>
 
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        {/* Add Lead Sheet */}
+        <Sheet
+          open={sheetOpen}
+          onOpenChange={(o) => {
+            setSheetOpen(o);
+            if (!o) setFormData(EMPTY_FORM);
+          }}
+        >
           <SheetTrigger asChild>
             <button className="flex gap-2 rounded-md border px-3 py-1 hover:bg-[#1b3e57]">
               <Plus className="w-5" /> Add
             </button>
           </SheetTrigger>
-          <SheetContent className="bg-[#07131d]">
+          <SheetContent className="overflow-y-auto bg-[#07131d] px-5">
             <SheetHeader>
               <SheetTitle className="text-white">Lead qo'shish</SheetTitle>
             </SheetHeader>
-            <form
-              className="mt-4 w-full max-w-sm text-white"
-              onSubmit={handleSubmit}
-            >
+            <form className="mt-4 w-full text-white" onSubmit={handleSubmit}>
               <FieldGroup>
                 <div className="grid grid-cols-2 gap-4">
                   <Field>
-                    <FieldLabel>Ism</FieldLabel>
+                    <FieldLabel>Ism *</FieldLabel>
                     <Input
                       name="firstName"
                       value={formData.firstName}
@@ -464,13 +477,14 @@ export default function Pipeline() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Field>
-                    <FieldLabel>Telefon</FieldLabel>
+                    <FieldLabel>Telefon *</FieldLabel>
                     <Input
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+998 __ ___ __ __"
+                      required
                     />
                   </Field>
                   <Field>
@@ -484,6 +498,20 @@ export default function Pipeline() {
                     />
                   </Field>
                 </div>
+                <Field>
+                  <FieldLabel>Tug'ilgan sana</FieldLabel>
+                  <Input
+                    type="date"
+                    name="birthDate"
+                    value={formData.birthDate}
+                    onChange={handleChange}
+                    max={maxBirthDate}
+                  />
+                  <p className="mt-0.5 text-[11px] text-gray-500">
+                    18 yoshdan katta bo'lishi shart (max:{" "}
+                    {maxBirthDate.slice(0, 4)}-yil)
+                  </p>
+                </Field>
                 <Field>
                   <FieldLabel>Manzil</FieldLabel>
                   <Input
@@ -532,6 +560,15 @@ export default function Pipeline() {
                     </Select>
                   </Field>
                 </div>
+                <Field>
+                  <FieldLabel>Teg</FieldLabel>
+                  <Input
+                    name="tag"
+                    value={formData.tag}
+                    onChange={handleChange}
+                    placeholder="Masalan: VIP, comfort, business..."
+                  />
+                </Field>
                 <Field orientation="horizontal" className="mt-4">
                   <Button
                     type="button"
@@ -559,6 +596,7 @@ export default function Pipeline() {
         </Sheet>
       </div>
 
+      {/* Kanban board */}
       <DragDropContext onDragEnd={onDragEnd} onDragUpdate={handleDragUpdate}>
         <div
           ref={scrollRef}
@@ -569,7 +607,7 @@ export default function Pipeline() {
             className="flex h-full gap-4 p-6"
             style={{ minWidth: "max-content" }}
           >
-            {columns.map((col) => (
+            {statuses.map((col) => (
               <div key={col.id} className="flex h-full w-80 shrink-0 flex-col">
                 <div
                   className="mb-3 overflow-hidden rounded-lg border-b-4 bg-[#11263a] shadow-sm"
@@ -578,7 +616,7 @@ export default function Pipeline() {
                   <div className="flex items-center justify-between bg-[#153043] px-4 py-3 font-semibold text-white">
                     <span className="truncate">{col.name}</span>
                     <span className="rounded-full bg-gray-700 px-2.5 py-1 text-xs">
-                      {col.items.length}
+                      {col.leads.length}
                     </span>
                   </div>
                 </div>
@@ -596,7 +634,7 @@ export default function Pipeline() {
                         scrollbarColor: "#2a4868 transparent",
                       }}
                     >
-                      {col.items.length === 0 ? (
+                      {col.leads.length === 0 ? (
                         <div
                           className={`rounded-lg border-2 border-dashed p-6 text-center text-xs transition-colors duration-150 ${
                             snapshot.isDraggingOver
@@ -609,7 +647,7 @@ export default function Pipeline() {
                             : "Bo'sh"}
                         </div>
                       ) : (
-                        col.items.map((lead, index) => (
+                        col.leads.map((lead, index) => (
                           <Draggable
                             key={lead.id}
                             draggableId={String(lead.id)}
@@ -640,18 +678,26 @@ export default function Pipeline() {
                                 <div className="mt-1 text-xs opacity-60">
                                   {lead.phone}
                                 </div>
-
                                 <div className="mt-2 flex items-center justify-between gap-2">
                                   {lead.budjet > 0 && (
                                     <div className="mt-1 text-xs text-green-400">
                                       {lead.budjet.toLocaleString()} so'm
                                     </div>
                                   )}
-
                                   {lead.taskRemainingDays != null && (
                                     <div className="mt-1 flex items-center gap-1 text-xs">
-                                      {lead.taskRemainingDays}{" "}
-                                      <MessageCircle className="h-3 w-3" />{" "}
+                                      <span
+                                        className={
+                                          String(
+                                            lead.taskRemainingDays,
+                                          ).startsWith("-")
+                                            ? "text-red-400"
+                                            : "text-green-400"
+                                        }
+                                      >
+                                        {lead.taskRemainingDays}
+                                      </span>
+                                      <CalendarCheck2 className="h-3 w-3" />
                                     </div>
                                   )}
                                 </div>

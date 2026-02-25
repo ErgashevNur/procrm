@@ -50,7 +50,7 @@ export default function Header() {
                 Log out
               </div>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/setting")}>
               <div className="flex items-center gap-3">
                 <Settings />
                 Settings

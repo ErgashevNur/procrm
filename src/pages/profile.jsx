@@ -1,328 +1,295 @@
-import { useState, useEffect } from "react";
-import {
-  LogOut,
-  Shield,
-  Mail,
-  Building2,
-  Clock,
-  CheckCircle2,
-  Key,
-  User,
-  ChevronRight,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Copy, Check, Camera, ChevronDown } from "lucide-react";
 
-// ── Role badge ────────────────────────────────────────────────────────────
-const ROLE_MAP = {
-  SUPERADMIN: {
-    label: "Super Admin",
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.12)",
-    icon: Shield,
-  },
-  ADMIN: {
-    label: "Admin",
-    color: "#3b82f6",
-    bg: "rgba(59,130,246,0.12)",
-    icon: Shield,
-  },
-  USER: {
-    label: "Foydalanuvchi",
-    color: "#6b7280",
-    bg: "rgba(107,114,128,0.1)",
-    icon: User,
-  },
-};
+const LANGUAGES = ["Русский", "O'zbek", "English"];
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("uz-UZ", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function Avatar({ email }) {
-  const letter = email ? email[0].toUpperCase() : "?";
+function CopyBtn({ value }) {
+  const [ok, setOk] = useState(false);
   return (
-    <div
-      className="relative flex h-20 w-20 items-center justify-center rounded-2xl text-3xl font-black text-white"
-      style={{
-        background: "linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)",
-        boxShadow:
-          "0 0 0 4px rgba(59,130,246,0.15), 0 8px 32px rgba(59,130,246,0.25)",
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(value);
+        setOk(true);
+        setTimeout(() => setOk(false), 1500);
       }}
+      className="ml-2 text-gray-500 transition-colors hover:text-gray-300"
     >
-      {letter}
-      {/* Online dot */}
-      <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0a1929] bg-green-500">
-        <span className="h-1.5 w-1.5 animate-ping rounded-full bg-green-300" />
-      </span>
-    </div>
+      {ok ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+    </button>
   );
 }
 
-// ── Info Row ──────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, label, value, color = "#6b7280" }) {
+function LangSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+  useEffect(() => {
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 transition-colors hover:bg-white/[0.04]">
-      <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: `${color}18`, border: `1px solid ${color}30` }}
+    <div ref={ref} className="relative w-72">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] transition-colors hover:border-[#3a5570] focus:outline-none"
       >
-        <Icon size={14} style={{ color }} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-gray-600">{label}</p>
-        <p className="mt-0.5 truncate text-sm font-medium text-white">
-          {value || "—"}
-        </p>
-      </div>
+        {value}
+        <ChevronDown
+          size={14}
+          className={`text-[#7a9ab5] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 z-30 mt-1 w-full overflow-hidden rounded border border-[#253d52] bg-[#1a2e40] shadow-2xl">
+          {LANGUAGES.map((l) => (
+            <button
+              key={l}
+              onClick={() => {
+                onChange(l);
+                setOpen(false);
+              }}
+              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 ${l === value ? "text-blue-400" : "text-[#c8dce8]"}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Permission Badge ──────────────────────────────────────────────────────
-function PermBadge({ name, active }) {
+function Row({ label, children }) {
   return (
-    <div
-      className={`flex items-center gap-2 rounded-xl border px-4 py-3 transition-all ${
+    <div className="mb-0.5 flex min-h-11 items-start">
+      <div className="w-40 shrink-0 pt-2.5">
+        <span className="text-sm text-[#7a9ab5]">{label}</span>
+      </div>
+      <div className="flex items-center pt-1.5">{children}</div>
+    </div>
+  );
+}
+
+function TInput({ value, onChange, placeholder, type = "text" }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-72 rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+    />
+  );
+}
+
+function TTextarea({ value, onChange }) {
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={4}
+      className="w-72 resize-none rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+    />
+  );
+}
+
+function Toggle({ active, onChange }) {
+  return (
+    <button
+      onClick={() => onChange(!active)}
+      className={`relative h-5 w-9 rounded-full border transition-colors duration-200 ${
         active
-          ? "border-green-500/20 bg-green-500/5"
-          : "border-white/5 bg-white/[0.02] opacity-40"
+          ? "border-blue-500 bg-blue-500"
+          : "border-[#3a5570] bg-transparent"
       }`}
     >
-      <CheckCircle2
-        size={15}
-        className={active ? "text-green-400" : "text-gray-600"}
-      />
       <span
-        className={`text-sm font-medium ${active ? "text-white" : "text-gray-600"}`}
-      >
-        {name}
-      </span>
-      <span
-        className={`ml-auto rounded-md px-2 py-0.5 text-[10px] font-bold ${
-          active ? "bg-green-500/15 text-green-400" : "bg-white/5 text-gray-600"
+        className={`absolute top-0.5 h-3.5 w-3.5 rounded-full transition-all duration-200 ${
+          active ? "left-4.5 bg-white" : "left-0.5 bg-[#3a5570]"
         }`}
-      >
-        {active ? "Faol" : "Yopiq"}
-      </span>
-    </div>
+      />
+    </button>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────
-export default function profile() {
-  const navigate = useNavigate();
-  const [userData, setUserData] = useState(null);
+export default function Profile() {
+  const [saved, setSaved] = useState(false);
+  const [twoFactor, setTwoFactor] = useState(false);
+  const [form, setForm] = useState({
+    language: "Русский",
+    name: "",
+    phone: "",
+    email: "",
+    password: "",
+    note: "",
+    userId: "12579786",
+  });
 
   useEffect(() => {
     try {
-      // localStorage da "userData" key bilan saqlangan object
       const raw = localStorage.getItem("userData");
       if (raw) {
-        setUserData(JSON.parse(raw));
+        const { user = {} } = JSON.parse(raw);
+        setForm((f) => ({
+          ...f,
+          email: user.email || "",
+          userId: user.id || user.companyId || f.userId,
+          name: user.name || user.email?.split("@")[0] || "",
+          phone: user.phone || "",
+          note: user.note || "",
+        }));
       } else {
-        // Agar "userData" yo'q bo'lsa, alohida keylardan yig'amiz
-        setUserData({
-          user: {
-            email: localStorage.getItem("email") || "",
-            companyId: localStorage.getItem("companyId") || "",
-            role: localStorage.getItem("role") || "USER",
-            createdAt: localStorage.getItem("createdAt") || "",
-            updateAt: localStorage.getItem("updateAt") || "",
-          },
-          permission: {},
-        });
+        setForm((f) => ({
+          ...f,
+          email: localStorage.getItem("email") || "",
+          userId: localStorage.getItem("companyId") || f.userId,
+          name: localStorage.getItem("name") || "",
+          phone: localStorage.getItem("phone") || "",
+        }));
       }
-    } catch {
-      console.error("userData parse xatosi");
-    }
+    } catch {}
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSave = () => {
+    try {
+      const raw = localStorage.getItem("userData");
+      const parsed = raw ? JSON.parse(raw) : { user: {} };
+      parsed.user = {
+        ...parsed.user,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        note: form.note,
+      };
+      localStorage.setItem("userData", JSON.stringify(parsed));
+    } catch {}
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
-  if (!userData) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#071828]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-blue-500" />
-      </div>
-    );
-  }
-
-  const { user = {}, permission = {} } = userData;
-  const roleInfo = ROLE_MAP[user.role] || ROLE_MAP.USER;
-  const RoleIcon = roleInfo.icon;
+  const avatarLetter = (form.name || form.email || "Z")[0].toUpperCase();
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#071828]">
-      {/* ── Grid bg ─────────────────────────────────────────────────── */}
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{
-          backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)
-        `,
-          backgroundSize: "40px 40px",
-        }}
-      />
+    <div
+      className="mx-auto min-h-screen bg-[#0d1e2e] text-white"
+      style={{ fontFamily: "'Segoe UI', Arial, sans-serif" }}
+    >
+      {/* Header */}
+      <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-[#162840] bg-[#0d1e2e] px-6 py-3.5">
+        <span className="text-[15px] font-medium text-[#c0d8e8]">
+          Настройки профиля
+        </span>
 
-      {/* ── Glow ────────────────────────────────────────────────────── */}
-      <div
-        className="pointer-events-none fixed top-0 left-1/2 h-64 w-96 -translate-x-1/2 rounded-full opacity-10"
-        style={{
-          background: "radial-gradient(circle, #3b82f6, transparent)",
-          filter: "blur(60px)",
-        }}
-      />
-
-      {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="scrollbar-hide relative flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-lg space-y-4">
-          {/* ── Hero card ─────────────────────────────────────────── */}
-          <div
-            className="overflow-hidden rounded-2xl border border-white/[0.06]"
-            style={{
-              background: "linear-gradient(145deg, #0f2438 0%, #0a1929 100%)",
-              animation: "fadeUp .4s ease both",
-            }}
-          >
-            {/* Top stripe */}
-            <div
-              className="h-1 w-full"
-              style={{
-                background: `linear-gradient(90deg, ${roleInfo.color}, transparent)`,
-              }}
-            />
-
-            <div className="flex items-center gap-5 p-6">
-              <Avatar email={user.email} />
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-bold text-white">
-                  {user.email?.split("@")[0] || "Foydalanuvchi"}
-                </p>
-                <p className="truncate text-sm text-gray-500">{user.email}</p>
-
-                {/* Role badge */}
-                <div
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1"
-                  style={{
-                    background: roleInfo.bg,
-                    border: `1px solid ${roleInfo.color}30`,
-                  }}
-                >
-                  <RoleIcon size={11} style={{ color: roleInfo.color }} />
-                  <span
-                    className="text-xs font-semibold"
-                    style={{ color: roleInfo.color }}
-                  >
-                    {roleInfo.label}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Ma'lumotlar ───────────────────────────────────────── */}
-          <div
-            className="rounded-2xl border border-white/[0.06] p-5"
-            style={{
-              background: "linear-gradient(145deg, #0f2438 0%, #0a1929 100%)",
-              animation: "fadeUp .4s ease .08s both",
-            }}
-          >
-            <p className="mb-3 text-xs font-semibold tracking-wider text-gray-600 uppercase">
-              Asosiy ma'lumotlar
-            </p>
-            <div className="space-y-2">
-              <InfoRow
-                icon={Mail}
-                label="Email"
-                value={user.email}
-                color="#3b82f6"
-              />
-              <InfoRow
-                icon={Building2}
-                label="Kompaniya"
-                value={`ID: ${user.companyId}`}
-                color="#8b5cf6"
-              />
-              <InfoRow
-                icon={Key}
-                label="Rol"
-                value={roleInfo.label}
-                color={roleInfo.color}
-              />
-              <InfoRow
-                icon={Clock}
-                label="Ro'yxatdan o'tgan"
-                value={formatDate(user.createdAt)}
-                color="#06b6d4"
-              />
-              <InfoRow
-                icon={Clock}
-                label="Yangilangan"
-                value={formatDate(user.updateAt || user.updatedAt)}
-                color="#6b7280"
-              />
-            </div>
-          </div>
-
-          {/* ── Ruxsatlar ─────────────────────────────────────────── */}
-          {Object.keys(permission).length > 0 && (
-            <div
-              className="rounded-2xl border border-white/[0.06] p-5"
-              style={{
-                background: "linear-gradient(145deg, #0f2438 0%, #0a1929 100%)",
-                animation: "fadeUp .4s ease .16s both",
-              }}
-            >
-              <p className="mb-3 text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                Ruxsatlar
-              </p>
-              <div className="space-y-2">
-                {Object.entries(permission)
-                  .filter(([k]) => !k.startsWith("__"))
-                  .map(([key, val]) => (
-                    <PermBadge key={key} name={key} active={!!val} />
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Logout ────────────────────────────────────────────── */}
-          <div style={{ animation: "fadeUp .4s ease .24s both" }}>
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center justify-between rounded-2xl border border-red-500/10 bg-red-500/5 px-5 py-4 text-sm font-medium text-red-400 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-300"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10">
-                  <LogOut size={14} className="text-red-400" />
-                </div>
-                Hisobdan chiqish
-              </div>
-              <ChevronRight size={16} className="text-red-500/40" />
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={handleSave}
+          className="min-w- ext-sm rounded border border-[#2a4560] bg-[#1a2e40] px-5 py-1.5 font-medium text-[#9ab8cc] transition-colors hover:border-[#3a5570]"
+        >
+          {saved ? "Сохранено ✓" : "Сохранить"}
+        </button>
       </div>
 
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-      `}</style>
+      {/* Body */}
+      <div className="mx-auto max-w-3xl p-6">
+        {/* Profile Card */}
+        <div className="mb-7 rounded-md border border-[#162840] bg-[#0f2030] p-7">
+          <div className="flex gap-9">
+            {/* Avatar */}
+            <div className="shrink-0">
+              <div className="relative h-24 w-24">
+                <div
+                  className="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-4xl font-black text-white"
+                  style={{
+                    background: "linear-gradient(145deg,#7a3810,#a04a20)",
+                  }}
+                >
+                  {avatarLetter}
+                </div>
+                <label className="absolute right-1 bottom-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[#2a4560] bg-[#1a2e40] transition-colors hover:bg-[#243d54]">
+                  <Camera size={13} className="text-[#7a9ab5]" />
+                  <input type="file" accept="image/*" className="hidden" />
+                </label>
+              </div>
+            </div>
+
+            {/* Fields */}
+            <div className="flex-1">
+              <Row label="ID пользователя">
+                <span className="text-sm text-[#7a9ab5]">{form.userId}</span>
+                <CopyBtn value={form.userId} />
+              </Row>
+              <Row label="Language / Язык">
+                <LangSelect value={form.language} onChange={set("language")} />
+              </Row>
+              <Row label="Имя">
+                <TInput
+                  value={form.name}
+                  onChange={set("name")}
+                  placeholder="Введите имя"
+                />
+              </Row>
+              <Row label="Телефон">
+                <TInput
+                  value={form.phone}
+                  onChange={set("phone")}
+                  placeholder="+998 xx xxx xx xx"
+                />
+              </Row>
+              <Row label="Email">
+                <TInput
+                  value={form.email}
+                  onChange={set("email")}
+                  placeholder="email@example.com"
+                  type="email"
+                />
+              </Row>
+              <Row label="Пароль">
+                <TInput
+                  value={form.password}
+                  onChange={set("password")}
+                  placeholder="••••••"
+                  type="password"
+                />
+              </Row>
+              <Row label="Примечание">
+                <TTextarea value={form.note} onChange={set("note")} />
+              </Row>
+            </div>
+          </div>
+        </div>
+
+        {/* Security */}
+        <p className="mb-3 text-[15px] font-medium text-[#c0d8e8]">
+          Безопасность
+        </p>
+        <div className="mb-7 rounded-md border border-[#162840] bg-[#0f2030] px-6 py-4">
+          <div className="mb-2 flex items-center gap-3">
+            <span className="text-sm font-medium text-[#c0d8e8]">
+              2-этапная проверка
+            </span>
+            <Toggle active={twoFactor} onChange={setTwoFactor} />
+          </div>
+          <p className="max-w-2xl text-[12.5px] leading-relaxed text-[#456070]">
+            Добавьте дополнительную защиту для вашего аккаунта amoCRM. Помимо
+            пароля, при каждом входе потребуется вводить код из письма,
+            отправленного на вашу электронную почту.
+          </p>
+        </div>
+
+        {/* Sessions */}
+        <p className="mb-3 text-[15px] font-medium text-[#c0d8e8]">Сеансы</p>
+        <div className="rounded-md border border-[#162840] bg-[#0f2030] px-6 py-4">
+          <p className="text-[12.5px] leading-relaxed text-[#456070]">
+            Список авторизованных устройств. Сеансы завершаются через 3 месяца
+            без активности. Если вы заметили что-то подозрительное, рекомендуем
+            сменить пароль. После смены пароля вы автоматически выйдите из
+            аккаунта на всех устройствах, кроме текущего.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

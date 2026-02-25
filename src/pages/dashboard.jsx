@@ -1,195 +1,514 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import {
+  TrendingUp,
+  Users,
+  CalendarCheck2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  BarChart3,
+} from "lucide-react";
 
-// Floating particle
-function Particle({ style }) {
+const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+
+async function apiFetch(url) {
+  const token = localStorage.getItem("user");
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (res.status === 401) {
+    localStorage.clear();
+    window.location.href = "/login";
+    return null;
+  }
+  return res;
+}
+
+// ── Animated counter ──────────────────────────────────────────────────────────
+function Counter({ value, duration = 1200 }) {
+  const [display, setDisplay] = useState(0);
+  const raf = useRef();
+
+  useEffect(() => {
+    const start = performance.now();
+    const animate = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(ease * value));
+      if (progress < 1) raf.current = requestAnimationFrame(animate);
+    };
+    raf.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf.current);
+  }, [value]);
+
+  return <>{display.toLocaleString()}</>;
+}
+
+// ── Arc progress ──────────────────────────────────────────────────────────────
+function ArcProgress({ percent, color, size = 80, stroke = 7 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (percent / 100) * circ;
   return (
-    <div className="pointer-events-none absolute rounded-full" style={style} />
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        style={{
+          transition: "stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1)",
+        }}
+      />
+    </svg>
   );
 }
 
-export default function Dashboard() {
-  const [dots, setDots] = useState([]);
-  const canvasRef = useRef(null);
+// ── Stat card ─────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/6 p-5"
+      style={{
+        background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
+        animation: `fadeUp 0.5s ease ${delay}s both`,
+      }}
+    >
+      {/* Glow blob */}
+      <div
+        className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-20 blur-2xl"
+        style={{ background: color }}
+      />
+      <div className="flex items-start justify-between">
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-xl"
+          style={{ background: `${color}18`, border: `1px solid ${color}30` }}
+        >
+          <Icon size={18} style={{ color }} />
+        </div>
+        {sub != null && (
+          <span className="text-xs font-semibold text-gray-500">{sub}</span>
+        )}
+      </div>
+      <p className="mt-4 text-3xl font-black tracking-tight text-white">
+        <Counter value={value} />
+      </p>
+      <p className="mt-1 text-xs font-medium tracking-widest text-gray-500 uppercase">
+        {label}
+      </p>
+    </div>
+  );
+}
 
-  // Generate random floating orbs once
-  useEffect(() => {
-    setDots(
-      Array.from({ length: 18 }, (_, i) => ({
-        id: i,
-        width: Math.random() * 6 + 2,
-        top: Math.random() * 100,
-        left: Math.random() * 100,
-        opacity: Math.random() * 0.25 + 0.05,
-        duration: Math.random() * 8 + 6,
-        delay: Math.random() * 5,
-        color: i % 3 === 0 ? "#3b82f6" : i % 3 === 1 ? "#06b6d4" : "#6366f1",
-      })),
-    );
-  }, []);
+// ── Status bar item ───────────────────────────────────────────────────────────
+const STATUS_META = {
+  new: { label: "Yangi", color: "#3b82f6", icon: Users },
+  pending: { label: "Kutilmoqda", color: "#f59e0b", icon: Clock },
+  success: { label: "Muvaffaqiyatli", color: "#22c55e", icon: CheckCircle2 },
+  canceled: { label: "Bekor qilingan", color: "#ef4444", icon: XCircle },
+};
+
+function StatusBar({ statusKey, count, total, percent }) {
+  const meta = STATUS_META[statusKey] || {
+    label: statusKey,
+    color: "#6b7280",
+    icon: BarChart3,
+  };
+  const Icon = meta.icon;
+  const w = total > 0 ? (count / total) * 100 : 0;
 
   return (
-    <div className="relative flex h-screen flex-1 flex-col items-center justify-center bg-[#0d1e35] py-5 pb-64">
-      {/* ── Grid lines bg ─────────────────────────────────────── */}
+    <div className="flex items-center gap-3 py-2">
       <div
-        className="pointer-events-none absolute inset-0"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
         style={{
-          backgroundImage: `
-            linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px)
-          `,
+          background: `${meta.color}15`,
+          border: `1px solid ${meta.color}25`,
+        }}
+      >
+        <Icon size={13} style={{ color: meta.color }} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-400">
+            {meta.label}
+          </span>
+          <span className="text-xs font-bold text-white">
+            {count}{" "}
+            <span className="font-normal text-gray-600">({percent}%)</span>
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+          <div
+            className="h-full rounded-full transition-all duration-1000"
+            style={{
+              width: `${w}%`,
+              background: meta.color,
+              boxShadow: `0 0 6px ${meta.color}60`,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Task ring card ────────────────────────────────────────────────────────────
+function TaskRing({ label, value, total, color }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative">
+        <ArcProgress percent={pct} color={color} size={72} stroke={6} />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-black text-white">{pct}%</span>
+        </div>
+      </div>
+      <p className="text-center text-[11px] leading-tight font-medium text-gray-500">
+        {label}
+      </p>
+      <p className="text-sm font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function Shimmer({ className }) {
+  return (
+    <div className={`animate-pulse rounded-2xl bg-white/4 ${className}`} />
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const projectId = localStorage.getItem("projectId");
+
+  useEffect(() => {
+    if (projectId) {
+      const load = async () => {
+        try {
+          const res = await apiFetch(
+            `${API}/dashboard/crm/leads/statistik/${projectId}`,
+          );
+          if (!res) return;
+          const json = await res.json();
+          setData(json);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      };
+      load();
+    } else {
+      setData({
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+        totalLeads: 0,
+        byStatus: {
+          new: 0,
+          pending: 0,
+          success: 0,
+          canceled: 0,
+        },
+        percentages: {
+          success: 0,
+          pending: 0,
+          canceled: 0,
+          new: 0,
+        },
+        tasks: {
+          total: 0,
+          completed: 0,
+          overdue: 0,
+          pending: 0,
+          completionRate: 0,
+        },
+      });
+      setLoading(false);
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#071828] p-6">
+        <div className="mx-auto max-w-5xl space-y-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {Array(4)
+              .fill(0)
+              .map((_, i) => (
+                <Shimmer key={i} className="h-32" />
+              ))}
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Shimmer className="h-64" />
+            <Shimmer className="h-64" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { daily, weekly, monthly, totalLeads, byStatus, percentages, tasks } =
+    data;
+
+  return (
+    <div className="min-h-screen bg-[#071828] p-6">
+      {/* Grid bg */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)`,
           backgroundSize: "48px 48px",
         }}
       />
+      {/* Top glow */}
+      <div
+        className="pointer-events-none fixed top-0 left-1/2 h-72 w-150 -translate-x-1/2 opacity-[0.07]"
+        style={{
+          background: "radial-gradient(ellipse,#3b82f6,transparent)",
+          filter: "blur(50px)",
+        }}
+      />
 
-      {/* ── Glow blobs ─────────────────────────────────────────── */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute -top-32 -left-32 h-96 w-96 rounded-full opacity-20"
-          style={{
-            background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)",
-            filter: "blur(60px)",
-            animation: "pulse 6s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute -right-32 -bottom-32 h-80 w-80 rounded-full opacity-15"
-          style={{
-            background: "radial-gradient(circle, #6366f1 0%, transparent 70%)",
-            filter: "blur(60px)",
-            animation: "pulse 8s ease-in-out infinite 2s",
-          }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10"
-          style={{
-            background: "radial-gradient(circle, #06b6d4 0%, transparent 70%)",
-            filter: "blur(80px)",
-            animation: "pulse 10s ease-in-out infinite 1s",
-          }}
-        />
-      </div>
+      <div className="relative mx-auto max-w-5xl space-y-5">
+        {/* Title */}
+        {/* <div style={{ animation: "fadeUp 0.4s ease both" }}>
+          <h1 className="text-xl font-black tracking-tight text-white">
+            Dashboard
+          </h1>
+          <p className="mt-0.5 text-xs text-gray-600">Umumiy ko'rsatkichlar</p>
+        </div> */}
 
-      {/* ── Floating dots ──────────────────────────────────────── */}
-      {dots.map((d) => (
-        <Particle
-          key={d.id}
-          style={{
-            width: d.width,
-            height: d.width,
-            top: `${d.top}%`,
-            left: `${d.left}%`,
-            opacity: d.opacity,
-            background: d.color,
-            boxShadow: `0 0 ${d.width * 2}px ${d.color}`,
-            animation: `float ${d.duration}s ease-in-out infinite ${d.delay}s`,
-          }}
-        />
-      ))}
-
-      {/* ── Main content ───────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6 text-center">
-        {/* Icon */}
-        <div
-          className="flex h-20 w-20 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10"
-          style={{
-            boxShadow:
-              "0 0 40px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
-            animation: "float 4s ease-in-out infinite",
-          }}
-        >
-          <svg
-            width="36"
-            height="36"
-            viewBox="0 0 24 24"
-            fill="none"
-            className="text-blue-400"
-          >
-            <path
-              d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ animation: "draw 3s ease-in-out infinite" }}
-            />
-          </svg>
+        {/* ── Top stat cards ── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            icon={Users}
+            label="Jami Leadlar"
+            value={totalLeads}
+            color="#3b82f6"
+            delay={0.05}
+          />
+          <StatCard
+            icon={TrendingUp}
+            label="Bugun"
+            value={daily}
+            color="#22c55e"
+            delay={0.1}
+          />
+          <StatCard
+            icon={BarChart3}
+            label="Bu hafta"
+            value={weekly}
+            color="#f59e0b"
+            delay={0.15}
+          />
+          <StatCard
+            icon={CalendarCheck2}
+            label="Bu oy"
+            value={monthly}
+            color="#a78bfa"
+            delay={0.2}
+          />
         </div>
 
-        {/* Badge */}
-        <div
-          className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5"
-          style={{ animation: "fadeIn 0.6s ease both" }}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
-          </span>
-          <span className="text-xs font-semibold tracking-widest text-amber-300 uppercase">
-            Ishlab chiqilmoqda
-          </span>
-        </div>
-
-        {/* Heading */}
-        <div style={{ animation: "fadeInUp 0.7s ease 0.1s both" }}>
-          <h1
-            className="text-5xl font-black tracking-tight text-white sm:text-6xl"
+        {/* ── Middle row ── */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Statuslar bo'yicha */}
+          <div
+            className="rounded-2xl border border-white/6 p-5"
             style={{
-              fontFamily: "'DM Serif Display', Georgia, serif",
-              textShadow: "0 0 60px rgba(59,130,246,0.3)",
+              background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
+              animation: "fadeUp 0.5s ease 0.25s both",
             }}
           >
-            Tez Kunda
-          </h1>
-          <p
-            className="mt-4 max-w-md text-base leading-relaxed text-gray-400"
-            style={{ fontFamily: "system-ui" }}
-          >
-            Dashboard sahifasi hozirda tayyorlanmoqda. Tez orada to'liq
-            statistika, grafiklar va hisobotlar bilan ishga tushadi.
-          </p>
-        </div>
-
-        {/* Features preview cards */}
-        <div
-          className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3"
-          style={{ animation: "fadeInUp 0.7s ease 0.25s both" }}
-        >
-          {[
-            { icon: "📊", label: "Statistika" },
-            { icon: "📈", label: "Grafiklar" },
-            { icon: "🎯", label: "Hisobotlar" },
-          ].map((f) => (
-            <div
-              key={f.label}
-              className="flex items-center gap-3 rounded-xl border border-white/5 bg-white px-5 py-3"
-              style={{ backdropFilter: "blur(8px)" }}
-            >
-              <span className="text-xl opacity-60">{f.icon}</span>
-              <span className="text-sm font-medium text-gray-500">
-                {f.label}
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+                Statuslar bo'yicha
+              </p>
+              <span className="text-xs font-semibold text-gray-600">
+                {totalLeads} ta
               </span>
             </div>
-          ))}
+            <div className="space-y-1 divide-y divide-white/3">
+              {Object.entries(byStatus).map(([key, count]) => (
+                <StatusBar
+                  key={key}
+                  statusKey={key}
+                  count={count}
+                  total={totalLeads}
+                  percent={percentages[key] ?? 0}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Tasklar */}
+          <div
+            className="rounded-2xl border border-white/6 p-5"
+            style={{
+              background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
+              animation: "fadeUp 0.5s ease 0.30s both",
+            }}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+                Tasklar
+              </p>
+              <div className="flex items-center gap-1.5 rounded-lg border border-white/6 bg-white/3 px-2.5 py-1">
+                <CalendarCheck2 size={11} className="text-blue-400" />
+                <span className="text-xs font-bold text-white">
+                  {tasks.total}
+                </span>
+                <span className="text-[10px] text-gray-600">jami</span>
+              </div>
+            </div>
+
+            {/* Completion rate big arc */}
+            <div className="mb-5 flex items-center gap-5">
+              <div className="relative shrink-0">
+                <ArcProgress
+                  percent={tasks.completionRate}
+                  color="#22c55e"
+                  size={96}
+                  stroke={8}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg leading-none font-black text-white">
+                    {tasks.completionRate}%
+                  </span>
+                  <span className="mt-0.5 text-[9px] text-gray-500">
+                    bajarildi
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2.5">
+                {[
+                  {
+                    label: "Bajarilgan",
+                    value: tasks.completed,
+                    color: "#22c55e",
+                    icon: CheckCircle2,
+                  },
+                  {
+                    label: "Kutilmoqda",
+                    value: tasks.pending,
+                    color: "#f59e0b",
+                    icon: Clock,
+                  },
+                  {
+                    label: "Muddati o'tgan",
+                    value: tasks.overdue,
+                    color: "#ef4444",
+                    icon: AlertTriangle,
+                  },
+                ].map(({ label, value, color, icon: Icon }) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon size={12} style={{ color }} />
+                      <span className="text-xs text-gray-500">{label}</span>
+                    </div>
+                    <span className="text-xs font-bold text-white">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mini rings */}
+            <div className="grid grid-cols-3 gap-2 border-t border-white/4 pt-4">
+              <TaskRing
+                label="Bajarilgan"
+                value={tasks.completed}
+                total={tasks.total}
+                color="#22c55e"
+              />
+              <TaskRing
+                label="Kutilmoqda"
+                value={tasks.pending}
+                total={tasks.total}
+                color="#f59e0b"
+              />
+              <TaskRing
+                label="Muddati o'tgan"
+                value={tasks.overdue}
+                total={tasks.total}
+                color="#ef4444"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Lead conversion summary ── */}
+        <div
+          className="rounded-2xl border border-white/6 p-5"
+          style={{
+            background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
+            animation: "fadeUp 0.5s ease 0.35s both",
+          }}
+        >
+          <p className="mb-4 text-xs font-bold tracking-widest text-gray-500 uppercase">
+            Lead konversiyasi
+          </p>
+          <div className="flex h-16 items-end gap-1">
+            {Object.entries(byStatus).map(([key, count]) => {
+              const meta = STATUS_META[key] || { color: "#6b7280", label: key };
+              const h =
+                totalLeads > 0 ? Math.max((count / totalLeads) * 100, 4) : 4;
+              return (
+                <div
+                  key={key}
+                  className="flex flex-1 flex-col items-center gap-1"
+                >
+                  <span className="text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                  <div
+                    className="w-full rounded-t-md transition-all duration-1000"
+                    style={{
+                      height: `${h}%`,
+                      minHeight: 6,
+                      background: `linear-gradient(to top, ${meta.color}cc, ${meta.color}40)`,
+                      boxShadow: `0 -2px 8px ${meta.color}40`,
+                    }}
+                  />
+                  <span className="text-[9px] text-gray-600">{meta.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── CSS animations ─────────────────────────────────────── */}
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px);   }
-          50%       { transform: translateY(-12px); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1);    opacity: 0.2; }
-          50%       { transform: scale(1.15); opacity: 0.35; }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>

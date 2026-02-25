@@ -15,6 +15,7 @@ import { toast } from "sonner";
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
 // ── API statuslar (backend qiymatlari) ────────────────────────────────────
+
 // Backend: "STARTED" | "DONE" | "PENDING"  (kelajakda kengayishi mumkin)
 const API_STATUSES = {
   STARTED: { label: "Jarayonda", color: "#f59e0b" },
@@ -71,192 +72,6 @@ function Avatar({ name }) {
   );
 }
 
-// ── Add Task Drawer ───────────────────────────────────────────────────────
-function AddTaskDrawer({ onClose, onAdd, leads = [] }) {
-  const token = localStorage.getItem("user");
-  const projectId = localStorage.getItem("projectId");
-
-  const [form, setForm] = useState({
-    description: "",
-    taskDate: "",
-    type: "task",
-    leadsId: "",
-  });
-  const [busy, setBusy] = useState(false);
-
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-  const submit = async () => {
-    if (!form.description.trim()) {
-      toast.error("Tavsif kiriting");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const body = {
-        description: form.description.trim(),
-        projectId: Number(projectId),
-        status: "PENDING",
-        ...(form.taskDate && {
-          taskDate: new Date(form.taskDate).toISOString(),
-        }),
-        ...(form.leadsId && { leadsId: Number(form.leadsId) }),
-      };
-
-      const res = await fetch(`${API}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      onAdd(data);
-      toast.success("Vazifa qo'shildi ✅");
-      onClose();
-    } catch (err) {
-      console.error(err);
-      toast.error("Qo'shishda xato ❌");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        style={{ animation: "fadeIn .2s ease both" }}
-      />
-      <div
-        className="fixed top-0 right-0 z-50 flex h-full w-[400px] flex-col border-l border-white/5"
-        style={{
-          background: "linear-gradient(180deg,#0d1f33 0%,#071828 100%)",
-          animation: "slideIn .25s cubic-bezier(.32,.72,0,1) both",
-          boxShadow: "-24px 0 60px rgba(0,0,0,.5)",
-        }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
-          <div>
-            <p className="text-xs tracking-widest text-gray-500 uppercase">
-              Yangi
-            </p>
-            <p className="text-base font-semibold text-white">
-              Vazifa qo'shish
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/5 text-gray-400 hover:text-white"
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
-          {/* Description */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">
-              Vazifa tavsifi *
-            </label>
-            <textarea
-              autoFocus
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Nima qilish kerak?"
-              rows={3}
-              className="w-full resize-none rounded-xl border border-white/5 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-white/15 focus:bg-white/[0.06]"
-            />
-          </div>
-
-          {/* Type */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">
-              Turi
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {Object.entries(TYPES).map(([k, v]) => (
-                <button
-                  key={k}
-                  onClick={() => set("type", k)}
-                  className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 text-xs transition-all ${
-                    form.type === k
-                      ? "border-white/15 bg-white/10 text-white"
-                      : "border-white/5 text-gray-500 hover:border-white/10 hover:text-gray-300"
-                  }`}
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: v.color }}
-                  />
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Due date */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">
-              Muddat
-            </label>
-            <input
-              type="datetime-local"
-              value={form.taskDate}
-              onChange={(e) => set("taskDate", e.target.value)}
-              className="w-full rounded-xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-sm text-white [color-scheme:dark] outline-none focus:border-white/15"
-            />
-          </div>
-
-          {/* Lead */}
-          {leads.length > 0 && (
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-500">
-                Lead (ixtiyoriy)
-              </label>
-              <select
-                value={form.leadsId}
-                onChange={(e) => set("leadsId", e.target.value)}
-                className="w-full rounded-xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-sm text-white [color-scheme:dark] outline-none focus:border-white/15"
-              >
-                <option value="">— Tanlang —</option>
-                {leads.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.firstName} {l.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-white/5 p-6">
-          <button
-            onClick={submit}
-            disabled={busy || !form.description.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
-          >
-            {busy ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <Check size={15} />
-            )}
-            {busy ? "Saqlanmoqda..." : "Saqlash"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ── Task Row ──────────────────────────────────────────────────────────────
 function TaskRow({ task, onToggle, onDelete, style }) {
   const overdue = isOverdue(task.taskDate, task.status);
@@ -268,8 +83,8 @@ function TaskRow({ task, onToggle, onDelete, style }) {
     <div
       className={`group flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-150 ${
         isDone
-          ? "border-white/[0.03] bg-white/[0.01] opacity-55"
-          : "border-white/[0.05] bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]"
+          ? "border-white/3 bg-white/1 opacity-55"
+          : "border-white/5 bg-white/3 hover:border-white/10 hover:bg-white/5"
       }`}
       style={style}
     >
@@ -513,7 +328,7 @@ export default function Tasks() {
           </div>
 
           {/* Search */}
-          <div className="flex max-w-sm flex-1 items-center gap-2 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2">
+          <div className="flex max-w-sm flex-1 items-center gap-2 rounded-xl border border-white/5 bg-white/3 px-3 py-2">
             <Search size={14} className="shrink-0 text-gray-600" />
             <input
               type="text"
@@ -544,7 +359,7 @@ export default function Tasks() {
               key: "yesterday",
               label: "Ertangi",
               count: stats.yesterday,
-              alert: status.yesterday > 0,
+              alert: stats.yesterday > 0,
             },
           ].map((tab) => (
             <button
@@ -575,7 +390,7 @@ export default function Tasks() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1.5 text-xs text-gray-400 [color-scheme:dark] outline-none"
+            className="scheme:dark rounded-lg border border-white/5 bg-white/3 px-2 py-1.5 text-xs text-gray-400 outline-none"
           >
             <option value="all">Barcha holat</option>
             {Object.entries(API_STATUSES).map(([k, v]) => (
@@ -584,20 +399,6 @@ export default function Tasks() {
               </option>
             ))}
           </select>
-
-          {/* Type filter */}
-          {/* <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1.5 text-xs text-gray-400 [color-scheme:dark] outline-none"
-          >
-            <option value="all">Barcha turlar</option>
-            {Object.entries(TYPES).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
-            ))}
-          </select> */}
         </div>
       </div>
 
@@ -653,15 +454,6 @@ export default function Tasks() {
           </div>
         )}
       </div>
-
-      {/* Add drawer */}
-      {/* {showAdd && (
-        <AddTaskDrawer
-          onClose={() => setShowAdd(false)}
-          onAdd={handleAdd}
-          leads={leads}
-        />
-      )} */}
 
       <style>{`
         @keyframes fadeIn  { from{opacity:0} to{opacity:1} }

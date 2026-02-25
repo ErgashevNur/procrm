@@ -17,7 +17,6 @@ import {
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -65,7 +64,6 @@ const formatMonthYear = (dateString) => {
   });
 };
 
-// 18 yoshdan katta: max tug'ilgan sana
 const maxBirthDate = (() => {
   const d = new Date();
   d.setFullYear(d.getFullYear() - 18);
@@ -73,7 +71,7 @@ const maxBirthDate = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────
-// EVENT TYPE CONFIG
+// EVENT CONFIG
 // ─────────────────────────────────────────────────────────────────────────
 const EVENT_CFG = {
   Description: { icon: MessageCircle, color: "#3b82f6", label: "Izoh" },
@@ -88,9 +86,6 @@ const EVENT_CFG = {
 };
 const getCfg = (type) => EVENT_CFG[type] || EVENT_CFG.default;
 
-// ─────────────────────────────────────────────────────────────────────────
-// INPUT TYPES
-// ─────────────────────────────────────────────────────────────────────────
 const INPUT_TYPES = [
   {
     value: "Description",
@@ -114,10 +109,8 @@ const INPUT_TYPES = [
 function EventCard({ event }) {
   const cfg = getCfg(event.type);
   const Icon = cfg.icon;
-
   return (
     <div className="group flex gap-3">
-      {/* Icon + connector */}
       <div className="flex flex-col items-center">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
@@ -134,12 +127,10 @@ function EventCard({ event }) {
         />
       </div>
 
-      {/* Content */}
       <div
-        className="mb-3 flex-1 overflow-hidden rounded-xl border border-white/[0.05] bg-white/[0.025] p-4 transition-colors group-hover:bg-white/[0.04]"
+        className="bg-white/025 mb-3 flex-1 overflow-hidden rounded-xl border border-white/[0.05] p-4 transition-colors group-hover:bg-white/4"
         style={{ borderLeft: `2px solid ${cfg.color}35` }}
       >
-        {/* Header */}
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span
@@ -158,20 +149,27 @@ function EventCard({ event }) {
           </div>
         </div>
 
-        {/* Text */}
         <p className="text-sm leading-relaxed text-gray-300">
           {event.text || event.description}
         </p>
 
-        {/* Task badge */}
+        {/* Task: muddat ko'rsat */}
         {event.type === "tasks" && (
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
               className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
               style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}
             >
               <CheckSquare size={11} /> Vazifa yaratildi
             </span>
+            {event.taskDate && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+                style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}
+              >
+                <Calendar size={11} /> {formatDateTime(event.taskDate)}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -180,13 +178,15 @@ function EventCard({ event }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// INPUT BAR
+// INPUT BAR  ← asosiy o'zgarish shu yerda
 // ─────────────────────────────────────────────────────────────────────────
 function InputBar({ onSubmit, sending }) {
   const [text, setText] = useState("");
   const [type, setType] = useState(INPUT_TYPES[0]);
+  const [taskDate, setTaskDate] = useState(""); // ← yangi state
   const textareaRef = useRef(null);
 
+  // Auto-resize
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -194,14 +194,22 @@ function InputBar({ onSubmit, sending }) {
     el.style.height = Math.min(el.scrollHeight, 130) + "px";
   }, [text]);
 
+  // Type o'zgarganda date ni tozalash
+  const handleTypeChange = (t) => {
+    setType(t);
+    if (t.value !== "tasks") setTaskDate("");
+  };
+
   const submit = () => {
     if (!text.trim() || sending) return;
-    onSubmit(text.trim(), type.value);
+    onSubmit(text.trim(), type.value, taskDate || null);
     setText("");
+    setTaskDate("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const TypeIcon = type.icon;
+  const isTask = type.value === "tasks";
 
   return (
     <div
@@ -213,37 +221,68 @@ function InputBar({ onSubmit, sending }) {
       }}
     >
       <div className="mx-auto max-w-3xl space-y-2.5">
-        {/* Type tabs */}
-        <div className="flex items-center gap-1.5">
-          {INPUT_TYPES.map((t) => {
-            const TIcon = t.icon;
-            const active = type.value === t.value;
-            return (
-              <button
-                key={t.value}
-                onClick={() => setType(t)}
-                className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all"
-                style={{
-                  color: active ? t.color : "#4b5563",
-                  background: active ? `${t.color}12` : "transparent",
-                  border: `1px solid ${active ? `${t.color}25` : "transparent"}`,
-                }}
-              >
-                <TIcon size={12} />
-                {t.label}
-                {active && (
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: t.color }}
-                  />
-                )}
-              </button>
-            );
-          })}
+        {/* ── Type tabs + date picker ──────────────────────────── */}
+        <div className="flex items-center gap-2">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5">
+            {INPUT_TYPES.map((t) => {
+              const TIcon = t.icon;
+              const active = type.value === t.value;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => handleTypeChange(t)}
+                  className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all"
+                  style={{
+                    color: active ? t.color : "#4b5563",
+                    background: active ? `${t.color}12` : "transparent",
+                    border: `1px solid ${active ? `${t.color}25` : "transparent"}`,
+                  }}
+                >
+                  <TIcon size={12} />
+                  {t.label}
+                  {active && (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: t.color }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Task date picker — faqat task tanlanganda ─────── */}
+          {isTask && (
+            <div
+              className="flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-all"
+              style={{
+                borderColor: taskDate
+                  ? "rgba(16,185,129,0.3)"
+                  : "rgba(255,255,255,0.07)",
+                background: taskDate
+                  ? "rgba(16,185,129,0.06)"
+                  : "rgba(255,255,255,0.03)",
+              }}
+            >
+              <Calendar
+                size={13}
+                style={{ color: taskDate ? "#10b981" : "#4b5563" }}
+              />
+              <input
+                type="datetime-local"
+                value={taskDate}
+                onChange={(e) => setTaskDate(e.target.value)}
+                className="bg-transparent text-xs text-white [color-scheme:dark] outline-none"
+                style={{ color: taskDate ? "#fff" : "#6b7280" }}
+              />
+            </div>
+          )}
+
           <span className="ml-auto text-[11px] text-gray-700">Ctrl+Enter</span>
         </div>
 
-        {/* Textarea + Send */}
+        {/* ── Textarea + Send ──────────────────────────────────── */}
         <div className="flex items-end gap-2.5">
           <div
             className="flex flex-1 items-start gap-3 rounded-xl px-4 py-3 transition-all duration-200"
@@ -321,10 +360,9 @@ const LeadDetails = () => {
     Authorization: `Bearer ${token}`,
   };
 
-  // ── Parallel fetch on mount ─────────────────────────────────────────
+  // ── Parallel fetch ──────────────────────────────────────────────────
   useEffect(() => {
     if (!token || !leadId) return;
-
     const init = async () => {
       try {
         const [leadRes, descRes, sourceRes] = await Promise.all([
@@ -334,19 +372,16 @@ const LeadDetails = () => {
           }),
           fetch(`${API}/lead-source/${projectId}`, { headers }),
         ]);
-
         if (leadRes.status === 401) {
           localStorage.clear();
           navigate("/login");
           return;
         }
-
         const [lead, descs, sources] = await Promise.all([
           leadRes.json(),
           descRes.ok ? descRes.json() : [],
           sourceRes.ok ? sourceRes.json() : [],
         ]);
-
         setDealData(lead);
         setEvents(Array.isArray(descs) ? descs : []);
         setLeadSource(Array.isArray(sources) ? sources : []);
@@ -357,7 +392,6 @@ const LeadDetails = () => {
         setLoading(false);
       }
     };
-
     init();
   }, []);
 
@@ -374,19 +408,22 @@ const LeadDetails = () => {
     }
   };
 
-  // ── Post comment / task ─────────────────────────────────────────────
-  const handlePostDesc = async (text, type) => {
+  // ── Post comment / task  ← taskDate ham qabul qiladi ───────────────
+  const handlePostDesc = async (text, type, taskDate) => {
     setSending(true);
     try {
       if (type === "tasks") {
+        const body = {
+          projectId: Number(projectId),
+          leadsId: Number(leadId),
+          description: text,
+          // taskDate bor bo'lsa ISO formatda yuborish
+          ...(taskDate && { taskDate: new Date(taskDate).toISOString() }),
+        };
         const res = await fetch(`${API}/tasks`, {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            projectId: Number(projectId),
-            leadsId: Number(leadId),
-            description: text,
-          }),
+          body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error();
       } else {
@@ -412,7 +449,7 @@ const LeadDetails = () => {
     }
   };
 
-  // ── Update lead (PATCH) ─────────────────────────────────────────────
+  // ── Update lead ─────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDealData((prev) => ({ ...prev, [name]: value }));
@@ -434,7 +471,6 @@ const LeadDetails = () => {
         ? new Date(dealData.birthDate).toISOString().split("T")[0]
         : undefined,
     };
-
     toast.promise(
       fetch(`${API}/leeds/${leadId}`, {
         method: "PATCH",
@@ -445,19 +481,18 @@ const LeadDetails = () => {
       }),
       {
         loading: "Saqlanmoqda...",
-        success: "Ma'lumotlar yangilandi ✅",
-        error: "Xatolik yuz berdi ❌",
+        success: "Yangilandi ✅",
+        error: "Xatolik ❌",
       },
     );
   };
 
   // ─────────────────────────────────────────────────────────────────────
-  // LOADING SKELETON
+  // LOADING
   // ─────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-screen overflow-hidden bg-[#071828] text-gray-200">
-        {/* Left */}
         <div className="flex w-96 shrink-0 flex-col border-r border-white/[0.05] bg-[#0a1929]">
           <div className="border-b border-white/[0.05] p-5">
             <div className="mb-3 flex items-center gap-3">
@@ -475,10 +510,6 @@ const LeadDetails = () => {
               </div>
             </div>
           </div>
-          <div className="flex border-b border-white/[0.05]">
-            <Skeleton className="h-10 flex-1 rounded-none bg-white/[0.02]" />
-            <Skeleton className="h-10 flex-1 rounded-none bg-white/[0.02]" />
-          </div>
           <div className="space-y-4 p-5">
             {Array(6)
               .fill(0)
@@ -490,20 +521,17 @@ const LeadDetails = () => {
               ))}
           </div>
         </div>
-
-        {/* Right */}
         <div className="flex flex-1 flex-col">
           <div className="flex justify-end border-b border-white/[0.05] p-4">
             <Skeleton className="h-8 w-36 rounded-full bg-white/5" />
           </div>
           <div className="flex-1 space-y-3 p-6">
-            {Array(5)
+            {Array(4)
               .fill(0)
               .map((_, i) => (
                 <Skeleton
                   key={i}
                   className="h-24 w-full rounded-xl bg-white/[0.03]"
-                  style={{ animationDelay: `${i * 0.06}s` }}
                 />
               ))}
           </div>
@@ -606,10 +634,8 @@ const LeadDetails = () => {
 
         {/* Tab content */}
         <div className="scrollbar-hide flex-1 overflow-y-auto">
-          {/* ── Asosiy tab ──────────────────────────────────────────── */}
           {activeTab === "asosiy" && (
             <div className="space-y-4 p-5">
-              {/* Project */}
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
                   Loyiha
@@ -618,8 +644,6 @@ const LeadDetails = () => {
                   {dealData?.project?.name || "—"}
                 </p>
               </div>
-
-              {/* Budjet */}
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
                   Budjet
@@ -631,8 +655,6 @@ const LeadDetails = () => {
                   </p>
                 </div>
               </div>
-
-              {/* Operator */}
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
                   Operator
@@ -641,8 +663,6 @@ const LeadDetails = () => {
                   {dealData?.assignedUser?.fullName || "—"}
                 </p>
               </div>
-
-              {/* Lead source */}
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
                   Manba
@@ -651,13 +671,11 @@ const LeadDetails = () => {
                   {dealData?.leadSource?.name || "—"}
                 </p>
               </div>
-
               <div
                 className="border-t pt-4"
                 style={{ borderColor: "rgba(255,255,255,0.05)" }}
               >
                 <div className="space-y-3">
-                  {/* Phone */}
                   <div>
                     <p className="text-[11px] text-gray-600">Tel raqam</p>
                     <div className="flex items-center gap-2">
@@ -670,8 +688,6 @@ const LeadDetails = () => {
                       </a>
                     </div>
                   </div>
-
-                  {/* Extra phone */}
                   <div>
                     <p className="text-[11px] text-gray-600">
                       Qo'shimcha raqam
@@ -686,8 +702,6 @@ const LeadDetails = () => {
                       </a>
                     </div>
                   </div>
-
-                  {/* Birthdate */}
                   <div>
                     <p className="text-[11px] text-gray-600">Tug'ilgan sana</p>
                     <div className="flex items-center gap-2">
@@ -700,8 +714,6 @@ const LeadDetails = () => {
                       </p>
                     </div>
                   </div>
-
-                  {/* Address */}
                   <div>
                     <p className="text-[11px] text-gray-600">Manzil</p>
                     <div className="flex items-center gap-2">
@@ -716,7 +728,6 @@ const LeadDetails = () => {
             </div>
           )}
 
-          {/* ── Tahrirlash tab ──────────────────────────────────────── */}
           {activeTab === "tahrirlash" && (
             <form className="p-5 text-white" onSubmit={handleSubmit}>
               <FieldGroup>
@@ -889,36 +900,25 @@ const LeadDetails = () => {
         </div>
 
         {/* Events feed */}
-        <div
-          className="scrollbar-hide flex-1 overflow-y-auto px-6 py-5"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "#1a3549 transparent",
-          }}
-        >
-          <div className="mx-auto max-w-2xl">
-            {/* Month divider */}
+        <div className="scrollbar-hide flex-1 overflow-y-auto px-6 py-5">
+          <div className="mx-auto h-[50vh] max-w-2xl">
             {dealData.createdAt && (
               <div className="mb-5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/[0.04]" />
-                <span className="rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-1 text-xs text-gray-600">
+                <div className="h-px flex-1 bg-white/4" />
+                <span className="rounded-full border border-white/6 bg-white/2 px-4 py-1 text-xs text-gray-600">
                   {formatMonthYear(dealData.createdAt)}
                 </span>
-                <div className="h-px flex-1 bg-white/[0.04]" />
+                <div className="h-px flex-1 bg-white/4" />
               </div>
             )}
-
-            {/* Created info */}
             {dealData.createdAt && (
               <div className="mb-4 flex items-center gap-2 text-xs text-gray-700">
                 <Tag size={10} />
                 {formatDateTime(dealData.createdAt)} • Lead yaratildi
               </div>
             )}
-
-            {/* Events */}
             {events.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
                 <MessageSquare size={36} className="text-gray-800" />
                 <p className="text-sm text-gray-600">Hali faoliyat yo'q</p>
                 <p className="text-xs text-gray-700">
