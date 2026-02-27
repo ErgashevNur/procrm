@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 export default function login() {
   const [email, setEmail] = useState("");
@@ -62,12 +63,8 @@ export default function login() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="hidden items-center justify-center p-8 md:flex md:w-1/2">
-        <img
-          src="/login_img.svg"
-          alt="ProCRM Illustration"
-          className="max-h-[80vh] max-w-full object-contain"
-        />
+      <div className="hidden items-center justify-center md:flex md:w-1/2">
+        <DotLottieReact src="/login.json" loop autoplay />{" "}
       </div>
 
       <div className="mx-auto flex h-screen items-center justify-center">
