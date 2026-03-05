@@ -1,0 +1,8 @@
+GitHubga push qilish uchun code
+# git add . && git commit -m && git pull
+
+GitHub ozgarishlarni qabul qilish
+# git pull
+
+GitHubga push qiladi
+# git push
