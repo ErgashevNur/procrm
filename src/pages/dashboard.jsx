@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const tour = true
 
 async function apiFetch(url) {
   const token = localStorage.getItem("user");
