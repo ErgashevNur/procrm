@@ -43,8 +43,46 @@ const COLORS = [
   "#ef4444",
 ];
 
+const PROTECTED_TYPES = ["NEW", "SUCCESS", "CANCELED"];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const isProtected = (col) =>
+  col && PROTECTED_TYPES.includes(col.type?.toUpperCase());
+
+/**
+ * Columns massivini to'g'ri tartibga keltiradi:
+ * NEW → [oddiylar] → SUCCESS → CANCELED
+ */
+function sortColumns(cols) {
+  const newCol = cols.find((c) => c.type?.toUpperCase() === "NEW");
+  const successCol = cols.find((c) => c.type?.toUpperCase() === "SUCCESS");
+  const canceledCol = cols.find((c) => c.type?.toUpperCase() === "CANCELED");
+  const rest = cols.filter((c) => !isProtected(c));
+  return [
+    ...(newCol ? [newCol] : []),
+    ...rest,
+    ...(successCol ? [successCol] : []),
+    ...(canceledCol ? [canceledCol] : []),
+  ];
+}
+
+/**
+ * Drag ruxsatini tekshiradi — faqat type asosida:
+ * - active column protected bo'lsa — drag yo'q
+ * - over column protected bo'lsa — drop yo'q
+ */
+function isDragAllowed(columns, activeId, overId) {
+  const activeCol = columns.find((c) => c.id === activeId);
+  const overCol = columns.find((c) => c.id === overId);
+
+  if (isProtected(activeCol)) return false;
+  if (isProtected(overCol)) return false;
+
+  return true;
+}
+
 // ── Sortable column wrapper ──────────────────────────────────────────────────
-function SortableColumn({ id, children }) {
+function SortableColumn({ id, children, disabled }) {
   const {
     attributes,
     listeners,
@@ -52,7 +90,7 @@ function SortableColumn({ id, children }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -62,30 +100,31 @@ function SortableColumn({ id, children }) {
 
   return (
     <div ref={setNodeRef} style={style}>
-      {children({ listeners, attributes })}
+      {children({
+        listeners: disabled ? undefined : listeners,
+        attributes: disabled ? undefined : attributes,
+      })}
     </div>
   );
 }
 
-// ── Insert modal: + button yonida ochiladi ───────────────────────────────────
+// ── Insert modal ─────────────────────────────────────────────────────────────
 function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
   const modalRef = useRef();
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3b82f6");
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  // anchor button pozitsiyasiga qarab joylashadi
   useEffect(() => {
     if (anchorRef?.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       setPos({
         top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX - 180, // modal markazi
+        left: rect.left + window.scrollX - 180,
       });
     }
   }, [anchorRef]);
 
-  // tashqariga bosilsa yopiladi
   useEffect(() => {
     const h = (e) => {
       if (
@@ -93,9 +132,8 @@ function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
         !modalRef.current.contains(e.target) &&
         anchorRef?.current &&
         !anchorRef.current.contains(e.target)
-      ) {
+      )
         onClose();
-      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -103,13 +141,12 @@ function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    const payload = {
+    onSubmit({
       name: name.trim().toUpperCase(),
       projectId: Number(projectId),
       color,
       after: afterId ?? 0,
-    };
-    onSubmit(payload);
+    });
     onClose();
   };
 
@@ -125,7 +162,6 @@ function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
           <X size={15} />
         </button>
       </div>
-
       <input
         type="text"
         value={name}
@@ -135,7 +171,6 @@ function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
         autoFocus
         className="mb-3 w-full rounded-lg border border-[#2a4a62] bg-[#1a3a52] px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
       />
-
       <p className="mb-2 text-xs text-gray-400">Rang</p>
       <div className="mb-3 grid grid-cols-6 gap-1.5">
         {COLORS.map((c) => (
@@ -143,21 +178,15 @@ function InsertModal({ anchorRef, afterId, projectId, onClose, onSubmit }) {
             key={c}
             type="button"
             onClick={() => setColor(c)}
-            className={`h-6 w-6 rounded-full transition-all ${
-              color === c
-                ? "ring-2 ring-white ring-offset-1 ring-offset-[#0f2942]"
-                : "hover:scale-110"
-            }`}
+            className={`h-6 w-6 rounded-full transition-all ${color === c ? "ring-2 ring-white ring-offset-1 ring-offset-[#0f2942]" : "hover:scale-110"}`}
             style={{ backgroundColor: c }}
           />
         ))}
       </div>
-
       <div
         className="mb-3 h-1 w-full rounded-full"
         style={{ background: color }}
       />
-
       <button
         onClick={handleSubmit}
         disabled={!name.trim()}
@@ -176,19 +205,14 @@ export default function AddStatus() {
 
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // insert modal
-  const [insertAfterId, setInsertAfterId] = useState(null); // qaysi column dan keyin
-  const insertBtnRefs = useRef({}); // har + button ning ref i
-
-  // edit dialog
+  const [insertAfterId, setInsertAfterId] = useState(null);
+  const insertBtnRefs = useRef({});
   const [editId, setEditId] = useState(null);
   const [updateName, setUpdateName] = useState("");
   const [updateColor, setUpdateColor] = useState("#3b82f6");
   const [updateLoading, setUpdateLoading] = useState(false);
-
-  // drag state
   const [activeId, setActiveId] = useState(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -220,7 +244,8 @@ export default function AddStatus() {
       }
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setColumns(Array.isArray(data) ? data : []);
+      // Sahifa ochilganda ham to'g'ri tartibga solib qo'yamiz
+      setColumns(sortColumns(Array.isArray(data) ? data : []));
     } catch {
       toast.error("Ustunlarni yuklab bo'lmadi");
     } finally {
@@ -232,16 +257,30 @@ export default function AddStatus() {
     setActiveId(null);
     if (!over || active.id === over.id) return;
 
+    // Drag ruxsat tekshiruvi
+    if (!isDragAllowed(columns, active.id, over.id)) {
+      const activeCol = columns.find((c) => c.id === active.id);
+      if (isProtected(activeCol)) {
+        toast.error(`"${activeCol.name}" statusini ko'chirish mumkin emas ❌`);
+      } else {
+        toast.error("Bu pozitsiyaga ko'chirish mumkin emas ❌");
+      }
+      return;
+    }
+
     const oldIndex = columns.findIndex((c) => c.id === active.id);
     const newIndex = columns.findIndex((c) => c.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Optimistic reorder
     const reordered = arrayMove(columns, oldIndex, newIndex);
     setColumns(reordered);
 
-    // after: yangi pozitsiyadan oldingi column id (birinchi bo'lsa 0)
     const afterId = newIndex === 0 ? 0 : reordered[newIndex - 1].id;
+
+    console.log(
+      `[Drag] "${columns.find((c) => c.id === active.id)?.name}" (id: ${active.id}) → after id: ${afterId}`,
+      afterId === 0 ? "(birinchi o'ringa)" : `(id ${afterId} dan keyin)`,
+    );
 
     try {
       const res = await fetch(`${API}/status/${active.id}`, {
@@ -255,7 +294,6 @@ export default function AddStatus() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast.success("Tartib saqlandi ✅");
     } catch (err) {
-      // rollback
       setColumns(columns);
       toast.error("Saqlashda xato: " + err.message);
     }
@@ -271,12 +309,16 @@ export default function AddStatus() {
     };
 
     setColumns((prev) => {
-      if (!payload.after) return [tempCol, ...prev]; // after:0 => birinchi
-      const idx = prev.findIndex((c) => c.id === payload.after);
-      if (idx === -1) return [...prev, tempCol];
-      const next = [...prev];
-      next.splice(idx + 1, 0, tempCol);
-      return next;
+      let next;
+      if (!payload.after) next = [tempCol, ...prev];
+      else {
+        const idx = prev.findIndex((c) => c.id === payload.after);
+        next =
+          idx === -1
+            ? [...prev, tempCol]
+            : [...prev.slice(0, idx + 1), tempCol, ...prev.slice(idx + 1)];
+      }
+      return sortColumns(next); // yangi column qo'shilganda ham tartib saqlansin
     });
 
     try {
@@ -291,7 +333,7 @@ export default function AddStatus() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setColumns((prev) =>
-        prev.map((c) => (c.id === tempId ? { ...data } : c)),
+        sortColumns(prev.map((c) => (c.id === tempId ? { ...data } : c))),
       );
       toast.success("Status qo'shildi ✅");
     } catch (err) {
@@ -384,156 +426,176 @@ export default function AddStatus() {
             items={columns.map((c) => c.id)}
             strategy={horizontalListSortingStrategy}
           >
-            {columns.map((column, index) => (
-              <SortableColumn key={column.id} id={column.id}>
-                {({ listeners, attributes }) => (
-                  <div
-                    className="relative flex h-full shrink-0 flex-col border-r border-[#1a3a52]"
-                    style={{ width: "280px" }}
-                  >
-                    {/* ── Header ── */}
+            {columns.map((column, index) => {
+              const locked = isProtected(column);
+              return (
+                <SortableColumn
+                  key={column.id}
+                  id={column.id}
+                  disabled={locked}
+                >
+                  {({ listeners, attributes }) => (
                     <div
-                      className="relative shrink-0 bg-[#0f2942]"
-                      style={{
-                        borderBottom: `3px solid ${column.color || "#6b7280"}`,
-                      }}
+                      className="relative flex h-full shrink-0 flex-col border-r border-[#1a3a52]"
+                      style={{ width: "280px" }}
                     >
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <h2 className="text-xs font-semibold tracking-widest text-white uppercase">
-                          {column.name}
-                          {column._temp && (
-                            <span className="ml-2 text-[10px] font-normal text-gray-500 normal-case">
-                              saqlanmoqda...
-                            </span>
-                          )}
-                        </h2>
+                      <div
+                        className="relative shrink-0 bg-[#0f2942]"
+                        style={{
+                          borderBottom: `3px solid ${column.color || "#6b7280"}`,
+                        }}
+                      >
+                        <div className="flex items-center justify-between px-4 py-3">
+                          <h2 className="text-xs font-semibold tracking-widest text-white uppercase">
+                            {column.name}
+                            {column._temp && (
+                              <span className="ml-2 text-[10px] font-normal text-gray-500 normal-case">
+                                saqlanmoqda...
+                              </span>
+                            )}
+                            {/* Lock belgisi protected columnlar uchun */}
+                            {locked && (
+                              <span className="ml-2 text-[10px] font-normal text-gray-500 normal-case">
+                                🔒
+                              </span>
+                            )}
+                          </h2>
 
-                        <div className="flex items-center gap-2">
-                          <span
-                            {...listeners}
-                            {...attributes}
-                            className="cursor-grab text-[#3a5570] select-none active:cursor-grabbing"
-                          >
-                            ⠿
-                          </span>
-
-                          <button
-                            onClick={() => deleteColumn(column.id)}
-                            disabled={!!column._temp}
-                            className="text-gray-500 transition-colors hover:text-red-500 disabled:opacity-30"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-
-                          <Dialog
-                            open={editId === column.id}
-                            onOpenChange={(open) => {
-                              if (open) {
-                                setEditId(column.id);
-                                setUpdateName(column.name);
-                                setUpdateColor(column.color || "#3b82f6");
-                              } else setEditId(null);
-                            }}
-                          >
-                            <DialogTrigger asChild>
-                              <button
-                                disabled={!!column._temp}
-                                className="text-gray-500 transition-colors hover:text-blue-400 disabled:opacity-30"
+                          <div className="flex items-center gap-2">
+                            {locked ? (
+                              <span
+                                className="cursor-not-allowed text-[#3a5570]/30 select-none"
+                                title="Ko'chirish mumkin emas"
                               >
-                                <Pen size={14} />
-                              </button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-[#0f2231] text-white">
-                              <DialogHeader>
-                                <DialogTitle>Statusni tahrirlash</DialogTitle>
-                              </DialogHeader>
-                              <form
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  updateColumn(column.id);
-                                }}
-                                className="space-y-4 pt-2"
+                                ⠿
+                              </span>
+                            ) : (
+                              <span
+                                {...listeners}
+                                {...attributes}
+                                className="cursor-grab text-[#3a5570] select-none active:cursor-grabbing"
                               >
-                                <input
-                                  type="text"
-                                  value={updateName}
-                                  onChange={(e) =>
-                                    setUpdateName(e.target.value)
-                                  }
-                                  placeholder="Nom kiriting..."
-                                  className="w-full rounded-lg border border-[#2a4a62] bg-[#1a3a52] px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                                  autoFocus
-                                />
-                                <div>
-                                  <p className="mb-2 text-xs text-gray-400">
-                                    Rang
-                                  </p>
-                                  <div className="grid grid-cols-8 gap-2">
-                                    {COLORS.map((c) => (
-                                      <button
-                                        type="button"
-                                        key={c}
-                                        onClick={() => setUpdateColor(c)}
-                                        className={`h-7 w-7 rounded-full transition-all ${
-                                          updateColor === c
-                                            ? "ring-2 ring-white ring-offset-1 ring-offset-[#0f2231]"
-                                            : "hover:scale-110"
-                                        }`}
-                                        style={{ backgroundColor: c }}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <Button
-                                  type="submit"
-                                  className="w-full"
-                                  disabled={updateLoading || !updateName.trim()}
+                                ⠿
+                              </span>
+                            )}
+
+                            <button
+                              onClick={() => deleteColumn(column.id)}
+                              disabled={!!column._temp}
+                              className="text-gray-500 transition-colors hover:text-red-500 disabled:opacity-30"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+
+                            <Dialog
+                              open={editId === column.id}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  setEditId(column.id);
+                                  setUpdateName(column.name);
+                                  setUpdateColor(column.color || "#3b82f6");
+                                } else setEditId(null);
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <button
+                                  disabled={!!column._temp}
+                                  className="text-gray-500 transition-colors hover:text-blue-400 disabled:opacity-30"
                                 >
-                                  <RefreshCcw
-                                    size={14}
-                                    className={
-                                      updateLoading ? "animate-spin" : ""
+                                  <Pen size={14} />
+                                </button>
+                              </DialogTrigger>
+                              <DialogContent className="bg-[#0f2231] text-white">
+                                <DialogHeader>
+                                  <DialogTitle>Statusni tahrirlash</DialogTitle>
+                                </DialogHeader>
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    updateColumn(column.id);
+                                  }}
+                                  className="space-y-4 pt-2"
+                                >
+                                  <input
+                                    type="text"
+                                    value={updateName}
+                                    onChange={(e) =>
+                                      setUpdateName(e.target.value)
                                     }
+                                    placeholder="Nom kiriting..."
+                                    className="w-full rounded-lg border border-[#2a4a62] bg-[#1a3a52] px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                                    autoFocus
                                   />
-                                  {updateLoading
-                                    ? "Yangilanmoqda..."
-                                    : "Yangilash"}
-                                </Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                                  <div>
+                                    <p className="mb-2 text-xs text-gray-400">
+                                      Rang
+                                    </p>
+                                    <div className="grid grid-cols-8 gap-2">
+                                      {COLORS.map((c) => (
+                                        <button
+                                          type="button"
+                                          key={c}
+                                          onClick={() => setUpdateColor(c)}
+                                          className={`h-7 w-7 rounded-full transition-all ${updateColor === c ? "ring-2 ring-white ring-offset-1 ring-offset-[#0f2231]" : "hover:scale-110"}`}
+                                          style={{ backgroundColor: c }}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="submit"
+                                    className="w-full"
+                                    disabled={
+                                      updateLoading || !updateName.trim()
+                                    }
+                                  >
+                                    <RefreshCcw
+                                      size={14}
+                                      className={
+                                        updateLoading ? "animate-spin" : ""
+                                      }
+                                    />
+                                    {updateLoading
+                                      ? "Yangilanmoqda..."
+                                      : "Yangilash"}
+                                  </Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                         </div>
+
+                        {/* + insert button — faqat drag qilsa bo'ladigan zone ichida */}
+                        {index < columns.length - 1 &&
+                          !isProtected(columns[index + 1]) && (
+                            <button
+                              ref={(el) =>
+                                (insertBtnRefs.current[column.id] = el)
+                              }
+                              onClick={() =>
+                                setInsertAfterId((prev) =>
+                                  prev === column.id ? null : column.id,
+                                )
+                              }
+                              className={`absolute -right-3 -bottom-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border transition-all ${
+                                insertAfterId === column.id
+                                  ? "border-blue-500 bg-blue-600 text-white"
+                                  : "border-[#2a4a62] bg-[#0a1929] text-gray-400 hover:border-blue-500 hover:bg-blue-600 hover:text-white"
+                              }`}
+                            >
+                              <Plus size={12} />
+                            </button>
+                          )}
                       </div>
 
-                      {/* + button — faqat oxirgi column dan tashqari */}
-                      {index < columns.length - 1 && (
-                        <button
-                          ref={(el) => (insertBtnRefs.current[column.id] = el)}
-                          onClick={() =>
-                            setInsertAfterId((prev) =>
-                              prev === column.id ? null : column.id,
-                            )
-                          }
-                          className={`absolute -right-3 -bottom-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border transition-all ${
-                            insertAfterId === column.id
-                              ? "border-blue-500 bg-blue-600 text-white"
-                              : "border-[#2a4a62] bg-[#0a1929] text-gray-400 hover:border-blue-500 hover:bg-blue-600 hover:text-white"
-                          }`}
-                        >
-                          <Plus size={12} />
-                        </button>
-                      )}
+                      <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#0f2942]" />
                     </div>
-
-                    {/* ── Body ── */}
-                    <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#0f2942]" />
-                  </div>
-                )}
-              </SortableColumn>
-            ))}
+                  )}
+                </SortableColumn>
+              );
+            })}
           </SortableContext>
 
-          {/* Drag overlay — sürüklənən column ko'rinishi */}
           <DragOverlay>
             {activeId
               ? (() => {
@@ -558,7 +620,6 @@ export default function AddStatus() {
           </DragOverlay>
         </DndContext>
 
-        {/* ── Oxirgi column dan keyin yangi status qo'shish ── */}
         <div className="flex h-full w-64 shrink-0 flex-col border-r border-[#1a3a52] bg-[#0a1929] p-4">
           <button
             ref={(el) => (insertBtnRefs.current["end"] = el)}
@@ -577,7 +638,6 @@ export default function AddStatus() {
         </div>
       </div>
 
-      {/* ── Insert modal — qaysi + bosilgan bo'lsa o'sha yaqinida ochiladi ── */}
       {insertAfterId !== null && (
         <InsertModal
           anchorRef={{ current: insertBtnRefs.current[insertAfterId] }}
