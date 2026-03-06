@@ -177,9 +177,7 @@ function buildSearchQuery(paramsState, projectId) {
 
 function normalizeLead(raw) {
   const normalizedTags = Array.isArray(raw?.tag)
-    ? raw.tag
-        .map((t) => (typeof t === "string" ? t : t?.name))
-        .filter(Boolean)
+    ? raw.tag.map((t) => (typeof t === "string" ? t : t?.name)).filter(Boolean)
     : [];
   return {
     ...raw,
@@ -762,8 +760,7 @@ export default function Pipeline() {
         searchSummary?.totalBudjet ??
           visibleStatuses.reduce(
             (a, s) =>
-              a +
-              s.leads.reduce((sum, l) => sum + Number(l?.budjet || 0), 0),
+              a + s.leads.reduce((sum, l) => sum + Number(l?.budjet || 0), 0),
             0,
           ),
       )
@@ -944,7 +941,9 @@ export default function Pipeline() {
                   <div className="flex items-center gap-2">
                     <Select
                       value={searchParams.leadSourceId || undefined}
-                      onValueChange={(v) => updateSearchParam("leadSourceId", v)}
+                      onValueChange={(v) =>
+                        updateSearchParam("leadSourceId", v)
+                      }
                     >
                       <SelectTrigger className="h-9 w-full bg-[#10263b]">
                         <SelectValue placeholder="Lead manbasi" />
@@ -990,13 +989,17 @@ export default function Pipeline() {
                   <input
                     type="number"
                     value={searchParams.budjetTo}
-                    onChange={(e) => updateSearchParam("budjetTo", e.target.value)}
+                    onChange={(e) =>
+                      updateSearchParam("budjetTo", e.target.value)
+                    }
                     placeholder="Budjet gacha"
                     className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
                   />
                   <input
                     value={searchParams.adress}
-                    onChange={(e) => updateSearchParam("adress", e.target.value)}
+                    onChange={(e) =>
+                      updateSearchParam("adress", e.target.value)
+                    }
                     placeholder="Manzil"
                     className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
                   />
@@ -1012,21 +1015,27 @@ export default function Pipeline() {
                   <input
                     type="date"
                     value={searchParams.birthDateTo}
-                    onChange={(e) => updateSearchParam("birthDateTo", e.target.value)}
+                    onChange={(e) =>
+                      updateSearchParam("birthDateTo", e.target.value)
+                    }
                     className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
                     style={{ colorScheme: "dark" }}
                   />
                   <input
                     type="date"
                     value={searchParams.createdFrom}
-                    onChange={(e) => updateSearchParam("createdFrom", e.target.value)}
+                    onChange={(e) =>
+                      updateSearchParam("createdFrom", e.target.value)
+                    }
                     className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
                     style={{ colorScheme: "dark" }}
                   />
                   <input
                     type="date"
                     value={searchParams.createdTo}
-                    onChange={(e) => updateSearchParam("createdTo", e.target.value)}
+                    onChange={(e) =>
+                      updateSearchParam("createdTo", e.target.value)
+                    }
                     className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
                     style={{ colorScheme: "dark" }}
                   />
