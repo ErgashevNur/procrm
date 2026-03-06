@@ -56,6 +56,13 @@
 
 :root {
   --radius: 0.625rem;
+  --crm-bg: #071828;
+  --crm-surface: #0f2030;
+  --crm-surface-2: #10263a;
+  --crm-border: rgba(255, 255, 255, 0.08);
+  --crm-text: #e2e8f0;
+  --crm-muted: #7b90a5;
+  --crm-accent: #3b82f6;
   --background: oklch(1 0 0);
   --foreground: oklch(0.147 0.004 49.25);
   --card: oklch(1 0 0);
@@ -146,7 +153,63 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: radial-gradient(
+        1200px 560px at 50% -220px,
+        rgba(59, 130, 246, 0.12),
+        transparent 70%
+      ),
+      var(--crm-bg);
+    color: var(--crm-text);
+  }
+}
+
+@layer components {
+  .crm-skeleton {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, #0e2134, #0b1a2a);
+  }
+
+  .crm-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      110deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.12) 45%,
+      transparent 70%
+    );
+    animation: skeleton-shimmer 1.35s ease-in-out infinite;
+  }
+
+  .crm-page {
+    @apply min-h-full p-5 md:p-6;
+    background: var(--crm-bg);
+  }
+
+  .crm-card {
+    @apply rounded-2xl border p-4 md:p-5;
+    border-color: var(--crm-border);
+    background: linear-gradient(160deg, var(--crm-surface), var(--crm-surface-2));
+  }
+
+  .crm-title {
+    @apply text-sm font-semibold tracking-wide text-white;
+  }
+
+  .crm-subtitle {
+    @apply text-xs;
+    color: var(--crm-muted);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
 

@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { getCurrentRole, isRoleAllowed, isSupportedRole } from "@/lib/rbac";
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const raw = localStorage.getItem("userData");
@@ -13,10 +14,11 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   try {
-    const { user = {} } = JSON.parse(raw);
-    const role = user.role || "USER";
-
-    if (!allowedRoles.includes(role)) {
+    const role = getCurrentRole();
+    if (!isSupportedRole(role)) {
+      return <Navigate to="/login" replace />;
+    }
+    if (!isRoleAllowed(allowedRoles, role)) {
       return <Navigate to="/403" replace />;
     }
   } catch {

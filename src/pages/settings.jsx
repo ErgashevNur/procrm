@@ -165,7 +165,7 @@ export default function settings() {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("USER");
+  const [inviteRole, setInviteRole] = useState("SALESMANAGER");
   const [inviting, setInviting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -501,9 +501,8 @@ export default function settings() {
                         value={inviteRole}
                         onChange={setInviteRole}
                         options={[
-                          ["USER", "Xodim"],
-                          ["ADMIN", "Admin"],
-                          ["SUPERADMIN", "Super Admin"],
+                          ["SALESMANAGER", "Sales Manager"],
+                          ["ROP", "Direktor (ROP)"],
                         ]}
                       />
                     </FieldRow>

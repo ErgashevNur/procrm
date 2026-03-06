@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 // const IMG_API = "https://back.prohome.uz/api/v1/image";
@@ -488,15 +489,12 @@ function ProjectCard({ project, onEdit, onDelete, index }) {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
-    <div
-      className="animate-pulse overflow-hidden rounded-2xl border border-white/[0.04]"
-      style={{ background: "#0f2438" }}
-    >
-      <div className="h-44 bg-white/[0.03]" />
+    <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
+      <Skeleton className="h-44 w-full rounded-none" />
       <div className="space-y-2 p-4">
-        <div className="h-4 w-2/3 rounded-lg bg-white/[0.04]" />
-        <div className="h-3 w-1/2 rounded-lg bg-white/[0.03]" />
-        <div className="mt-3 h-6 w-24 rounded-lg bg-white/[0.03]" />
+        <Skeleton className="h-4 w-2/3 rounded-lg" />
+        <Skeleton className="h-3 w-1/2 rounded-lg" />
+        <Skeleton className="mt-3 h-6 w-24 rounded-lg" />
       </div>
     </div>
   );

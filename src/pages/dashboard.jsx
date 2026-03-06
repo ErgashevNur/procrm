@@ -84,7 +84,7 @@ function ArcProgress({ percent, color, size = 80, stroke = 7 }) {
 function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-white/6 p-5"
+      className="crm-card relative overflow-hidden"
       style={{
         background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
         animation: `fadeUp 0.5s ease ${delay}s both`,
@@ -190,9 +190,7 @@ function TaskRing({ label, value, total, color }) {
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function Shimmer({ className }) {
-  return (
-    <div className={`animate-pulse rounded-2xl bg-white/4 ${className}`} />
-  );
+  return <div className={`crm-skeleton rounded-2xl ${className}`} />;
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
@@ -250,7 +248,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#071828] p-6">
+      <div className="crm-page">
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {Array(4)
@@ -274,7 +272,7 @@ export default function Dashboard() {
     data;
 
   return (
-    <div className="min-h-screen bg-[#071828] p-6">
+    <div className="crm-page overflow-y-auto">
       {/* Grid bg */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.015]"
@@ -337,9 +335,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Statuslar bo'yicha */}
           <div
-            className="rounded-2xl border border-white/6 p-5"
+            className="crm-card"
             style={{
-              background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
               animation: "fadeUp 0.5s ease 0.25s both",
             }}
           >
@@ -366,9 +363,8 @@ export default function Dashboard() {
 
           {/* Tasklar */}
           <div
-            className="rounded-2xl border border-white/6 p-5"
+            className="crm-card"
             style={{
-              background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
               animation: "fadeUp 0.5s ease 0.30s both",
             }}
           >
@@ -466,9 +462,8 @@ export default function Dashboard() {
 
         {/* ── Lead conversion summary ── */}
         <div
-          className="rounded-2xl border border-white/6 p-5"
+          className="crm-card"
           style={{
-            background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
             animation: "fadeUp 0.5s ease 0.35s both",
           }}
         >

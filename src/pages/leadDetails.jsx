@@ -33,8 +33,97 @@ import { Button } from "../components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { getCurrentRole, ROLES } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+
+async function extractApiMessage(res, fallback) {
+  try {
+    const text = await res.text();
+    if (!text) return fallback;
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed?.message === "string" && parsed.message.trim()) {
+        return parsed.message;
+      }
+      if (Array.isArray(parsed?.message) && parsed.message.length > 0) {
+        return String(parsed.message[0]);
+      }
+      return fallback;
+    } catch {
+      return text.trim() || fallback;
+    }
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeOperator(user) {
+  if (!user || typeof user !== "object") return null;
+  const id = user.id ?? user.userId ?? user._id;
+  if (!id) return null;
+
+  const fullName =
+    user.fullName ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+    user.name ||
+    "";
+
+  return {
+    id,
+    role: user.role,
+    fullName,
+    email: user.email || "",
+  };
+}
+
+function extractUsersFromPayload(payload) {
+  const candidates = [
+    payload,
+    payload?.data,
+    payload?.items,
+    payload?.users,
+    payload?.results,
+    payload?.result,
+    payload?.data?.items,
+    payload?.data?.users,
+    payload?.data?.results,
+    payload?.result?.items,
+    payload?.result?.users,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+}
+
+async function fetchSalesManagers(headers) {
+  const limit = 25;
+  let page = 1;
+  let all = [];
+
+  // API response shakli turlicha bo'lishi mumkin, shuning uchun ehtiyotkor parse
+  while (page <= 20) {
+    const res = await fetch(
+      `${API}/user/all/sales-manager?limit=${limit}&page=${page}`,
+      { headers },
+    );
+    if (!res.ok) break;
+
+    const payload = await res.json();
+    const list = extractUsersFromPayload(payload);
+    const normalized = list.map(normalizeOperator).filter(Boolean);
+
+    all = [...all, ...normalized];
+
+    if (normalized.length < limit) break;
+    page += 1;
+  }
+
+  return all;
+}
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("uz-UZ").format(amount) + " so'm";
@@ -807,11 +896,16 @@ const LeadDetails = () => {
   const leadId = searchParams.get("leadId");
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
+  const role = getCurrentRole();
+  const canAssignOperator = [ROLES.ROP, ROLES.SUPERADMIN].includes(role);
   // FIX 1: userId = projectId bug tuzatildi — tasks lead ichidan keladi, alohida fetch yo'q
 
   const [dealData, setDealData] = useState(null);
   const [events, setEvents] = useState([]);
   const [leadSource, setLeadSource] = useState([]);
+  const [operators, setOperators] = useState([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState("");
+  const [assigningOperator, setAssigningOperator] = useState(false);
   const [activeTab, setActiveTab] = useState("asosiy");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -869,6 +963,9 @@ const LeadDetails = () => {
         setLeadSource(Array.isArray(sources) ? sources : []);
         // FIX 3: lead.tasks ichidan olamiz
         setEvents(mergeEvents(descs, lead.tasks || []));
+        const preAssignedId =
+          lead?.assignedUser?.id || lead?.assignedUserId || lead?.userId || "";
+        setSelectedOperatorId(preAssignedId ? String(preAssignedId) : "");
         // FIX 2: tag array bilan editTags ni to'ldirish
         const tagArr =
           Array.isArray(lead.tag) && lead.tag.length ? lead.tag : [""];
@@ -881,6 +978,36 @@ const LeadDetails = () => {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!canAssignOperator || !token || !projectId) return;
+    (async () => {
+      try {
+        let salesManagers = await fetchSalesManagers(headers);
+
+        // Fallback: ba'zi backendlarda umumiy users endpoint ishlaydi
+        if (salesManagers.length === 0) {
+          const res = await fetch(`${API}/users?projectId=${projectId}`, {
+            headers,
+          });
+          if (res.ok) {
+            const payload = await res.json();
+            const users = extractUsersFromPayload(payload)
+              .map(normalizeOperator)
+              .filter(Boolean);
+            salesManagers = users.filter((u) => u.role === ROLES.SALESMANAGER);
+          }
+        }
+
+        const unique = Array.from(
+          new Map(salesManagers.map((u) => [String(u.id), u])).values(),
+        );
+        setOperators(unique);
+      } catch {
+        // operator list yuklanmasa ham detail ishlayveradi
+      }
+    })();
+  }, [canAssignOperator, token, projectId]);
 
   const refreshEvents = async () => {
     try {
@@ -944,6 +1071,40 @@ const LeadDetails = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDealData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAssignOperator = async () => {
+    if (!selectedOperatorId || !dealData) {
+      toast.error("Operator tanlang");
+      return;
+    }
+    setAssigningOperator(true);
+    try {
+      const res = await fetch(`${API}/leeds/${leadId}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          projectId: Number(projectId),
+          assignedUserId: Number(selectedOperatorId),
+        }),
+      });
+      if (!res.ok) {
+        const msg = await extractApiMessage(res, "Operator biriktirib bo'lmadi");
+        throw new Error(msg);
+      }
+      const selectedUser = operators.find(
+        (u) => String(u.id) === String(selectedOperatorId),
+      );
+      setDealData((prev) => ({
+        ...prev,
+        assignedUser: selectedUser || prev?.assignedUser,
+      }));
+      toast.success("Operator biriktirildi");
+    } catch (err) {
+      toast.error(err?.message || "Operator biriktirishda xatolik");
+    } finally {
+      setAssigningOperator(false);
+    }
   };
 
   // FIX 2: handleSubmit — tag array yuborish
@@ -1067,6 +1228,43 @@ const LeadDetails = () => {
           )}
         </div>
 
+        {/* Operator assignment (ROP / SUPERADMIN) */}
+        {canAssignOperator && (
+          <div
+            className="shrink-0 border-b px-5 py-3"
+            style={{ borderColor: "rgba(255,255,255,0.05)" }}
+          >
+            <p className="mb-1 text-[11px] tracking-wide text-gray-600 uppercase">
+              Operator biriktirish
+            </p>
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedOperatorId}
+                onValueChange={setSelectedOperatorId}
+              >
+                <SelectTrigger className="h-9 flex-1">
+                  <SelectValue placeholder="Operator tanlang" />
+                </SelectTrigger>
+                <SelectContent className="mt-2">
+                  {operators.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.fullName || u.email || `Operator #${u.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={handleAssignOperator}
+                disabled={assigningOperator || !selectedOperatorId}
+                className="h-9 bg-blue-600 px-3 text-xs hover:bg-blue-500"
+              >
+                {assigningOperator ? "Saqlanmoqda..." : "Tasdiqlash"}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Avatar */}
         <div
           className="shrink-0 border-b px-5 py-4"
@@ -1113,11 +1311,11 @@ const LeadDetails = () => {
           {/* ── ASOSIY TAB ── */}
           {activeTab === "asosiy" && (
             <div className="space-y-4 p-5">
-              <InfoRow label="Loyiha" value={dealData?.project?.name} />
               <InfoRow
                 label="Operator"
                 value={dealData?.assignedUser?.fullName}
               />
+              <InfoRow label="Loyiha" value={dealData?.project?.name} />
               <InfoRow label="Manba" value={dealData?.leadSource?.name} />
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
@@ -1255,6 +1453,43 @@ const LeadDetails = () => {
                   </Field>
                 </div>
                 <Field>
+                  <FieldLabel>Teglar</FieldLabel>
+                  <div className="flex flex-col gap-1.5">
+                    {editTags.map((tag, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <Input
+                          value={tag}
+                          onChange={(e) => {
+                            const next = [...editTags];
+                            next[idx] = e.target.value;
+                            setEditTags(next);
+                          }}
+                          placeholder="VIP, comfort..."
+                          className="flex-1"
+                        />
+                        {editTags.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditTags((p) => p.filter((_, i) => i !== idx))
+                            }
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-red-800/40 text-red-400 hover:bg-red-900/20"
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setEditTags((p) => [...p, ""])}
+                      className="flex items-center gap-1 self-start rounded-md border border-dashed border-[#2a4868] px-2.5 py-1 text-xs text-gray-400 hover:border-blue-500/50 hover:text-white"
+                    >
+                      + Teg qo'shish
+                    </button>
+                  </div>
+                </Field>
+                <Field>
                   <FieldLabel>Manzil</FieldLabel>
                   <Input
                     name="adress"
@@ -1302,45 +1537,6 @@ const LeadDetails = () => {
                     </Select>
                   </Field>
                 </div>
-
-                {/* FIX 2: tag — dynamic array inputs */}
-                <Field>
-                  <FieldLabel>Teglar</FieldLabel>
-                  <div className="flex flex-col gap-1.5">
-                    {editTags.map((tag, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
-                        <Input
-                          value={tag}
-                          onChange={(e) => {
-                            const next = [...editTags];
-                            next[idx] = e.target.value;
-                            setEditTags(next);
-                          }}
-                          placeholder="VIP, comfort..."
-                          className="flex-1"
-                        />
-                        {editTags.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditTags((p) => p.filter((_, i) => i !== idx))
-                            }
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-red-800/40 text-red-400 hover:bg-red-900/20"
-                          >
-                            <X size={13} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setEditTags((p) => [...p, ""])}
-                      className="flex items-center gap-1 self-start rounded-md border border-dashed border-[#2a4868] px-2.5 py-1 text-xs text-gray-400 hover:border-blue-500/50 hover:text-white"
-                    >
-                      + Teg qo'shish
-                    </button>
-                  </div>
-                </Field>
 
                 <div className="flex gap-2 pt-1">
                   <Button

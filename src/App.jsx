@@ -1,9 +1,12 @@
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+} from "react-router-dom";
 import Dashboard from "./pages/dashboard";
 import Login from "./pages/login";
 import Mijozlar from "./pages/mijozlar";
-import Status from "./pages/status";
-import AddStatus from "./pages/addStatus";
 import Profile from "./pages/profile";
 import Projects from "./pages/project";
 import Kanban from "./pages/kanban";
@@ -12,15 +15,29 @@ import Tasks from "./pages/task";
 import LeadSource from "./pages/leadSource";
 import LeadDetails from "./pages/leadDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ProjectGate from "./components/ProjectGate";
 import AppSidebar from "./components/AppSidebar";
-import Header from "./components/Header";
 import { Toaster } from "sonner";
-import {
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import SmsRassilka from "./pages/smsRassilka";
+import {
+  getCurrentRole,
+  getDefaultRouteByRole,
+  isSupportedRole,
+  ROLES,
+} from "@/lib/rbac";
+import AddStatus from "./pages/addStatus";
+
+const MANAGEMENT_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
+const CRM_ROLES = [ROLES.ROP, ROLES.SALESMANAGER, ROLES.SUPERADMIN];
+
+function RoleHomeRedirect() {
+  const role = getCurrentRole();
+  if (!isSupportedRole(role)) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to={getDefaultRouteByRole(role)} replace />;
+}
 
 // 403 sahifasi
 function Forbidden() {
@@ -47,12 +64,8 @@ export function ProtectedLayout() {
       <div className="flex w-full overflow-hidden bg-gray-700">
         <AppSidebar />
         <SidebarInset className="flex flex-col overflow-hidden bg-[#153043]">
-          {/* <header className="sticky top-0 z-20 flex h-16 w-full shrink-0 items-center gap-2 bg-[#153043] px-4 backdrop-blur-sm">
-            <SidebarTrigger className="p-1 text-2xl text-white" />
-            <Header />
-          </header> */}
           <main
-            className="flex-1 overflow-hidden bg-[#0f2231]"
+            className="flex-1 overflow-y-auto bg-[#0f2231]"
             style={{
               backgroundImage: `linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),
                       linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px)`,
@@ -85,8 +98,18 @@ const router = createBrowserRouter([
     ),
     children: [
       {
+        index: true,
+        element: <RoleHomeRedirect />,
+      },
+      {
         path: "dashboard",
-        element: <Dashboard />,
+        element: (
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <ProjectGate>
+              <Dashboard />
+            </ProjectGate>
+          </ProtectedRoute>
+        ),
       },
       {
         path: "profile",
@@ -94,64 +117,65 @@ const router = createBrowserRouter([
       },
       {
         path: "kanban",
-        element: <Kanban />,
+        element: (
+          <ProjectGate>
+            <Kanban />
+          </ProjectGate>
+        ),
       },
       {
         path: "tasks",
-        element: <Tasks />,
+        element: (
+          <ProjectGate>
+            <Tasks />
+          </ProjectGate>
+        ),
       },
       {
         path: "leadDetails",
-        element: <LeadDetails />,
+        element: (
+          <ProjectGate>
+            <LeadDetails />
+          </ProjectGate>
+        ),
       },
 
-      // ✅ Faqat ROP, SALESMANAGER va SUPERADMIN
       {
         path: "leadlar",
         element: (
-          <ProtectedRoute allowedRoles={["ROP", "SALESMANAGER", "SUPERADMIN"]}>
-            <Mijozlar />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "leadSource",
-        element: (
-          <ProtectedRoute allowedRoles={["ROP", "SALESMANAGER", "SUPERADMIN"]}>
-            <LeadSource />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "status",
-        element: (
-          <ProtectedRoute allowedRoles={["ROP", "SALESMANAGER", "SUPERADMIN"]}>
-            <Status />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "projects",
-        element: (
-          <ProtectedRoute allowedRoles={["ROP", "SALESMANAGER", "SUPERADMIN"]}>
-            <Projects />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "addStatus",
-        element: (
-          <ProtectedRoute allowedRoles={["ROP", "SUPERADMIN"]}>
-            <AddStatus />
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            <ProjectGate>
+              <Mijozlar />
+            </ProjectGate>
           </ProtectedRoute>
         ),
       },
 
-      // ✅ Faqat ROP, SUPERADMIN
+      {
+        path: "addStatus",
+        element: (
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            <ProjectGate>
+              <AddStatus />
+            </ProjectGate>
+          </ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "leadSource",
+        element: (
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            <ProjectGate>
+              <LeadSource />
+            </ProjectGate>
+          </ProtectedRoute>
+        ),
+      },
       {
         path: "setting",
         element: (
-          <ProtectedRoute allowedRoles={["ROP", "SUPERADMIN"]}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <Setting />
           </ProtectedRoute>
         ),
@@ -159,7 +183,7 @@ const router = createBrowserRouter([
       {
         path: "projects",
         element: (
-          <ProtectedRoute allowedRoles={["ROP", "SUPERADMIN"]}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <Projects />
           </ProtectedRoute>
         ),
@@ -167,12 +191,22 @@ const router = createBrowserRouter([
       {
         path: "rassilka",
         element: (
-          <ProtectedRoute allowedRoles={["ROP", "SUPERADMIN"]}>
-            <SmsRassilka />
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <ProjectGate>
+              <SmsRassilka />
+            </ProjectGate>
           </ProtectedRoute>
         ),
       },
+      {
+        path: "*",
+        element: <RoleHomeRedirect />,
+      },
     ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/login" replace />,
   },
 ]);
 

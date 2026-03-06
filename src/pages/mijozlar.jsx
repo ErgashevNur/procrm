@@ -10,8 +10,7 @@ import {
   X,
   Upload,
   Download,
-  SlidersHorizontal,
-  ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "../components/ui/skeleton";
@@ -34,6 +33,8 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useExcelWorker } from "../hooks/Useexcelworker";
+import { ROLES, getCurrentRole } from "@/lib/rbac";
+import { toast } from "sonner";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -61,23 +62,25 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
-function Toast({ message, type, onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3500);
-    return () => clearTimeout(t);
-  }, [onClose]);
-  return (
-    <div
-      className={`fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3 text-sm text-white shadow-xl ${
-        type === "error" ? "bg-red-600" : "bg-green-600"
-      }`}
-    >
-      {message}
-      <button onClick={onClose} className="opacity-60 hover:opacity-100">
-        ✕
-      </button>
-    </div>
-  );
+async function extractApiMessage(res, fallback) {
+  try {
+    const text = await res.text();
+    if (!text) return fallback;
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed?.message === "string" && parsed.message.trim()) {
+        return parsed.message;
+      }
+      if (Array.isArray(parsed?.message) && parsed.message.length > 0) {
+        return String(parsed.message[0]);
+      }
+      return fallback;
+    } catch {
+      return text.trim() || fallback;
+    }
+  } catch {
+    return fallback;
+  }
 }
 
 function applyDrag(statuses, source, destination, draggableId) {
@@ -120,154 +123,70 @@ const EMPTY_FORM = {
   birthDate: "",
 };
 
-// ── Filter state default ─────────────────────────────────────────────────────
-const DEFAULT_FILTERS = {
-  budjetMin: "",
-  budjetMax: "",
-  sourceIds: [], // leadSource id lari
-  dateFrom: "",
-  dateTo: "",
+const DEFAULT_SEARCH_PARAMS = {
+  search: "",
+  statusId: "",
+  leadSourceId: "",
+  assignedUserId: "",
+  budjetFrom: "",
+  budjetTo: "",
+  adress: "",
+  birthDateFrom: "",
+  birthDateTo: "",
+  createdFrom: "",
+  createdTo: "",
 };
+const PAGE_LIMIT = 10;
 
-// ── FilterPanel component ────────────────────────────────────────────────────
-function FilterPanel({
-  open,
-  onClose,
-  filters,
-  onChange,
-  leadSources,
-  activeCount,
-}) {
-  const ref = useRef(null);
+const SEARCH_DATE_KEYS = new Set([
+  "birthDateFrom",
+  "birthDateTo",
+  "createdFrom",
+  "createdTo",
+]);
 
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    };
-    if (open) document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+function toIsoDate(value, endOfDay = false) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return `${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`;
+  }
+  if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
+    const [d, m, y] = raw.split("-");
+    return `${y}-${m}-${d}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`;
+  }
+  return raw;
+}
 
-  if (!open) return null;
+function buildSearchQuery(paramsState, projectId) {
+  const params = new URLSearchParams();
+  Object.entries(paramsState).forEach(([key, value]) => {
+    const normalized = String(value ?? "").trim();
+    if (!normalized) return;
+    if (SEARCH_DATE_KEYS.has(key)) {
+      const isTo = key.endsWith("To");
+      params.set(key, toIsoDate(normalized, isTo));
+      return;
+    }
+    params.set(key, normalized);
+  });
+  if (projectId) params.set("projectId", String(projectId));
+  return params;
+}
 
-  const toggleSource = (id) => {
-    onChange((f) => ({
-      ...f,
-      sourceIds: f.sourceIds.includes(id)
-        ? f.sourceIds.filter((s) => s !== id)
-        : [...f.sourceIds, id],
-    }));
+function normalizeLead(raw) {
+  const normalizedTags = Array.isArray(raw?.tag)
+    ? raw.tag
+        .map((t) => (typeof t === "string" ? t : t?.name))
+        .filter(Boolean)
+    : [];
+  return {
+    ...raw,
+    id: Number(raw?.id),
+    statusId: Number(raw?.statusId),
+    tag: normalizedTags,
   };
-
-  const clear = () => onChange(() => ({ ...DEFAULT_FILTERS }));
-
-  return (
-    <div
-      ref={ref}
-      className="absolute top-full right-0 z-50 mt-2 w-72 rounded-xl border border-[#1e3a52] bg-[#0a1929] shadow-2xl"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#1e3a52] px-4 py-3">
-        <span className="text-xs font-semibold text-white">Filterlar</span>
-        {activeCount > 0 && (
-          <button
-            onClick={clear}
-            className="text-[11px] text-red-400 hover:text-red-300"
-          >
-            Tozalash
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-4 p-4">
-        {/* Budjet oralig'i */}
-        <div>
-          <p className="mb-2 text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-            Budjet (so'm)
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.budjetMin}
-              onChange={(e) =>
-                onChange((f) => ({ ...f, budjetMin: e.target.value }))
-              }
-              className="w-full rounded-lg border border-[#1e3a52] bg-[#0f2231] px-3 py-1.5 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
-            />
-            <span className="text-gray-600">—</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.budjetMax}
-              onChange={(e) =>
-                onChange((f) => ({ ...f, budjetMax: e.target.value }))
-              }
-              className="w-full rounded-lg border border-[#1e3a52] bg-[#0f2231] px-3 py-1.5 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
-            />
-          </div>
-        </div>
-
-        {/* Manba */}
-        {leadSources.length > 0 && (
-          <div>
-            <p className="mb-2 text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-              Manba
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {leadSources.map((src) => {
-                const active = filters.sourceIds.includes(src.id);
-                return (
-                  <button
-                    key={src.id}
-                    onClick={() => toggleSource(src.id)}
-                    className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-all"
-                    style={{
-                      background: active
-                        ? "rgba(59,130,246,0.15)"
-                        : "rgba(255,255,255,0.04)",
-                      color: active ? "#60a5fa" : "#6b7280",
-                      border: `1px solid ${active ? "rgba(59,130,246,0.35)" : "transparent"}`,
-                    }}
-                  >
-                    {src.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Sana oralig'i */}
-        <div>
-          <p className="mb-2 text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-            Yaratilgan sana
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) =>
-                onChange((f) => ({ ...f, dateFrom: e.target.value }))
-              }
-              className="w-full rounded-lg border border-[#1e3a52] bg-[#0f2231] px-2.5 py-1.5 text-[11px] text-gray-300 outline-none focus:border-blue-500/50"
-              style={{ colorScheme: "dark" }}
-            />
-            <span className="text-gray-600">—</span>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) =>
-                onChange((f) => ({ ...f, dateTo: e.target.value }))
-              }
-              className="w-full rounded-lg border border-[#1e3a52] bg-[#0f2231] px-2.5 py-1.5 text-[11px] text-gray-300 outline-none focus:border-blue-500/50"
-              style={{ colorScheme: "dark" }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── Icon button — iconOnly: faqat icon, aks holda icon+text ──────────────────
@@ -307,6 +226,8 @@ export default function Pipeline() {
   const boardRef = useRef(null);
   const isDragging = useRef(false);
   const scrollRAF = useRef(null);
+  const searchWrapRef = useRef(null);
+  const actionsWrapRef = useRef(null);
   const searchInputRef = useRef(null);
 
   const [appState, setAppState] = useState("loading");
@@ -316,76 +237,203 @@ export default function Pipeline() {
   const [currentProject, setCurrentProject] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  // search
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    ...DEFAULT_SEARCH_PARAMS,
+  });
+  const [searchStatuses, setSearchStatuses] = useState(null);
+  const [searchSummary, setSearchSummary] = useState(null);
+  const [statusMeta, setStatusMeta] = useState({});
+  const role = getCurrentRole();
+  const canManageStatuses = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
 
-  // filters
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const showToast = (message, type = "error") =>
+    type === "success" ? toast.success(message) : toast.error(message);
 
-  const activeFilterCount = [
-    filters.budjetMin,
-    filters.budjetMax,
-    filters.sourceIds.length > 0 ? "x" : "",
-    filters.dateFrom,
-    filters.dateTo,
-  ].filter(Boolean).length;
+  const updateSearchParam = (key, value) => {
+    setSearchParams((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const showToast = (message, type = "error") => setToast({ message, type });
+  const hasActiveSearch = Object.values(searchParams).some(
+    (v) => String(v ?? "").trim() !== "",
+  );
 
-  const toggleSearch = () => {
-    setSearchOpen((o) => {
-      if (!o) setTimeout(() => searchInputRef.current?.focus(), 50);
-      else setSearchQuery("");
-      return !o;
+  const initializeStatusMeta = (statusList) => {
+    const initial = {};
+    statusList.forEach((s) => {
+      initial[s.id] = {
+        page: 0,
+        limit: PAGE_LIMIT,
+        total: 0,
+        loaded: 0,
+        hasMore: true,
+        loading: false,
+      };
     });
+    setStatusMeta(initial);
   };
 
   const { importCSV, exportCSV, loading: workerLoading } = useExcelWorker();
 
-  const handleImport = async () => {
+  const fetchLeadsByStatus = async (statusId, page = 1, append = false) => {
+    setStatusMeta((prev) => ({
+      ...prev,
+      [statusId]: {
+        ...(prev[statusId] || {}),
+        loading: true,
+      },
+    }));
+
     try {
-      const leads = await importCSV();
-      if (!leads.length) {
-        showToast("Fayl bo\'sh yoki noto\'g\'ri format", "error");
+      const res = await apiFetch(
+        `${API}/leeds/by/${statusId}?page=${page}&limit=${PAGE_LIMIT}`,
+      );
+      if (!res) return;
+      if (!res.ok) {
+        const msg = await extractApiMessage(res, "Leadlar yuklanmadi");
+        showToast(msg, "error");
         return;
       }
-      // Birinchi statusga qo'shamiz (optimistic)
+
+      const json = await res.json();
+      const rawLeads = Array.isArray(json?.data)
+        ? json.data
+        : Array.isArray(json)
+          ? json
+          : [];
+      const leads = rawLeads.map(normalizeLead);
+      const meta = json?.meta || {};
+
       setStatuses((prev) =>
-        prev.map((s, i) =>
-          i === 0
-            ? {
-                ...s,
-                leads: [
-                  ...leads.map((l) => ({
-                    ...l,
-                    id: Date.now() + Math.random(),
-                  })),
-                  ...s.leads,
-                ],
-              }
-            : s,
-        ),
+        prev.map((s) => {
+          if (Number(s.id) !== Number(statusId)) return s;
+          if (!append) return { ...s, leads };
+          const existingIds = new Set((s.leads || []).map((l) => Number(l.id)));
+          const nextChunk = leads.filter((l) => !existingIds.has(Number(l.id)));
+          return { ...s, leads: [...(s.leads || []), ...nextChunk] };
+        }),
       );
-      showToast(`${leads.length} ta mijoz import qilindi ✅`, "success");
-    } catch (err) {
-      if (err.message !== "Fayl tanlanmadi")
-        showToast("Import xatosi: " + err.message, "error");
+
+      setStatusMeta((prev) => {
+        const prevMeta = prev[statusId] || {
+          page: 0,
+          limit: PAGE_LIMIT,
+          total: 0,
+          loaded: 0,
+          hasMore: true,
+        };
+        const loaded = append ? prevMeta.loaded + leads.length : leads.length;
+        const total = Number(meta.total ?? loaded);
+        const limit = Number(meta.limit ?? PAGE_LIMIT);
+        const currentPage = Number(meta.page ?? page);
+        return {
+          ...prev,
+          [statusId]: {
+            ...prevMeta,
+            page: currentPage,
+            limit,
+            total,
+            loaded,
+            hasMore: loaded < total,
+            loading: false,
+          },
+        };
+      });
+    } catch {
+      showToast("Leadlarni yuklashda xatolik", "error");
+      setStatusMeta((prev) => ({
+        ...prev,
+        [statusId]: {
+          ...(prev[statusId] || {}),
+          loading: false,
+        },
+      }));
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const date = new Date().toISOString().slice(0, 10);
-      await exportCSV(statuses, `leads_${date}.csv`);
-      showToast("Export muvaffaqiyatli ✅", "success");
-    } catch (err) {
-      showToast("Export xatosi: " + err.message, "error");
+  const handleLeadOpen = async (leadId, isDraggingCard) => {
+    if (isDraggingCard) return;
+
+    // Faqat Sales Manager uchun 403 ni oldindan tutamiz
+    if (role === ROLES.SALESMANAGER) {
+      try {
+        const res = await apiFetch(`${API}/leeds/${leadId}`);
+        if (!res) return;
+        if (res.status === 403) {
+          const msg = await extractApiMessage(
+            res,
+            "Bu lead tafsilotini ko'rishga ruxsat yo'q",
+          );
+          showToast(msg, "error");
+          return;
+        }
+        if (!res.ok) {
+          const msg = await extractApiMessage(res, "Lead tafsiloti ochilmadi");
+          showToast(msg, "error");
+          return;
+        }
+      } catch {
+        showToast("Lead tafsilotini tekshirishda xatolik", "error");
+        return;
+      }
     }
+
+    navigate(`/leadDetails?leadId=${leadId}`);
+  };
+
+  const handleImport = async () => {
+    await toast.promise(
+      (async () => {
+        const leads = await importCSV();
+        if (!leads.length) {
+          throw new Error("Fayl bo'sh yoki noto'g'ri format");
+        }
+        // Birinchi statusga qo'shamiz (optimistic)
+        setStatuses((prev) =>
+          prev.map((s, i) =>
+            i === 0
+              ? {
+                  ...s,
+                  leads: [
+                    ...leads.map((l) => ({
+                      ...l,
+                      id: Date.now() + Math.random(),
+                    })),
+                    ...s.leads,
+                  ],
+                }
+              : s,
+          ),
+        );
+        return leads.length;
+      })(),
+      {
+        loading: "Import qilinmoqda...",
+        success: (count) => `${count} ta mijoz import qilindi`,
+        error: (err) => {
+          if (err?.message === "Fayl tanlanmadi") return "Import bekor qilindi";
+          return "Import xatosi: " + (err?.message || "noma'lum xato");
+        },
+      },
+    );
+  };
+
+  const handleExport = async () => {
+    await toast.promise(
+      (async () => {
+        const date = new Date().toISOString().slice(0, 10);
+        await exportCSV(statuses, `leads_${date}.csv`);
+      })(),
+      {
+        loading: "Export qilinmoqda...",
+        success: "Export muvaffaqiyatli",
+        error: (err) => "Export xatosi: " + (err?.message || "noma'lum xato"),
+      },
+    );
   };
 
   useEffect(() => {
@@ -410,17 +458,20 @@ export default function Pipeline() {
             statusesRes.json(),
             sourcesRes?.json().catch(() => []),
           ]);
+          const normalizedStatuses = statusesData.map((s) => ({
+            ...s,
+            id: Number(s.id),
+            leads: [],
+          }));
           setProjects(Array.isArray(projectsData) ? projectsData : []);
-          setStatuses(
-            statusesData.map((s) => ({
-              ...s,
-              id: Number(s.id),
-              leads: Array.isArray(s.leads) ? s.leads : [],
-            })),
-          );
+          setStatuses(normalizedStatuses);
+          initializeStatusMeta(normalizedStatuses);
           setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
           setCurrentProject({ id: savedId, name: savedName });
           setAppState("ready");
+          await Promise.all(
+            normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
+          );
         } else {
           const res = await apiFetch(`${API}/projects`);
           if (!res) return;
@@ -454,21 +505,130 @@ export default function Pipeline() {
         statusesRes.json(),
         sourcesRes?.json().catch(() => []),
       ]);
-      setStatuses(
-        statusesData.map((s) => ({
-          ...s,
-          id: Number(s.id),
-          leads: Array.isArray(s.leads) ? s.leads : [],
-        })),
-      );
+      const normalizedStatuses = statusesData.map((s) => ({
+        ...s,
+        id: Number(s.id),
+        leads: [],
+      }));
+      setStatuses(normalizedStatuses);
+      initializeStatusMeta(normalizedStatuses);
       setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
+      setSearchParams({ ...DEFAULT_SEARCH_PARAMS });
+      setSearchStatuses(null);
+      setSearchSummary(null);
       setAppState("ready");
+      await Promise.all(
+        normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
+      );
     } catch (err) {
       console.error("Loyiha yuklanmadi:", err);
       showToast("Loyiha ma\'lumotlari yuklanmadi", "error");
       setAppState("no-project");
     }
   };
+
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      const target = e.target;
+      if (
+        target instanceof Element &&
+        target.closest('[data-slot="select-content"]')
+      ) {
+        return;
+      }
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) {
+        setSearchPanelOpen(false);
+      }
+      if (
+        actionsWrapRef.current &&
+        !actionsWrapRef.current.contains(e.target)
+      ) {
+        setActionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (appState !== "ready" || !currentProject?.id) return;
+    if (!hasActiveSearch) {
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
+    const params = buildSearchQuery(searchParams, currentProject.id);
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [appState, currentProject?.id, hasActiveSearch, searchParams]);
+
+  useEffect(() => {
+    if (appState !== "ready" || !currentProject?.id) return;
+    if (!hasActiveSearch) {
+      setSearchStatuses(null);
+      setSearchSummary(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const params = buildSearchQuery(searchParams, currentProject.id);
+
+        const res = await apiFetch(
+          `${API}/leeds/all/search?${params.toString()}`,
+          {
+            signal: controller.signal,
+          },
+        );
+        if (!res) return;
+        if (!res.ok) {
+          const msg = await extractApiMessage(res, "Qidiruvda xatolik");
+          showToast(msg, "error");
+          setSearchStatuses(null);
+          setSearchSummary(null);
+          return;
+        }
+
+        const data = await res.json();
+        const leads = Array.isArray(data?.leads)
+          ? data.leads
+          : Array.isArray(data)
+            ? data
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+        const normalizedLeads = leads.map(normalizeLead);
+        const totalLeads = Number(data?.totalLeads ?? normalizedLeads.length);
+        const totalBudjet = Number(
+          data?.totalBudjet ??
+            normalizedLeads.reduce((sum, l) => sum + Number(l?.budjet || 0), 0),
+        );
+        setSearchSummary({ totalLeads, totalBudjet });
+
+        const next = statuses.map((status) => ({
+          ...status,
+          leads: normalizedLeads.filter(
+            (lead) => Number(lead.statusId) === Number(status.id),
+          ),
+        }));
+        setSearchStatuses(next);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          showToast("Qidiruvni yuklashda xatolik", "error");
+        }
+        setSearchSummary(null);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [appState, currentProject?.id, hasActiveSearch, searchParams, statuses]);
 
   const startAutoScroll = () => {
     const tick = () => {
@@ -533,6 +693,17 @@ export default function Pipeline() {
     }
   };
 
+  const handleColumnScroll = (statusId, e) => {
+    if (hasActiveSearch) return;
+    const el = e.currentTarget;
+    const meta = statusMeta[statusId];
+    if (!meta || meta.loading || !meta.hasMore) return;
+    const threshold = 180;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= threshold) {
+      fetchLeadsByStatus(statusId, (meta.page || 1) + 1, true);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -577,58 +748,26 @@ export default function Pipeline() {
     }
   };
 
-  // filter leads by search
-  const q = searchQuery.trim().toLowerCase();
-  const filteredStatuses = statuses.map((s) => ({
-    ...s,
-    leads: s.leads.filter((l) => {
-      // ── Text search ──
-      if (q) {
-        const nameMatch = `${l.firstName ?? ""} ${l.lastName ?? ""}`
-          .toLowerCase()
-          .includes(q);
-        const phoneMatch = (l.phone ?? "").includes(q);
-        const sourceMatch = (l.leadSource?.name ?? "")
-          .toLowerCase()
-          .includes(q);
-        const tagMatch =
-          Array.isArray(l.tag) &&
-          l.tag.some((t) => t.toLowerCase().includes(q));
-        if (!nameMatch && !phoneMatch && !sourceMatch && !tagMatch)
-          return false;
-      }
-      // ── Budjet ──
-      if (filters.budjetMin && (l.budjet ?? 0) < Number(filters.budjetMin))
-        return false;
-      if (filters.budjetMax && (l.budjet ?? 0) > Number(filters.budjetMax))
-        return false;
-      // ── Manba ──
-      if (
-        filters.sourceIds.length > 0 &&
-        !filters.sourceIds.includes(l.leadSourceId)
+  const isFiltering = hasActiveSearch;
+  const visibleStatuses = searchStatuses ?? statuses;
+  const totalFiltered = isFiltering
+    ? Number(
+        searchSummary?.totalLeads ??
+          visibleStatuses.reduce((a, s) => a + s.leads.length, 0),
       )
-        return false;
-      // ── Sana ──
-      if (filters.dateFrom) {
-        const created = new Date(l.createdAt);
-        if (created < new Date(filters.dateFrom)) return false;
-      }
-      if (filters.dateTo) {
-        const created = new Date(l.createdAt);
-        const to = new Date(filters.dateTo);
-        to.setHours(23, 59, 59);
-        if (created > to) return false;
-      }
-      return true;
-    }),
-  }));
-
-  const totalFiltered = filteredStatuses.reduce(
-    (a, s) => a + s.leads.length,
-    0,
-  );
+    : visibleStatuses.reduce((a, s) => a + s.leads.length, 0);
   const totalAll = statuses.reduce((a, s) => a + s.leads.length, 0);
-  const isFiltering = q || activeFilterCount > 0;
+  const totalFilteredBudjet = isFiltering
+    ? Number(
+        searchSummary?.totalBudjet ??
+          visibleStatuses.reduce(
+            (a, s) =>
+              a +
+              s.leads.reduce((sum, l) => sum + Number(l?.budjet || 0), 0),
+            0,
+          ),
+      )
+    : 0;
 
   if (appState === "loading") {
     return (
@@ -653,7 +792,6 @@ export default function Pipeline() {
   if (appState === "no-project") {
     return (
       <div className="flex h-full flex-col bg-[#0d1e35]">
-        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
         <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6 text-white">
           <Select
             onValueChange={(name) => {
@@ -722,8 +860,6 @@ export default function Pipeline() {
         backgroundSize: "40px 40px",
       }}
     >
-      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4 border-b border-[#284860] bg-[#0f2231] px-6 py-4 text-white">
         {/* Left: project select + search */}
@@ -747,39 +883,166 @@ export default function Pipeline() {
             </SelectContent>
           </Select>
 
-          {/* Expandable search */}
-          <div className="flex items-center gap-1">
-            <div
-              className={`flex items-center overflow-hidden rounded-md border transition-all duration-200 ${
-                searchOpen
-                  ? "w-56 border-blue-500/50 bg-[#0d1e35]"
-                  : "w-0 border-transparent"
-              }`}
-              style={{ height: "36px" }}
-            >
+          <div ref={searchWrapRef} className="relative w-full max-w-4xl">
+            <div className="flex h-10 items-center gap-2 rounded-md bg-[#10263b] px-3">
+              <Search size={14} className="shrink-0 text-gray-500" />
               <input
                 ref={searchInputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Qidiruv..."
-                className="h-full w-full bg-transparent px-3 text-sm text-white placeholder-gray-500 outline-none"
+                value={searchParams.search}
+                onFocus={() => setSearchPanelOpen(true)}
+                onChange={(e) => updateSearchParam("search", e.target.value)}
+                placeholder="Qidiruv (ism, familiya, telefon)"
+                className="h-full w-full bg-transparent text-sm text-white placeholder-gray-500 outline-none"
               />
-              {searchQuery && (
+              {searchLoading && (
+                <Loader2
+                  size={14}
+                  className="shrink-0 animate-spin text-blue-400"
+                />
+              )}
+              {searchParams.search && (
                 <button
-                  onClick={() => setSearchQuery("")}
-                  className="pr-2 text-gray-500 hover:text-white"
+                  onClick={() => updateSearchParam("search", "")}
+                  className="text-gray-500 hover:text-white"
                 >
                   <X size={13} />
                 </button>
               )}
             </div>
-            <IconBtn
-              icon={searchOpen ? X : Search}
-              label={searchOpen ? "Yopish" : "Qidiruv"}
-              onClick={toggleSearch}
-              iconOnly={true}
-              className={searchOpen ? "border-blue-500/50 text-blue-400" : ""}
-            />
+
+            {searchPanelOpen && (
+              <div className="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-md border border-[#21435b] bg-[#0f2236] shadow-2xl">
+                <div className="flex flex-col gap-2 p-3">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={searchParams.statusId || undefined}
+                      onValueChange={(v) => updateSearchParam("statusId", v)}
+                    >
+                      <SelectTrigger className="h-9 w-full bg-[#10263b]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="mt-10">
+                        {statuses.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {searchParams.statusId && (
+                      <button
+                        type="button"
+                        onClick={() => updateSearchParam("statusId", "")}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
+                        aria-label="Statusni tozalash"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={searchParams.leadSourceId || undefined}
+                      onValueChange={(v) => updateSearchParam("leadSourceId", v)}
+                    >
+                      <SelectTrigger className="h-9 w-full bg-[#10263b]">
+                        <SelectValue placeholder="Lead manbasi" />
+                      </SelectTrigger>
+                      <SelectContent className="mt-10">
+                        {leadSource.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {searchParams.leadSourceId && (
+                      <button
+                        type="button"
+                        onClick={() => updateSearchParam("leadSourceId", "")}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
+                        aria-label="Manbani tozalash"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    type="number"
+                    value={searchParams.assignedUserId}
+                    onChange={(e) =>
+                      updateSearchParam("assignedUserId", e.target.value)
+                    }
+                    placeholder="Operator ID"
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    value={searchParams.budjetFrom}
+                    onChange={(e) =>
+                      updateSearchParam("budjetFrom", e.target.value)
+                    }
+                    placeholder="Budjet dan"
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    value={searchParams.budjetTo}
+                    onChange={(e) => updateSearchParam("budjetTo", e.target.value)}
+                    placeholder="Budjet gacha"
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                  />
+                  <input
+                    value={searchParams.adress}
+                    onChange={(e) => updateSearchParam("adress", e.target.value)}
+                    placeholder="Manzil"
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={searchParams.birthDateFrom}
+                    onChange={(e) =>
+                      updateSearchParam("birthDateFrom", e.target.value)
+                    }
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                    style={{ colorScheme: "dark" }}
+                  />
+                  <input
+                    type="date"
+                    value={searchParams.birthDateTo}
+                    onChange={(e) => updateSearchParam("birthDateTo", e.target.value)}
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                    style={{ colorScheme: "dark" }}
+                  />
+                  <input
+                    type="date"
+                    value={searchParams.createdFrom}
+                    onChange={(e) => updateSearchParam("createdFrom", e.target.value)}
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                    style={{ colorScheme: "dark" }}
+                  />
+                  <input
+                    type="date"
+                    value={searchParams.createdTo}
+                    onChange={(e) => updateSearchParam("createdTo", e.target.value)}
+                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                    style={{ colorScheme: "dark" }}
+                  />
+                </div>
+                <div className="flex justify-end border-t border-[#21435b] px-3 py-2">
+                  <button
+                    onClick={() =>
+                      setSearchParams({ ...DEFAULT_SEARCH_PARAMS })
+                    }
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Tozalash
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -791,69 +1054,54 @@ export default function Pipeline() {
               <>
                 <span className="text-white">{totalFiltered}</span>/{totalAll}{" "}
                 mijoz
+                <span className="mx-1">•</span>
+                <span className="text-green-400">
+                  {Number(totalFilteredBudjet).toLocaleString()} so'm
+                </span>
               </>
             ) : (
               <>{totalAll} mijoz</>
             )}
           </span>
 
-          <IconBtn
-            icon={Upload}
-            label="Import"
-            onClick={handleImport}
-            variant="warning"
-            iconOnly={searchOpen}
-          />
-          <IconBtn
-            icon={Download}
-            label="Export"
-            onClick={handleExport}
-            variant="success"
-            iconOnly={searchOpen}
-          />
-
-          <div className="mx-1 h-5 w-px bg-white/10" />
-
-          {/* Filter button */}
-          <div className="relative">
+          <div ref={actionsWrapRef} className="relative">
             <button
-              onClick={() => setFilterOpen((o) => !o)}
-              className={`flex items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors duration-150 ${
-                activeFilterCount > 0
-                  ? "border-blue-500/50 bg-blue-600/10 text-blue-400"
-                  : "border-[#2a4868] text-gray-300 hover:bg-[#1b3e57] hover:text-white"
-              }`}
-              style={{ height: "36px" }}
+              onClick={() => setActionsOpen((v) => !v)}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-[#2a4868] text-gray-300 transition-colors hover:bg-[#1b3e57] hover:text-white"
             >
-              <SlidersHorizontal size={14} />
-              {!searchOpen && <span className="whitespace-nowrap">Filter</span>}
-              {activeFilterCount > 0 && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-              {!searchOpen && (
-                <ChevronDown
-                  size={12}
-                  className={`transition-transform ${filterOpen ? "rotate-180" : ""}`}
-                />
-              )}
+              <MoreHorizontal size={16} />
             </button>
-            <FilterPanel
-              open={filterOpen}
-              onClose={() => setFilterOpen(false)}
-              filters={filters}
-              onChange={setFilters}
-              leadSources={leadSource}
-              activeCount={activeFilterCount}
-            />
+            {actionsOpen && (
+              <div className="absolute top-full right-0 z-50 mt-2 w-44 rounded-md border border-[#1e3a52] bg-[#0a1929] p-1 shadow-2xl">
+                <button
+                  onClick={() => {
+                    setActionsOpen(false);
+                    handleImport();
+                  }}
+                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-gray-200 hover:bg-[#11263a]"
+                >
+                  <Upload size={14} className="text-yellow-400" />
+                  Import
+                </button>
+                <button
+                  onClick={() => {
+                    setActionsOpen(false);
+                    handleExport();
+                  }}
+                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-gray-200 hover:bg-[#11263a]"
+                >
+                  <Download size={14} className="text-green-400" />
+                  Export
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="mx-1 h-5 w-px bg-white/10" />
-
-          <Link to="/addStatus">
-            <IconBtn icon={Settings} label="Sozlamalar" iconOnly={searchOpen} />
-          </Link>
+          {canManageStatuses && (
+            <Link to="/addStatus">
+              <IconBtn icon={Settings} label="Sozlamalar" />
+            </Link>
+          )}
 
           <Sheet
             open={sheetOpen}
@@ -864,11 +1112,7 @@ export default function Pipeline() {
           >
             <SheetTrigger asChild>
               <div>
-                <IconBtn
-                  icon={Plus}
-                  label="Yangi mijoz"
-                  iconOnly={searchOpen}
-                />
+                <IconBtn icon={Plus} label="Yangi mijoz" />
               </div>
             </SheetTrigger>
             <SheetContent className="overflow-y-auto bg-[#07131d] px-5">
@@ -1053,89 +1297,6 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* ── Active filter badges ── */}
-      {isFiltering && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#1a3a52] bg-[#0a1929] px-6 py-2">
-          {q && (
-            <span className="flex items-center gap-1.5 rounded-full border border-[#2a4868] bg-[#0f2231] px-3 py-0.5 text-[11px] text-gray-300">
-              🔍 "{q}"
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-gray-500 hover:text-white"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-          {filters.budjetMin && (
-            <span className="flex items-center gap-1.5 rounded-full border border-[#2a4868] bg-[#0f2231] px-3 py-0.5 text-[11px] text-gray-300">
-              Budjet ≥ {Number(filters.budjetMin).toLocaleString()}
-              <button
-                onClick={() => setFilters((f) => ({ ...f, budjetMin: "" }))}
-                className="text-gray-500 hover:text-white"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-          {filters.budjetMax && (
-            <span className="flex items-center gap-1.5 rounded-full border border-[#2a4868] bg-[#0f2231] px-3 py-0.5 text-[11px] text-gray-300">
-              Budjet ≤ {Number(filters.budjetMax).toLocaleString()}
-              <button
-                onClick={() => setFilters((f) => ({ ...f, budjetMax: "" }))}
-                className="text-gray-500 hover:text-white"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-          {filters.sourceIds.map((id) => {
-            const src = leadSource.find((s) => s.id === id);
-            return src ? (
-              <span
-                key={id}
-                className="flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-600/10 px-3 py-0.5 text-[11px] text-blue-400"
-              >
-                {src.name}
-                <button
-                  onClick={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      sourceIds: f.sourceIds.filter((s) => s !== id),
-                    }))
-                  }
-                  className="hover:text-white"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ) : null;
-          })}
-          {(filters.dateFrom || filters.dateTo) && (
-            <span className="flex items-center gap-1.5 rounded-full border border-[#2a4868] bg-[#0f2231] px-3 py-0.5 text-[11px] text-gray-300">
-              📅 {filters.dateFrom || "…"} → {filters.dateTo || "…"}
-              <button
-                onClick={() =>
-                  setFilters((f) => ({ ...f, dateFrom: "", dateTo: "" }))
-                }
-                className="text-gray-500 hover:text-white"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setFilters({ ...DEFAULT_FILTERS });
-            }}
-            className="ml-auto text-[11px] text-red-400/70 hover:text-red-400"
-          >
-            Barchasini tozalash
-          </button>
-        </div>
-      )}
-
       {/* ── Board ── */}
       <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div
@@ -1143,7 +1304,7 @@ export default function Pipeline() {
           className="flex flex-1 gap-4 overflow-x-auto overflow-y-hidden p-6"
           style={{ alignItems: "flex-start" }}
         >
-          {filteredStatuses.map((col) => (
+          {visibleStatuses.map((col) => (
             <div
               key={col.id}
               className="flex shrink-0 flex-col"
@@ -1191,8 +1352,13 @@ export default function Pipeline() {
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
+                    onScroll={(e) => handleColumnScroll(col.id, e)}
                     className={`flex flex-col gap-2.5 rounded-lg p-2 transition-colors duration-150 ${snapshot.isDraggingOver ? "bg-[#1a3552]/60" : ""}`}
-                    style={{ minHeight: 80, overflow: "visible" }}
+                    style={{
+                      minHeight: 80,
+                      maxHeight: "calc(100vh - 245px)",
+                      overflowY: "auto",
+                    }}
                   >
                     {col.leads.length === 0 ? (
                       <div
@@ -1215,8 +1381,7 @@ export default function Pipeline() {
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               onClick={() =>
-                                !snapshot.isDragging &&
-                                navigate(`/leadDetails?leadId=${lead.id}`)
+                                handleLeadOpen(lead.id, snapshot.isDragging)
                               }
                               className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${snapshot.isDragging ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30" : ""}`}
                               style={{
@@ -1274,6 +1439,12 @@ export default function Pipeline() {
                           )}
                         </Draggable>
                       ))
+                    )}
+                    {!hasActiveSearch && statusMeta[col.id]?.loading && (
+                      <div className="flex items-center justify-center py-2 text-xs text-blue-300">
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                        Yuklanmoqda...
+                      </div>
                     )}
                     {provided.placeholder}
                   </div>

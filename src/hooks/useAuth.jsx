@@ -1,22 +1,27 @@
+import { isSupportedRole, ROLES } from "@/lib/rbac";
+
 export function useAuth() {
   try {
     const raw = localStorage.getItem("userData");
-    if (raw) {
-      const { user = {}, permission = {} } = JSON.parse(raw);
+    if (!raw) {
       return {
-        user,
-        role: user.role || "USER", // "SUPERADMIN" | "ADMIN" | "ROP"
-        permission,
-        isAuthenticated: !!user.email,
+        user: {},
+        role: null,
+        permission: {},
+        isAuthenticated: false,
       };
     }
+    const { user = {}, permission = {} } = JSON.parse(raw);
+    const role = user.role || null;
     return {
-      user: { email: localStorage.getItem("email") },
-      role: localStorage.getItem("role") || "USER",
-      permission: {},
-      isAuthenticated: !!localStorage.getItem("email"),
+      user,
+      role,
+      permission,
+      isAuthenticated: !!user.email && isSupportedRole(role),
+      isManager: [ROLES.ROP, ROLES.SUPERADMIN].includes(role),
+      isSales: role === ROLES.SALESMANAGER,
     };
   } catch {
-    return { user: {}, role: "USER", permission: {}, isAuthenticated: false };
+    return { user: {}, role: null, permission: {}, isAuthenticated: false };
   }
 }

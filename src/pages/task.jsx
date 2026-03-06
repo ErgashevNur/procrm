@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
@@ -274,17 +275,13 @@ export default function Tasks() {
     return (
       <div className="flex h-full flex-col bg-[#071828]">
         <div className="border-b border-white/5 px-6 py-4">
-          <div className="h-6 w-32 animate-pulse rounded-lg bg-white/5" />
+          <Skeleton className="h-6 w-32 rounded-lg" />
         </div>
         <div className="flex flex-col gap-2 p-6">
           {Array(6)
             .fill(0)
             .map((_, i) => (
-              <div
-                key={i}
-                className="h-12 animate-pulse rounded-xl bg-white/3"
-                style={{ animationDelay: `${i * 0.07}s` }}
-              />
+              <Skeleton key={i} className="h-12 rounded-xl" />
             ))}
         </div>
       </div>

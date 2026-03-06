@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
@@ -334,9 +335,14 @@ export default function SmsRassilka() {
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#071828]">
-        <Loader2 size={28} className="animate-spin text-blue-500" />
-        <p className="text-sm text-gray-600">Yuklanmoqda...</p>
+      <div className="crm-page space-y-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-14 rounded-2xl" />
+        <Skeleton className="h-[420px] rounded-2xl" />
       </div>
     );
   }

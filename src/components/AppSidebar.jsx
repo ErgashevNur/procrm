@@ -1,17 +1,12 @@
 import { useSidebar } from "@/components/ui/sidebar";
-import {
-  CalendarCheck2,
-  FolderOpenDot,
-  LayoutDashboard,
-  Lock,
-  LogOut,
-  MessageSquare,
-  Settings,
-  Share2,
-  ShoppingBag,
-  Users,
-} from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import {
+  NAV_ITEMS,
+  ROLE_LABELS,
+  ROLES,
+  isSupportedRole,
+} from "@/lib/rbac";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -21,44 +16,7 @@ function getImageUrl(imgName) {
   return `${API_BASE}/image/${imgName}`;
 }
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    roles: ["ROP", "SUPERADMIN"],
-  },
-  {
-    title: "Leadlar",
-    url: "/leadlar",
-    icon: Users,
-    roles: ["ROP", "SALESMANAGER", "SUPERADMIN"],
-  },
-  {
-    title: "Tasklar",
-    url: "/tasks",
-    icon: CalendarCheck2,
-    roles: ["SALESMANAGER", "ROP", "SUPERADMIN"],
-  },
-  {
-    title: "Sms/Rassilka",
-    url: "/rassilka",
-    icon: MessageSquare,
-    roles: ["ROP", "SUPERADMIN"],
-  },
-  {
-    title: "Lead manbasi",
-    url: "/leadSource",
-    icon: Share2,
-    roles: ["ROP", "SALESMANAGER", "SUPERADMIN"],
-  },
-  {
-    title: "Projectlar",
-    url: "/projects",
-    icon: FolderOpenDot,
-    roles: ["ROP", "SUPERADMIN"],
-  },
-];
+const SETTINGS_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 
 // NavLink className orqali active holat — inline style ishlatmaymiz
 function navCls(isActive, isCollapsed, extra = "") {
@@ -103,30 +61,34 @@ export default function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   let user = {};
-  let role = "SALESMANAGER";
+  let role = null;
   try {
     const raw = localStorage.getItem("userData");
     if (raw) {
       const parsed = JSON.parse(raw);
       user = parsed.user || {};
-      role = user.role || "SALESMANAGER";
+      role = user.role || null;
     }
   } catch {}
 
   const avatarUrl = getImageUrl(user.img);
   const avatarLetter = (user.fullName || user.email || "U")[0].toUpperCase();
-  const visibleMenus = menuItems.filter((item) => item.roles.includes(role));
+  const safeRole = isSupportedRole(role) ? role : ROLES.SALESMANAGER;
+  const visibleMenus = NAV_ITEMS.filter((item) => item.roles.includes(safeRole));
+  const roleLabel = ROLE_LABELS[safeRole] || safeRole;
+  const canOpenSettings = SETTINGS_ROLES.includes(safeRole);
+  const projectName = localStorage.getItem("projectName");
 
   return (
     <div
       className={`${
-        isCollapsed ? "w-20" : "w-[220px]"
-      } sticky top-0 flex h-screen min-h-[80vh] flex-shrink-0 flex-col justify-between bg-[#07131d] transition-[width] duration-[250ms] ease-in-out`}
+        isCollapsed ? "w-20" : "w-[236px]"
+      } sticky top-0 flex h-screen min-h-[80vh] flex-shrink-0 flex-col justify-between border-r border-white/8 bg-gradient-to-b from-[#081521] via-[#07131d] to-[#060f18] transition-[width] duration-[250ms] ease-in-out`}
     >
       {/* TOP */}
       <div>
         {/* Profile link */}
-        <div className="border-b border-white/6 pt-2 pl-2">
+        <div className="border-b border-white/6 px-2 pt-2 pb-2">
           <NavLink
             to="/profile"
             className={({ isActive }) => profileCls(isActive, isCollapsed)}
@@ -151,19 +113,24 @@ export default function AppSidebar() {
 
             {isCollapsed ? (
               <span className="text-center text-[10px] leading-tight text-slate-400">
-                {role?.slice(0, 5) || "User"}
+                {roleLabel.slice(0, 5) || "User"}
               </span>
             ) : (
               <div className="min-w-0">
                 <div className="overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap text-slate-200">
                   {user.fullName || user.role || "User"}
                 </div>
-                <div className="overflow-hidden text-[11px] text-ellipsis whitespace-nowrap text-slate-700">
-                  {user.email || "—"}
+                <div className="overflow-hidden text-[11px] text-ellipsis whitespace-nowrap text-slate-500">
+                  {roleLabel}
                 </div>
               </div>
             )}
           </NavLink>
+          {!isCollapsed && (
+            <div className="mt-1 rounded-md border border-cyan-400/15 bg-cyan-500/8 px-2 py-1 text-[11px] text-cyan-100">
+              {projectName || "Loyiha tanlanmagan"}
+            </div>
+          )}
         </div>
 
         {/* Menu items */}
@@ -190,47 +157,24 @@ export default function AppSidebar() {
               </span>
             </NavLink>
           ))}
-
-          {/* Pro market — disabled */}
-          <div
-            className={`mx-2 my-0.5 flex cursor-not-allowed items-center rounded-lg text-slate-400 opacity-45 ${
-              isCollapsed
-                ? "flex-col justify-center gap-1 px-0 py-2.5"
-                : "flex-row justify-start gap-3 px-4 py-2.5"
-            }`}
-          >
-            <ShoppingBag
-              size={isCollapsed ? 22 : 18}
-              className="flex-shrink-0"
-            />
-            {isCollapsed ? (
-              <span className="text-center text-[10px] leading-tight font-medium">
-                Pro market
-              </span>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium">Pro market</span>
-                <span className="text-[11px] text-slate-500">Beta</span>
-                <Lock size={12} />
-              </div>
-            )}
-          </div>
         </nav>
       </div>
 
       {/* BOTTOM */}
       <div className="p-2">
-        <NavLink
-          to="/setting"
-          className={({ isActive }) => settingCls(isActive, isCollapsed)}
-        >
-          <Settings size={isCollapsed ? 22 : 18} className="flex-shrink-0" />
-          <span
-            className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
+        {canOpenSettings && (
+          <NavLink
+            to="/setting"
+            className={({ isActive }) => settingCls(isActive, isCollapsed)}
           >
-            Sozlamalar
-          </span>
-        </NavLink>
+            <Settings size={isCollapsed ? 22 : 18} className="flex-shrink-0" />
+            <span
+              className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
+            >
+              Sozlamalar
+            </span>
+          </NavLink>
+        )}
 
         <div className="my-1 h-px bg-white/[0.06]" />
 

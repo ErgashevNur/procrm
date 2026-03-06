@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 
 const slides = [
   {
@@ -173,10 +174,15 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then(async (data) => {
           if (data.statusCode === 400)
             throw new Error("Login yoki parol noto'g'ri");
           if (data.accessToken) {
+            const role = data?.user?.role;
+            if (!isSupportedRole(role)) {
+              localStorage.clear();
+              throw new Error("Sizning profilingizga bu CRM da ruxsat berilmagan");
+            }
             localStorage.setItem("user", data.accessToken);
             localStorage.setItem("companyId", data.user.companyId);
             localStorage.setItem(
@@ -187,7 +193,24 @@ export default function Login() {
                 user: data.user,
               }),
             );
-            navigate("/");
+            try {
+              const projectsRes = await fetch(
+                `${import.meta.env.VITE_VITE_API_KEY_PROHOME}/projects`,
+                {
+                  headers: { Authorization: `Bearer ${data.accessToken}` },
+                },
+              );
+              if (projectsRes.ok) {
+                const projects = await projectsRes.json();
+                if (Array.isArray(projects) && projects.length > 0) {
+                  localStorage.setItem("projectId", String(projects[0].id));
+                  localStorage.setItem("projectName", projects[0].name || "");
+                }
+              }
+            } catch {
+              // project tanlashni ProjectGate hal qiladi
+            }
+            navigate(getDefaultRouteByRole(role));
           }
           return data;
         })

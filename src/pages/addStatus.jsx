@@ -14,7 +14,15 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Trash2, Pen, RefreshCcw, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pen,
+  RefreshCcw,
+  X,
+  Lock,
+  LockKeyholeIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
 import {
@@ -43,42 +51,33 @@ const COLORS = [
   "#ef4444",
 ];
 
-const PROTECTED_TYPES = ["NEW", "SUCCESS", "CANCELED"];
+const CANCELED_TYPES = ["CANCELED", "CANCELLED"];
+const PROTECTED_TYPES = ["NEW", "SUCCESS", ...CANCELED_TYPES];
+
+const normalizeType = (type) => String(type || "").toUpperCase();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const isProtected = (col) =>
-  col && PROTECTED_TYPES.includes(col.type?.toUpperCase());
+  col && PROTECTED_TYPES.includes(normalizeType(col.type));
 
-/**
- * Columns massivini to'g'ri tartibga keltiradi:
- * NEW → [oddiylar] → SUCCESS → CANCELED
- */
-function sortColumns(cols) {
-  const newCol = cols.find((c) => c.type?.toUpperCase() === "NEW");
-  const successCol = cols.find((c) => c.type?.toUpperCase() === "SUCCESS");
-  const canceledCol = cols.find((c) => c.type?.toUpperCase() === "CANCELED");
-  const rest = cols.filter((c) => !isProtected(c));
-  return [
-    ...(newCol ? [newCol] : []),
-    ...rest,
-    ...(successCol ? [successCol] : []),
-    ...(canceledCol ? [canceledCol] : []),
-  ];
+function getRestrictedRanges(cols) {
+  const protectedIndexes = cols.reduce((acc, col, index) => {
+    if (isProtected(col)) acc.push(index);
+    return acc;
+  }, []);
+
+  const ranges = [];
+  for (let i = 0; i < protectedIndexes.length - 1; i += 1) {
+    const start = protectedIndexes[i] + 1;
+    const end = protectedIndexes[i + 1] - 1;
+    if (start <= end) ranges.push([start, end]);
+  }
+
+  return ranges;
 }
 
-/**
- * Drag ruxsatini tekshiradi — faqat type asosida:
- * - active column protected bo'lsa — drag yo'q
- * - over column protected bo'lsa — drop yo'q
- */
-function isDragAllowed(columns, activeId, overId) {
-  const activeCol = columns.find((c) => c.id === activeId);
-  const overCol = columns.find((c) => c.id === overId);
-
-  if (isProtected(activeCol)) return false;
-  if (isProtected(overCol)) return false;
-
-  return true;
+function isInRestrictedRange(index, ranges) {
+  return ranges.some(([start, end]) => index >= start && index <= end);
 }
 
 // ── Sortable column wrapper ──────────────────────────────────────────────────
@@ -244,8 +243,7 @@ export default function AddStatus() {
       }
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // Sahifa ochilganda ham to'g'ri tartibga solib qo'yamiz
-      setColumns(sortColumns(Array.isArray(data) ? data : []));
+      setColumns(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Ustunlarni yuklab bo'lmadi");
     } finally {
@@ -257,14 +255,9 @@ export default function AddStatus() {
     setActiveId(null);
     if (!over || active.id === over.id) return;
 
-    // Drag ruxsat tekshiruvi
-    if (!isDragAllowed(columns, active.id, over.id)) {
-      const activeCol = columns.find((c) => c.id === active.id);
-      if (isProtected(activeCol)) {
-        toast.error(`"${activeCol.name}" statusini ko'chirish mumkin emas ❌`);
-      } else {
-        toast.error("Bu pozitsiyaga ko'chirish mumkin emas ❌");
-      }
+    const activeCol = columns.find((c) => c.id === active.id);
+    if (isProtected(activeCol)) {
+      toast.error(`"${activeCol.name}" statusini ko'chirish mumkin emas ❌`);
       return;
     }
 
@@ -272,10 +265,27 @@ export default function AddStatus() {
     const newIndex = columns.findIndex((c) => c.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
+    const prevColumns = columns;
     const reordered = arrayMove(columns, oldIndex, newIndex);
+    const movedIndex = reordered.findIndex((c) => c.id === active.id);
+
+    const sourceInRestricted = isInRestrictedRange(
+      oldIndex,
+      getRestrictedRanges(columns),
+    );
+    const targetInRestricted = isInRestrictedRange(
+      movedIndex,
+      getRestrictedRanges(reordered),
+    );
+
+    if (!sourceInRestricted && targetInRestricted) {
+      toast.error("Bu oraliqqa boshqa joydan ko'chirib bo'lmaydi ❌");
+      return;
+    }
+
     setColumns(reordered);
 
-    const afterId = newIndex === 0 ? 0 : reordered[newIndex - 1].id;
+    const afterId = movedIndex === 0 ? 0 : reordered[movedIndex - 1].id;
 
     console.log(
       `[Drag] "${columns.find((c) => c.id === active.id)?.name}" (id: ${active.id}) → after id: ${afterId}`,
@@ -294,7 +304,7 @@ export default function AddStatus() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast.success("Tartib saqlandi ✅");
     } catch (err) {
-      setColumns(columns);
+      setColumns(prevColumns);
       toast.error("Saqlashda xato: " + err.message);
     }
   };
@@ -318,7 +328,7 @@ export default function AddStatus() {
             ? [...prev, tempCol]
             : [...prev.slice(0, idx + 1), tempCol, ...prev.slice(idx + 1)];
       }
-      return sortColumns(next); // yangi column qo'shilganda ham tartib saqlansin
+      return next;
     });
 
     try {
@@ -333,7 +343,7 @@ export default function AddStatus() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setColumns((prev) =>
-        sortColumns(prev.map((c) => (c.id === tempId ? { ...data } : c))),
+        prev.map((c) => (c.id === tempId ? { ...data } : c)),
       );
       toast.success("Status qo'shildi ✅");
     } catch (err) {
@@ -456,7 +466,10 @@ export default function AddStatus() {
                             {/* Lock belgisi protected columnlar uchun */}
                             {locked && (
                               <span className="ml-2 text-[10px] font-normal text-gray-500 normal-case">
-                                🔒
+                                <LockKeyholeIcon
+                                  size={11}
+                                  className="inline-block"
+                                />
                               </span>
                             )}
                           </h2>
@@ -464,10 +477,16 @@ export default function AddStatus() {
                           <div className="flex items-center gap-2">
                             {locked ? (
                               <span
-                                className="cursor-not-allowed text-[#3a5570]/30 select-none"
-                                title="Ko'chirish mumkin emas"
+                                className="group relative inline-flex cursor-not-allowed items-center justify-center text-[#3a5570]/30 select-none"
+                                title="Bu statusni drag & drop qilib bo'lmaydi"
                               >
-                                ⠿
+                                <span className="transition-opacity duration-150 group-hover:opacity-0">
+                                  ⠿
+                                </span>
+                                <Lock
+                                  size={11}
+                                  className="pointer-events-none absolute text-[#94a3b8] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                                />
                               </span>
                             ) : (
                               <span
@@ -565,27 +584,26 @@ export default function AddStatus() {
                           </div>
                         </div>
 
-                        {/* + insert button — faqat drag qilsa bo'ladigan zone ichida */}
-                        {index < columns.length - 1 &&
-                          !isProtected(columns[index + 1]) && (
-                            <button
-                              ref={(el) =>
-                                (insertBtnRefs.current[column.id] = el)
-                              }
-                              onClick={() =>
-                                setInsertAfterId((prev) =>
-                                  prev === column.id ? null : column.id,
-                                )
-                              }
-                              className={`absolute -right-3 -bottom-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border transition-all ${
-                                insertAfterId === column.id
-                                  ? "border-blue-500 bg-blue-600 text-white"
-                                  : "border-[#2a4a62] bg-[#0a1929] text-gray-400 hover:border-blue-500 hover:bg-blue-600 hover:text-white"
-                              }`}
-                            >
-                              <Plus size={12} />
-                            </button>
-                          )}
+                        {/* + insert button — har qanday qo'shni status oralig'ida */}
+                        {index < columns.length - 1 && (
+                          <button
+                            ref={(el) =>
+                              (insertBtnRefs.current[column.id] = el)
+                            }
+                            onClick={() =>
+                              setInsertAfterId((prev) =>
+                                prev === column.id ? null : column.id,
+                              )
+                            }
+                            className={`absolute -right-3 -bottom-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border transition-all ${
+                              insertAfterId === column.id
+                                ? "border-blue-500 bg-blue-600 text-white"
+                                : "border-[#2a4a62] bg-[#0a1929] text-gray-400 hover:border-blue-500 hover:bg-blue-600 hover:text-white"
+                            }`}
+                          >
+                            <Plus size={12} />
+                          </button>
+                        )}
                       </div>
 
                       <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#0f2942]" />
