@@ -126,9 +126,13 @@ function normalizeOperator(user) {
 }
 
 async function fetchProjectOperators(projectId) {
-  if (!projectId) return [];
+  const params = new URLSearchParams();
+  if (projectId) params.set("projectId", String(projectId));
+  params.set("limit", "100");
+  params.set("page", "1");
+  const query = params.toString();
   const res = await apiFetch(
-    `${API}/user/all/sales-manager?projectId=${projectId}&limit=50&page=1`,
+    `${API}/user/all/sales-manager${query ? `?${query}` : ""}`,
   );
   if (!res || !res.ok) return [];
   const payload = await res.json();
@@ -426,8 +430,12 @@ export default function Pipeline() {
   };
 
   const applyStatusTotals = (payload, fallbackStatuses = []) => {
-    const payloadStatuses = Array.isArray(payload?.statuses) ? payload.statuses : [];
-    const metricSource = payloadStatuses.length ? payloadStatuses : fallbackStatuses;
+    const payloadStatuses = Array.isArray(payload?.statuses)
+      ? payload.statuses
+      : [];
+    const metricSource = payloadStatuses.length
+      ? payloadStatuses
+      : fallbackStatuses;
     const order = Array.isArray(payload?.statusOrder)
       ? payload.statusOrder.map((id) => Number(id))
       : [];
@@ -645,7 +653,9 @@ export default function Pipeline() {
               sourcesRes?.json().catch(() => []),
               totalsRes?.json().catch(() => null),
             ]);
-          const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
+          const fallbackStatuses = Array.isArray(statusesData)
+            ? statusesData
+            : [];
           const { payloadStatuses, order } = applyStatusTotals(
             totalsData,
             fallbackStatuses,
@@ -665,6 +675,7 @@ export default function Pipeline() {
           setStatuses(normalizedStatuses);
           initializeStatusMeta(normalizedStatuses);
           setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
+          await loadOperatorsForProject(savedId);
           setCurrentProject({ id: savedId, name: savedName });
           setAppState("ready");
           await Promise.all(
@@ -724,6 +735,7 @@ export default function Pipeline() {
       setStatuses(normalizedStatuses);
       initializeStatusMeta(normalizedStatuses);
       setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
+      await loadOperatorsForProject(project.id);
       setSearchParams({ ...DEFAULT_SEARCH_PARAMS });
       setSearchStatuses(null);
       setSearchSummary(null);
@@ -743,7 +755,10 @@ export default function Pipeline() {
       const target = e.target;
       if (
         target instanceof Element &&
-        target.closest('[data-slot="select-content"]')
+        (target.closest('[data-slot="select-content"]') ||
+          target.closest('[data-slot="select-item"]') ||
+          target.closest('[data-slot="select-trigger"]') ||
+          target.closest("[data-radix-popper-content-wrapper]"))
       ) {
         return;
       }
@@ -966,7 +981,10 @@ export default function Pipeline() {
   const fallbackTotalSum = statuses.reduce(
     (acc, status) =>
       acc +
-      (status.leads || []).reduce((sum, lead) => sum + Number(lead?.budjet || 0), 0),
+      (status.leads || []).reduce(
+        (sum, lead) => sum + Number(lead?.budjet || 0),
+        0,
+      ),
     0,
   );
   const totalSumBase = Number(statusTotals.totalSum || fallbackTotalSum);
@@ -1132,135 +1150,207 @@ export default function Pipeline() {
             {searchPanelOpen && (
               <div className="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-md border border-[#21435b] bg-[#0f2236] shadow-2xl">
                 <div className="flex flex-col gap-2 p-3">
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={searchParams.statusId || undefined}
-                      onValueChange={(v) => updateSearchParam("statusId", v)}
-                    >
-                      <SelectTrigger className="h-9 w-full bg-[#10263b]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent className="mt-10">
-                        {statuses.map((s) => (
-                          <SelectItem key={s.id} value={String(s.id)}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {searchParams.statusId && (
-                      <button
-                        type="button"
-                        onClick={() => updateSearchParam("statusId", "")}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
-                        aria-label="Statusni tozalash"
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">Status</label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={searchParams.statusId || undefined}
+                        onValueChange={(v) => updateSearchParam("statusId", v)}
                       >
-                        <X size={13} />
-                      </button>
-                    )}
+                        <SelectTrigger className="h-9 w-full bg-[#10263b]">
+                          <SelectValue placeholder="Status tanlang" />
+                        </SelectTrigger>
+                        <SelectContent className="mt-10">
+                          {statuses.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {searchParams.statusId && (
+                        <button
+                          type="button"
+                          onClick={() => updateSearchParam("statusId", "")}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
+                          aria-label="Statusni tozalash"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={searchParams.leadSourceId || undefined}
-                      onValueChange={(v) =>
-                        updateSearchParam("leadSourceId", v)
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">
+                      Lead manbasi
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={searchParams.leadSourceId || undefined}
+                        onValueChange={(v) =>
+                          updateSearchParam("leadSourceId", v)
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full bg-[#10263b]">
+                          <SelectValue placeholder="Manba tanlang" />
+                        </SelectTrigger>
+                        <SelectContent className="mt-10">
+                          {leadSource.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {searchParams.leadSourceId && (
+                        <button
+                          type="button"
+                          onClick={() => updateSearchParam("leadSourceId", "")}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
+                          aria-label="Manbani tozalash"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">Operator</label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={searchParams.assignedUserId || undefined}
+                        onValueChange={(v) =>
+                          updateSearchParam("assignedUserId", v)
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full bg-[#10263b]">
+                          <SelectValue
+                            placeholder={
+                              operatorsLoading
+                                ? "Operatorlar yuklanmoqda..."
+                                : "Operator tanlang"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="mt-10 max-h-72">
+                          {operatorsList.map((operator) => (
+                            <SelectItem
+                              key={operator.id}
+                              value={String(operator.id)}
+                            >
+                              {operator.fullName ||
+                                operator.email ||
+                                `#${operator.id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {searchParams.assignedUserId && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateSearchParam("assignedUserId", "")
+                          }
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
+                          aria-label="Operatorni tozalash"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">
+                      Budjet (dan / gacha)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        value={searchParams.budjetFrom}
+                        onChange={(e) =>
+                          updateSearchParam("budjetFrom", e.target.value)
+                        }
+                        placeholder="Dan"
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                      />
+                      <input
+                        type="number"
+                        value={searchParams.budjetTo}
+                        onChange={(e) =>
+                          updateSearchParam("budjetTo", e.target.value)
+                        }
+                        placeholder="Gacha"
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">Manzil</label>
+                    <input
+                      value={searchParams.adress}
+                      onChange={(e) =>
+                        updateSearchParam("adress", e.target.value)
                       }
-                    >
-                      <SelectTrigger className="h-9 w-full bg-[#10263b]">
-                        <SelectValue placeholder="Lead manbasi" />
-                      </SelectTrigger>
-                      <SelectContent className="mt-10">
-                        {leadSource.map((s) => (
-                          <SelectItem key={s.id} value={String(s.id)}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {searchParams.leadSourceId && (
-                      <button
-                        type="button"
-                        onClick={() => updateSearchParam("leadSourceId", "")}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#2a4868] text-gray-400 transition-colors hover:bg-[#1b3e57] hover:text-white"
-                        aria-label="Manbani tozalash"
-                      >
-                        <X size={13} />
-                      </button>
-                    )}
+                      placeholder="Manzil kiriting"
+                      className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
+                    />
                   </div>
 
-                  <input
-                    type="number"
-                    value={searchParams.assignedUserId}
-                    onChange={(e) =>
-                      updateSearchParam("assignedUserId", e.target.value)
-                    }
-                    placeholder="Operator ID"
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
-                  />
-                  <input
-                    type="number"
-                    value={searchParams.budjetFrom}
-                    onChange={(e) =>
-                      updateSearchParam("budjetFrom", e.target.value)
-                    }
-                    placeholder="Budjet dan"
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
-                  />
-                  <input
-                    type="number"
-                    value={searchParams.budjetTo}
-                    onChange={(e) =>
-                      updateSearchParam("budjetTo", e.target.value)
-                    }
-                    placeholder="Budjet gacha"
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
-                  />
-                  <input
-                    value={searchParams.adress}
-                    onChange={(e) =>
-                      updateSearchParam("adress", e.target.value)
-                    }
-                    placeholder="Manzil"
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-white placeholder-gray-500 outline-none"
-                  />
-                  <input
-                    type="date"
-                    value={searchParams.birthDateFrom}
-                    onChange={(e) =>
-                      updateSearchParam("birthDateFrom", e.target.value)
-                    }
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
-                    style={{ colorScheme: "dark" }}
-                  />
-                  <input
-                    type="date"
-                    value={searchParams.birthDateTo}
-                    onChange={(e) =>
-                      updateSearchParam("birthDateTo", e.target.value)
-                    }
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
-                    style={{ colorScheme: "dark" }}
-                  />
-                  <input
-                    type="date"
-                    value={searchParams.createdFrom}
-                    onChange={(e) =>
-                      updateSearchParam("createdFrom", e.target.value)
-                    }
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
-                    style={{ colorScheme: "dark" }}
-                  />
-                  <input
-                    type="date"
-                    value={searchParams.createdTo}
-                    onChange={(e) =>
-                      updateSearchParam("createdTo", e.target.value)
-                    }
-                    className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
-                    style={{ colorScheme: "dark" }}
-                  />
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">
+                      Tug'ilgan sana (dan / gacha)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        value={searchParams.birthDateFrom}
+                        onChange={(e) =>
+                          updateSearchParam("birthDateFrom", e.target.value)
+                        }
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                        style={{ colorScheme: "dark" }}
+                      />
+                      <input
+                        type="date"
+                        value={searchParams.birthDateTo}
+                        onChange={(e) =>
+                          updateSearchParam("birthDateTo", e.target.value)
+                        }
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                        style={{ colorScheme: "dark" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-400">
+                      Yaratilgan sana (dan / gacha)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        value={searchParams.createdFrom}
+                        onChange={(e) =>
+                          updateSearchParam("createdFrom", e.target.value)
+                        }
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                        style={{ colorScheme: "dark" }}
+                      />
+                      <input
+                        type="date"
+                        value={searchParams.createdTo}
+                        onChange={(e) =>
+                          updateSearchParam("createdTo", e.target.value)
+                        }
+                        className="h-9 w-full rounded-md bg-[#10263b] px-3 text-sm text-gray-300 outline-none"
+                        style={{ colorScheme: "dark" }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-end border-t border-[#21435b] px-3 py-2">
                   <button
@@ -1297,7 +1387,7 @@ export default function Pipeline() {
             ) : (
               <>
                 <span className="text-white">{totalAll}</span> mijoz
-                <span className="mx-1">•</span>
+                <span className="mx-1">/</span>
                 <span className="text-green-400">
                   {Number(totalSumBase).toLocaleString()} so'm
                 </span>
@@ -1317,22 +1407,22 @@ export default function Pipeline() {
                 <button
                   onClick={() => {
                     setActionsOpen(false);
-                    handleImport();
-                  }}
-                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-gray-200 hover:bg-[#11263a]"
-                >
-                  <Upload size={14} className="text-yellow-400" />
-                  Import
-                </button>
-                <button
-                  onClick={() => {
-                    setActionsOpen(false);
                     handleExport();
                   }}
                   className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-gray-200 hover:bg-[#11263a]"
                 >
-                  <Download size={14} className="text-green-400" />
+                  <Upload size={14} className="text-green-400" />
                   Export
+                </button>
+                <button
+                  onClick={() => {
+                    setActionsOpen(false);
+                    handleImport();
+                  }}
+                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-gray-200 hover:bg-[#11263a]"
+                >
+                  <Download size={14} className="text-yellow-400" />
+                  Import
                 </button>
               </div>
             )}
@@ -1553,7 +1643,9 @@ export default function Pipeline() {
             >
               {(() => {
                 const statusMetric = statusTotals.metrics?.[col.id] || {};
-                const totalCount = Number(statusMetric.leadCount ?? col.leads.length ?? 0);
+                const totalCount = Number(
+                  statusMetric.leadCount ?? col.leads.length ?? 0,
+                );
                 const totalBudjet = Number(statusMetric.leadBudjet ?? 0);
                 const filteredCount = col.leads.length;
                 const filteredBudjet = (col.leads || []).reduce(
@@ -1569,13 +1661,17 @@ export default function Pipeline() {
                     <div className="flex items-center justify-between bg-[#153043] px-4 py-3 font-semibold text-white">
                       <span className="truncate text-sm">{col.name}</span>
                       <span className="rounded-full bg-gray-700 px-2.5 py-0.5 text-xs">
-                        {isFiltering ? `${filteredCount}/${totalCount}` : totalCount}
+                        {isFiltering
+                          ? `${filteredCount}/${totalCount}`
+                          : totalCount}
                       </span>
                     </div>
                     <div className="flex items-center justify-between bg-[#11263a] px-4 py-2 text-[11px] text-gray-300">
                       <span>
                         Lead:{" "}
-                        {isFiltering ? `${filteredCount}/${totalCount}` : totalCount}
+                        {isFiltering
+                          ? `${filteredCount}/${totalCount}`
+                          : totalCount}
                       </span>
                       <span className="text-green-400">
                         {isFiltering

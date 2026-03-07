@@ -62,7 +62,7 @@ function Forbidden() {
 
 export function ProtectedLayout() {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex w-full overflow-hidden bg-gray-700">
         <AppSidebar />
         <SidebarInset className="flex flex-col overflow-hidden bg-[#153043]">
