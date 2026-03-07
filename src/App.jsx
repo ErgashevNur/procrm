@@ -27,6 +27,8 @@ import {
   ROLES,
 } from "@/lib/rbac";
 import AddStatus from "./pages/addStatus";
+import Analitika from "./pages/analitika";
+import AppErrorFallback from "./pages/error";
 
 const MANAGEMENT_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 const CRM_ROLES = [ROLES.ROP, ROLES.SALESMANAGER, ROLES.SUPERADMIN];
@@ -84,6 +86,7 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+    errorElement: <AppErrorFallback />,
   },
   {
     path: "/403",
@@ -91,6 +94,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
+    errorElement: <AppErrorFallback />,
     element: (
       <ProtectedRoute>
         <ProtectedLayout />
@@ -199,6 +203,16 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "analitika",
+        element: (
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            <ProjectGate>
+              <Analitika />
+            </ProjectGate>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "*",
         element: <RoleHomeRedirect />,
       },
@@ -207,6 +221,7 @@ const router = createBrowserRouter([
   {
     path: "*",
     element: <Navigate to="/login" replace />,
+    errorElement: <AppErrorFallback />,
   },
 ]);
 

@@ -1,4 +1,5 @@
 import {
+  ChartLine,
   CalendarCheck2,
   FolderOpenDot,
   LayoutDashboard,
@@ -42,6 +43,12 @@ export const NAV_ITEMS = [
     title: "Tasklar",
     url: "/tasks",
     icon: CalendarCheck2,
+    roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
+  },
+  {
+    title: "Analitika",
+    url: "/analitika",
+    icon: ChartLine,
     roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
   },
   {
