@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Loader2,
   CalendarCheck2,
+  // TaskSquare,
   Settings,
   Search,
   X,
@@ -83,6 +84,61 @@ async function extractApiMessage(res, fallback) {
   }
 }
 
+function extractUsersFromPayload(payload) {
+  const candidates = [
+    payload,
+    payload?.data,
+    payload?.items,
+    payload?.users,
+    payload?.results,
+    payload?.result,
+    payload?.data?.items,
+    payload?.data?.users,
+    payload?.data?.results,
+    payload?.result?.items,
+    payload?.result?.users,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+}
+
+function normalizeOperator(user) {
+  if (!user) return null;
+  const id = user.id ?? user.userId ?? user._id;
+  if (!id) return null;
+
+  const fullName =
+    user.fullName ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+    user.name ||
+    "";
+
+  return {
+    id: Number(id),
+    fullName,
+    email: user.email || "",
+    role: user.role,
+  };
+}
+
+async function fetchProjectOperators(projectId) {
+  if (!projectId) return [];
+  const res = await apiFetch(
+    `${API}/user/all/sales-manager?projectId=${projectId}&limit=50&page=1`,
+  );
+  if (!res || !res.ok) return [];
+  const payload = await res.json();
+  const users = extractUsersFromPayload(payload);
+  return users
+    .map(normalizeOperator)
+    .filter(Boolean)
+    .map((user) => ({ ...user, id: Number(user.id) }));
+}
+
 function applyDrag(statuses, source, destination, draggableId) {
   const srcId = Number(source.droppableId);
   const dstId = Number(destination.droppableId);
@@ -109,6 +165,70 @@ function applyDrag(statuses, source, destination, draggableId) {
     }
     return status;
   });
+}
+
+function buildTaskBadgeMeta(rawValue) {
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return null;
+  }
+
+  const normalized = String(rawValue).trim();
+  if (!normalized) return null;
+
+  const styles = {
+    positive: {
+      text: "text-sky-300",
+      border: "border border-sky-400/40",
+      bg: "bg-sky-600/10",
+    },
+    today: {
+      text: "text-emerald-300",
+      border: "border border-emerald-400/40",
+      bg: "bg-emerald-600/10",
+    },
+    overdue: {
+      text: "text-rose-300",
+      border: "border border-rose-500/40",
+      bg: "bg-rose-600/10",
+    },
+  };
+
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric)) {
+    if (numeric === 0) {
+      return {
+        label: "Bugungi task",
+        ...styles.today,
+      };
+    }
+    if (numeric > 0) {
+      return {
+        label: `${numeric} kun qoldi`,
+        ...styles.positive,
+      };
+    }
+    const daysAgo = Math.abs(numeric);
+    return {
+      label: `Muddati tugagan${daysAgo ? ` (${daysAgo} kun)` : ""}`,
+      ...styles.overdue,
+    };
+  }
+
+  if (normalized.startsWith("-")) {
+    const payload = normalized.slice(1).trim();
+    const suffix = payload ? ` (${payload} kun)` : "";
+    return {
+      label: `Muddati tugagan${suffix}`,
+      ...styles.overdue,
+    };
+  }
+
+  return {
+    label: normalized,
+    text: "text-gray-300",
+    border: "border border-white/[0.08]",
+    bg: "bg-white/[0.02]",
+  };
 }
 
 const EMPTY_FORM = {
@@ -157,6 +277,28 @@ function toIsoDate(value, endOfDay = false) {
     return `${y}-${m}-${d}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`;
   }
   return raw;
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString("uz-UZ");
+}
+
+function orderStatusesByOrder(statusList, order) {
+  if (!order || !order.length) return statusList;
+  const indexMap = new Map(statusList.map((status) => [status.id, status]));
+  const ordered = order.map((id) => indexMap.get(Number(id))).filter(Boolean);
+  const remaining = statusList.filter((status) => !order.includes(status.id));
+  return [...ordered, ...remaining];
+}
+
+function buildStatusMetrics(statuses) {
+  return statuses.reduce((acc, status) => {
+    acc[status.id] = {
+      leadCount: Number(status.leadCount ?? 0),
+      leadBudjet: Number(status.leadBudjet ?? 0),
+    };
+    return acc;
+  }, {});
 }
 
 function buildSearchQuery(paramsState, projectId) {
@@ -232,6 +374,12 @@ export default function Pipeline() {
   const [projects, setProjects] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [leadSource, setLeadSource] = useState([]);
+  const [statusTotals, setStatusTotals] = useState({
+    totalSum: 0,
+    totalLeads: 0,
+    order: [],
+    metrics: {},
+  });
   const [currentProject, setCurrentProject] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -246,6 +394,8 @@ export default function Pipeline() {
   const [searchStatuses, setSearchStatuses] = useState(null);
   const [searchSummary, setSearchSummary] = useState(null);
   const [statusMeta, setStatusMeta] = useState({});
+  const [operatorsList, setOperatorsList] = useState([]);
+  const [operatorsLoading, setOperatorsLoading] = useState(false);
   const role = getCurrentRole();
   const canManageStatuses = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
 
@@ -273,6 +423,41 @@ export default function Pipeline() {
       };
     });
     setStatusMeta(initial);
+  };
+
+  const applyStatusTotals = (payload, fallbackStatuses = []) => {
+    const payloadStatuses = Array.isArray(payload?.statuses) ? payload.statuses : [];
+    const metricSource = payloadStatuses.length ? payloadStatuses : fallbackStatuses;
+    const order = Array.isArray(payload?.statusOrder)
+      ? payload.statusOrder.map((id) => Number(id))
+      : [];
+
+    setStatusTotals({
+      totalSum: Number(payload?.totalSum ?? 0),
+      totalLeads: Number(payload?.totalLeads ?? 0),
+      order,
+      metrics: buildStatusMetrics(metricSource),
+    });
+
+    return { payloadStatuses, order };
+  };
+
+  const loadOperatorsForProject = async (projectId) => {
+    if (!projectId) {
+      setOperatorsList([]);
+      return;
+    }
+    setOperatorsLoading(true);
+    try {
+      const list = await fetchProjectOperators(projectId);
+      setOperatorsList(list);
+    } catch (err) {
+      console.error("Operatorlar yuklanmadi:", err);
+      showToast("Operatorlar yuklanmadi", "error");
+      setOperatorsList([]);
+    } finally {
+      setOperatorsLoading(false);
+    }
   };
 
   const { importCSV, exportCSV, loading: workerLoading } = useExcelWorker();
@@ -445,22 +630,37 @@ export default function Pipeline() {
     const init = async () => {
       try {
         if (savedId) {
-          const [projectsRes, statusesRes, sourcesRes] = await Promise.all([
-            apiFetch(`${API}/projects`),
-            apiFetch(`${API}/status/${savedId}`),
-            apiFetch(`${API}/lead-source/${savedId}`),
-          ]);
+          const [projectsRes, statusesRes, sourcesRes, totalsRes] =
+            await Promise.all([
+              apiFetch(`${API}/projects`),
+              apiFetch(`${API}/status/${savedId}`),
+              apiFetch(`${API}/lead-source/${savedId}`),
+              apiFetch(`${API}/status/all/${savedId}`),
+            ]);
           if (!projectsRes || !statusesRes) return;
-          const [projectsData, statusesData, sourcesData] = await Promise.all([
-            projectsRes.json(),
-            statusesRes.json(),
-            sourcesRes?.json().catch(() => []),
-          ]);
-          const normalizedStatuses = statusesData.map((s) => ({
-            ...s,
-            id: Number(s.id),
-            leads: [],
-          }));
+          const [projectsData, statusesData, sourcesData, totalsData] =
+            await Promise.all([
+              projectsRes.json(),
+              statusesRes.json(),
+              sourcesRes?.json().catch(() => []),
+              totalsRes?.json().catch(() => null),
+            ]);
+          const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
+          const { payloadStatuses, order } = applyStatusTotals(
+            totalsData,
+            fallbackStatuses,
+          );
+          const statusSnapshot = payloadStatuses.length
+            ? payloadStatuses
+            : fallbackStatuses;
+          const normalizedStatuses = orderStatusesByOrder(
+            statusSnapshot.map((s) => ({
+              ...s,
+              id: Number(s.id),
+              leads: [],
+            })),
+            order,
+          );
           setProjects(Array.isArray(projectsData) ? projectsData : []);
           setStatuses(normalizedStatuses);
           initializeStatusMeta(normalizedStatuses);
@@ -494,20 +694,33 @@ export default function Pipeline() {
     localStorage.setItem("projectName", project.name);
     setCurrentProject({ id: project.id, name: project.name });
     try {
-      const [statusesRes, sourcesRes] = await Promise.all([
+      const [statusesRes, sourcesRes, totalsRes] = await Promise.all([
         apiFetch(`${API}/status/${project.id}`),
         apiFetch(`${API}/lead-source/${project.id}`),
+        apiFetch(`${API}/status/all/${project.id}`),
       ]);
       if (!statusesRes) return;
-      const [statusesData, sourcesData] = await Promise.all([
+      const [statusesData, sourcesData, totalsData] = await Promise.all([
         statusesRes.json(),
         sourcesRes?.json().catch(() => []),
+        totalsRes?.json().catch(() => null),
       ]);
-      const normalizedStatuses = statusesData.map((s) => ({
-        ...s,
-        id: Number(s.id),
-        leads: [],
-      }));
+      const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
+      const { payloadStatuses, order } = applyStatusTotals(
+        totalsData,
+        fallbackStatuses,
+      );
+      const statusSnapshot = payloadStatuses.length
+        ? payloadStatuses
+        : fallbackStatuses;
+      const normalizedStatuses = orderStatusesByOrder(
+        statusSnapshot.map((s) => ({
+          ...s,
+          id: Number(s.id),
+          leads: [],
+        })),
+        order,
+      );
       setStatuses(normalizedStatuses);
       initializeStatusMeta(normalizedStatuses);
       setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
@@ -748,13 +961,22 @@ export default function Pipeline() {
 
   const isFiltering = hasActiveSearch;
   const visibleStatuses = searchStatuses ?? statuses;
+  const fallbackTotalLeads = statuses.reduce((a, s) => a + s.leads.length, 0);
+  const totalLeadsBase = Number(statusTotals.totalLeads || fallbackTotalLeads);
+  const fallbackTotalSum = statuses.reduce(
+    (acc, status) =>
+      acc +
+      (status.leads || []).reduce((sum, lead) => sum + Number(lead?.budjet || 0), 0),
+    0,
+  );
+  const totalSumBase = Number(statusTotals.totalSum || fallbackTotalSum);
   const totalFiltered = isFiltering
     ? Number(
         searchSummary?.totalLeads ??
           visibleStatuses.reduce((a, s) => a + s.leads.length, 0),
       )
     : visibleStatuses.reduce((a, s) => a + s.leads.length, 0);
-  const totalAll = statuses.reduce((a, s) => a + s.leads.length, 0);
+  const totalAll = totalLeadsBase;
   const totalFilteredBudjet = isFiltering
     ? Number(
         searchSummary?.totalBudjet ??
@@ -860,7 +1082,7 @@ export default function Pipeline() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4 border-b border-[#284860] bg-[#0f2231] px-6 py-4 text-white">
         {/* Left: project select + search */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <Select
             value={currentProject?.name}
             onValueChange={(name) => {
@@ -880,7 +1102,7 @@ export default function Pipeline() {
             </SelectContent>
           </Select>
 
-          <div ref={searchWrapRef} className="relative w-full max-w-4xl">
+          <div ref={searchWrapRef} className="relative min-w-0 flex-1">
             <div className="flex h-10 items-center gap-2 rounded-md bg-[#10263b] px-3">
               <Search size={14} className="shrink-0 text-gray-500" />
               <input
@@ -1056,7 +1278,7 @@ export default function Pipeline() {
         </div>
 
         {/* Right: stats + action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {/* Mijoz soni + filter natijasi */}
           <span className="mr-2 text-xs text-gray-500">
             {isFiltering ? (
@@ -1067,9 +1289,19 @@ export default function Pipeline() {
                 <span className="text-green-400">
                   {Number(totalFilteredBudjet).toLocaleString()} so'm
                 </span>
+                <span className="mx-1 text-gray-600">/</span>
+                <span className="text-green-400/80">
+                  {Number(totalSumBase).toLocaleString()} so'm
+                </span>
               </>
             ) : (
-              <>{totalAll} mijoz</>
+              <>
+                <span className="text-white">{totalAll}</span> mijoz
+                <span className="mx-1">•</span>
+                <span className="text-green-400">
+                  {Number(totalSumBase).toLocaleString()} so'm
+                </span>
+              </>
             )}
           </span>
 
@@ -1319,17 +1551,41 @@ export default function Pipeline() {
               className="flex shrink-0 flex-col"
               style={{ width: 300 }}
             >
-              <div
-                className="mb-3 overflow-hidden rounded-lg border-b-4 bg-[#11263a]"
-                style={{ borderBottomColor: col.color || "#6b7280" }}
-              >
-                <div className="flex items-center justify-between bg-[#153043] px-4 py-3 font-semibold text-white">
-                  <span className="truncate text-sm">{col.name}</span>
-                  <span className="rounded-full bg-gray-700 px-2.5 py-0.5 text-xs">
-                    {col.leads.length}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                const statusMetric = statusTotals.metrics?.[col.id] || {};
+                const totalCount = Number(statusMetric.leadCount ?? col.leads.length ?? 0);
+                const totalBudjet = Number(statusMetric.leadBudjet ?? 0);
+                const filteredCount = col.leads.length;
+                const filteredBudjet = (col.leads || []).reduce(
+                  (sum, lead) => sum + Number(lead?.budjet || 0),
+                  0,
+                );
+
+                return (
+                  <div
+                    className="mb-3 overflow-hidden rounded-lg border-b-4 bg-[#11263a]"
+                    style={{ borderBottomColor: col.color || "#6b7280" }}
+                  >
+                    <div className="flex items-center justify-between bg-[#153043] px-4 py-3 font-semibold text-white">
+                      <span className="truncate text-sm">{col.name}</span>
+                      <span className="rounded-full bg-gray-700 px-2.5 py-0.5 text-xs">
+                        {isFiltering ? `${filteredCount}/${totalCount}` : totalCount}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-[#11263a] px-4 py-2 text-[11px] text-gray-300">
+                      <span>
+                        Lead:{" "}
+                        {isFiltering ? `${filteredCount}/${totalCount}` : totalCount}
+                      </span>
+                      <span className="text-green-400">
+                        {isFiltering
+                          ? `${Number(filteredBudjet).toLocaleString()}/${Number(totalBudjet).toLocaleString()} so'm`
+                          : `${Number(totalBudjet).toLocaleString()} so'm`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
               <Droppable
                 droppableId={String(col.id)}
                 mode="standard"
@@ -1384,68 +1640,90 @@ export default function Pipeline() {
                           draggableId={String(lead.id)}
                           index={index}
                         >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              onClick={() =>
-                                handleLeadOpen(lead.id, snapshot.isDragging)
-                              }
-                              className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${snapshot.isDragging ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30" : ""}`}
-                              style={{
-                                ...provided.draggableProps.style,
-                                opacity: 1,
-                              }}
-                            >
-                              {/* Ism */}
-                              <div className="font-medium">
-                                {lead.firstName} {lead.lastName}
-                              </div>
-                              {/* Telefon */}
-                              <div className="mt-0.5 text-xs opacity-50">
-                                {lead.phone}
-                              </div>
-
-                              {/* Manba */}
-                              {lead.leadSource?.name && (
-                                <div className="mt-1.5 text-[11px] text-blue-400/80">
-                                  {lead.leadSource.name}
+                          {(provided, snapshot) => {
+                            const taskBadge = buildTaskBadgeMeta(
+                              lead.taskRemainingDays,
+                            );
+                            return (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                onClick={() =>
+                                  handleLeadOpen(lead.id, snapshot.isDragging)
+                                }
+                                className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
+                                  snapshot.isDragging
+                                    ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
+                                    : ""
+                                }`}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  opacity: 1,
+                                }}
+                              >
+                                {/* Ism */}
+                                <div className="font-medium">
+                                  {lead.firstName} {lead.lastName}
                                 </div>
-                              )}
+                                {/* Telefon */}
+                                <div className="mt-0.5 text-xs opacity-50">
+                                  {lead.phone}
+                                </div>
 
-                              {/* Taglar */}
-                              {Array.isArray(lead.tag) &&
-                                lead.tag.length > 0 && (
-                                  <div className="mt-1.5 flex flex-wrap gap-1">
-                                    {lead.tag.map((t, i) => (
-                                      <span
-                                        key={i}
-                                        className="rounded border border-[#2a4868]/50 bg-[#0d2a3e] px-1.5 py-0.5 text-[10px] text-gray-300"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
+                                {/* Manba */}
+                                {lead.leadSource?.name && (
+                                  <div className="mt-1.5 text-[11px] text-blue-400/80">
+                                    {lead.leadSource.name}
                                   </div>
                                 )}
 
-                              {/* Budjet + Tasklar */}
-                              <div className="mt-2 flex items-center justify-between gap-2">
-                                {lead.budjet > 0 && (
-                                  <div className="text-xs text-green-400">
-                                    {Number(lead.budjet).toLocaleString()} so'm
-                                  </div>
-                                )}
-                                {Array.isArray(lead.tasks) &&
-                                  lead.tasks.length > 0 && (
-                                    <div className="flex items-center gap-1 text-xs text-yellow-400/80">
-                                      <CalendarCheck2 className="h-3 w-3" />
-                                      {lead.tasks.length}
+                                {/* Taglar */}
+                                {Array.isArray(lead.tag) &&
+                                  lead.tag.length > 0 && (
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                      {lead.tag.map((t, i) => (
+                                        <span
+                                          key={i}
+                                          className="rounded border border-[#2a4868]/50 bg-[#0d2a3e] px-1.5 py-0.5 text-[10px] text-gray-300"
+                                        >
+                                          {t}
+                                        </span>
+                                      ))}
                                     </div>
                                   )}
+
+                                {/* Budjet + Tasklar + Task holati */}
+                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    {lead.budjet > 0 && (
+                                      <div className="text-xs text-green-400">
+                                        {Number(lead.budjet).toLocaleString()}{" "}
+                                        so'm
+                                      </div>
+                                    )}
+                                    {Array.isArray(lead.tasks) &&
+                                      lead.tasks.length > 0 && (
+                                        <div className="flex items-center gap-1 text-xs text-yellow-400/80">
+                                          <CalendarCheck2 className="h-3 w-3" />
+                                          <span>{lead.tasks.length} task</span>
+                                        </div>
+                                      )}
+                                  </div>
+                                  {taskBadge && (
+                                    <div
+                                      className={`inline-flex max-w-[180px] items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${taskBadge.text} ${taskBadge.border} ${taskBadge.bg}`}
+                                    >
+                                      <CalendarCheck2 className="h-3 w-3" />
+                                      <span className="truncate">
+                                        {taskBadge.label}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          }}
                         </Draggable>
                       ))
                     )}
