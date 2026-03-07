@@ -36,6 +36,37 @@ import { toast } from "sonner";
 import { getCurrentRole, ROLES } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+const TOAST_STYLE = {
+  style: {
+    background: "#0f2231",
+    color: "#e5e7eb",
+    border: "1px solid rgba(96,165,250,0.2)",
+  },
+};
+
+function toastSuccess(message) {
+  toast.success(message, TOAST_STYLE);
+}
+
+function toastError(message) {
+  toast.error(message, TOAST_STYLE);
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : item?.name || item?.tag))
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
 
 async function extractApiMessage(res, fallback) {
   try {
@@ -250,11 +281,11 @@ function EventCard({ event, headers, onRefresh }) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
-      toast.success("Task yangilandi ✅");
+      toastSuccess("Task yangilandi ✅");
       setEditing(false);
       await onRefresh();
     } catch {
-      toast.error("Xatolik ❌");
+      toastError("Xatolik ❌");
     } finally {
       setSaving(false);
     }
@@ -270,11 +301,11 @@ function EventCard({ event, headers, onRefresh }) {
         body: JSON.stringify({ text: editText.trim() }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Izoh yangilandi ✅");
+      toastSuccess("Izoh yangilandi ✅");
       setEditing(false);
       await onRefresh();
     } catch {
-      toast.error("Xatolik ❌");
+      toastError("Xatolik ❌");
     } finally {
       setSaving(false);
     }
@@ -289,10 +320,10 @@ function EventCard({ event, headers, onRefresh }) {
         : `${API}/Description/${event.id}`;
       const res = await fetch(url, { method: "DELETE", headers });
       if (!res.ok) throw new Error();
-      toast.success("O'chirildi ✅");
+      toastSuccess("O'chirildi ✅");
       await onRefresh();
     } catch {
-      toast.error("O'chirishda xato ❌");
+      toastError("O'chirishda xato ❌");
     } finally {
       setDeleting(false);
     }
@@ -909,6 +940,7 @@ const LeadDetails = () => {
   const [activeTab, setActiveTab] = useState("asosiy");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const taskSoundRef = useRef(null);
 
   // FIX 2: tag editing — array state
   const [editTags, setEditTags] = useState([""]);
@@ -959,7 +991,8 @@ const LeadDetails = () => {
           sourceRes.ok ? sourceRes.json() : [],
         ]);
 
-        setDealData(lead);
+        const normalizedLeadTags = normalizeTags(lead?.tag);
+        setDealData({ ...lead, tag: normalizedLeadTags });
         setLeadSource(Array.isArray(sources) ? sources : []);
         // FIX 3: lead.tasks ichidan olamiz
         setEvents(mergeEvents(descs, lead.tasks || []));
@@ -967,16 +1000,26 @@ const LeadDetails = () => {
           lead?.assignedUser?.id || lead?.assignedUserId || lead?.userId || "";
         setSelectedOperatorId(preAssignedId ? String(preAssignedId) : "");
         // FIX 2: tag array bilan editTags ni to'ldirish
-        const tagArr =
-          Array.isArray(lead.tag) && lead.tag.length ? lead.tag : [""];
+        const tagArr = normalizedLeadTags.length ? normalizedLeadTags : [""];
         setEditTags(tagArr);
       } catch (err) {
         console.error(err);
-        toast.error("Ma'lumotlar yuklanmadi");
+        toastError("Ma'lumotlar yuklanmadi");
       } finally {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const audio = new Audio("/POST_task.mp3");
+    audio.preload = "auto";
+    taskSoundRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.src = "";
+      taskSoundRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -1020,7 +1063,7 @@ const LeadDetails = () => {
       const descs = descRes?.ok ? await descRes.json() : [];
       const lead = leadRes?.ok ? await leadRes.json() : null;
       if (lead) {
-        setDealData(lead);
+        setDealData({ ...lead, tag: normalizeTags(lead?.tag) });
         setEvents(mergeEvents(descs, lead.tasks || []));
       }
     } catch (err) {
@@ -1028,16 +1071,17 @@ const LeadDetails = () => {
     }
   };
 
-  // FIX 4: tasks POST — "date" -> "taskDate"
+  // Tasks POST: backend `date` key kutadi
   const handlePostDesc = async (text, type, date) => {
     setSending(true);
     try {
+      let shouldPlayTaskSound = false;
       if (type === "tasks") {
         const body = {
           projectId: Number(projectId),
           leadsId: Number(leadId),
           description: text,
-          ...(date && { taskDate: date }), // FIX: date -> taskDate
+          ...(date && { date }),
         };
         const res = await fetch(`${API}/tasks`, {
           method: "POST",
@@ -1045,6 +1089,14 @@ const LeadDetails = () => {
           body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error();
+        const payload = await res.json().catch(() => null);
+        shouldPlayTaskSound = Boolean(
+          payload?.success === true ||
+            payload?.id ||
+            payload?.task?.id ||
+            payload?.data?.id ||
+            payload?.message,
+        );
       } else {
         const res = await fetch(`${API}/Description`, {
           method: "POST",
@@ -1058,11 +1110,23 @@ const LeadDetails = () => {
         if (!res.ok) throw new Error();
       }
       await refreshEvents();
-      toast.success(
+      if (type === "tasks" && shouldPlayTaskSound) {
+        try {
+          const audio = taskSoundRef.current;
+          if (audio) {
+            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise) playPromise.catch(() => {});
+          }
+        } catch {
+          // Audio oynatishda muammo bo'lsa, oddiygina davom etamiz
+        }
+      }
+      toastSuccess(
         type === "tasks" ? "Task qo'shildi ✅" : "Izoh qo'shildi ✅",
       );
     } catch {
-      toast.error("Yuborishda xato ❌");
+      toastError("Yuborishda xato ❌");
     } finally {
       setSending(false);
     }
@@ -1073,11 +1137,12 @@ const LeadDetails = () => {
     setDealData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAssignOperator = async () => {
-    if (!selectedOperatorId || !dealData) {
-      toast.error("Operator tanlang");
+  const handleAssignOperator = async (operatorId = selectedOperatorId) => {
+    if (!operatorId || !dealData) {
+      toastError("Operator tanlang");
       return;
     }
+    setSelectedOperatorId(String(operatorId));
     setAssigningOperator(true);
     try {
       const res = await fetch(`${API}/leeds/${leadId}`, {
@@ -1085,23 +1150,26 @@ const LeadDetails = () => {
         headers,
         body: JSON.stringify({
           projectId: Number(projectId),
-          assignedUserId: Number(selectedOperatorId),
+          assignedUserId: Number(operatorId),
         }),
       });
       if (!res.ok) {
-        const msg = await extractApiMessage(res, "Operator biriktirib bo'lmadi");
+        const msg = await extractApiMessage(
+          res,
+          "Operator biriktirib bo'lmadi",
+        );
         throw new Error(msg);
       }
       const selectedUser = operators.find(
-        (u) => String(u.id) === String(selectedOperatorId),
+        (u) => String(u.id) === String(operatorId),
       );
       setDealData((prev) => ({
         ...prev,
         assignedUser: selectedUser || prev?.assignedUser,
       }));
-      toast.success("Operator biriktirildi");
+      toastSuccess("Operator biriktirildi");
     } catch (err) {
-      toast.error(err?.message || "Operator biriktirishda xatolik");
+      toastError(err?.message || "Operator biriktirishda xatolik");
     } finally {
       setAssigningOperator(false);
     }
@@ -1119,25 +1187,34 @@ const LeadDetails = () => {
       budjet: Number(dealData.budjet) || undefined,
       leadSourceId: Number(dealData.leadSourceId) || undefined,
       projectId: Number(projectId),
-      tag: editTags.map((t) => t.trim()).filter(Boolean), // FIX: array
+      tag: normalizeTags(editTags), // FIX: array
       birthDate: dealData.birthDate
         ? new Date(dealData.birthDate).toISOString().split("T")[0]
         : undefined,
     };
-    toast.promise(
-      fetch(`${API}/leeds/${leadId}`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify(body),
-      }).then((res) => {
-        if (!res.ok) throw new Error();
-      }),
-      {
-        loading: "Saqlanmoqda...",
-        success: "Yangilandi ✅",
-        error: "Xatolik ❌",
-      },
-    );
+    const nextTags = normalizeTags(editTags);
+    const updatePromise = fetch(`${API}/leeds/${leadId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(body),
+    }).then((res) => {
+      if (!res.ok) throw new Error();
+      setDealData((prev) => ({ ...prev, tag: nextTags }));
+      setEditTags(nextTags.length ? nextTags : [""]);
+      setActiveTab("asosiy");
+      return res;
+    });
+    toast.promise(updatePromise, {
+      loading: "Saqlanmoqda...",
+      success: "Yangilandi ✅",
+      error: "Xatolik ❌",
+    }, TOAST_STYLE);
+    try {
+      await updatePromise;
+      setActiveTab("asosiy");
+    } catch {
+      // toast.promise handles feedback
+    }
   };
 
   if (loading) {
@@ -1228,43 +1305,6 @@ const LeadDetails = () => {
           )}
         </div>
 
-        {/* Operator assignment (ROP / SUPERADMIN) */}
-        {canAssignOperator && (
-          <div
-            className="shrink-0 border-b px-5 py-3"
-            style={{ borderColor: "rgba(255,255,255,0.05)" }}
-          >
-            <p className="mb-1 text-[11px] tracking-wide text-gray-600 uppercase">
-              Operator biriktirish
-            </p>
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedOperatorId}
-                onValueChange={setSelectedOperatorId}
-              >
-                <SelectTrigger className="h-9 flex-1">
-                  <SelectValue placeholder="Operator tanlang" />
-                </SelectTrigger>
-                <SelectContent className="mt-2">
-                  {operators.map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>
-                      {u.fullName || u.email || `Operator #${u.id}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                onClick={handleAssignOperator}
-                disabled={assigningOperator || !selectedOperatorId}
-                className="h-9 bg-blue-600 px-3 text-xs hover:bg-blue-500"
-              >
-                {assigningOperator ? "Saqlanmoqda..." : "Tasdiqlash"}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Avatar */}
         <div
           className="shrink-0 border-b px-5 py-4"
@@ -1311,10 +1351,41 @@ const LeadDetails = () => {
           {/* ── ASOSIY TAB ── */}
           {activeTab === "asosiy" && (
             <div className="space-y-4 p-5">
-              <InfoRow
-                label="Operator"
-                value={dealData?.assignedUser?.fullName}
-              />
+              <div>
+                <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
+                  Operator
+                </p>
+                {canAssignOperator ? (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={selectedOperatorId}
+                      onValueChange={handleAssignOperator}
+                      disabled={assigningOperator}
+                    >
+                      <SelectTrigger
+                        className="h-8 border-0 bg-transparent px-0 text-sm font-medium text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        style={{ boxShadow: "none" }}
+                      >
+                        <SelectValue placeholder="Operator tanlang" />
+                      </SelectTrigger>
+                      <SelectContent className="mt-2">
+                        {operators.map((u) => (
+                          <SelectItem key={u.id} value={String(u.id)}>
+                            {u.fullName || u.email || `Operator #${u.id}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {assigningOperator && (
+                      <span className="text-xs text-gray-500">Saqlanmoqda...</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-white">
+                    {dealData?.assignedUser?.fullName || "—"}
+                  </p>
+                )}
+              </div>
               <InfoRow label="Loyiha" value={dealData?.project?.name} />
               <InfoRow label="Manba" value={dealData?.leadSource?.name} />
               <div>
