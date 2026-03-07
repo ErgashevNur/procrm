@@ -5,7 +5,7 @@ import {
   AlertCircle,
   Calendar,
   Search,
-  Trash2,
+  Ban,
   Phone,
   User,
   Clock,
@@ -38,8 +38,8 @@ function getImageUrl(src) {
 
 const API_STATUSES = {
   STARTED: { label: "Jarayonda", color: "#f59e0b" },
-  PENDING: { label: "Kutilmoqda", color: "#6b7280" },
   FINISHED: { label: "Bajarildi", color: "#10b981" },
+  CANCELED: { label: "Bekor qilingan", color: "#ef4444" },
 };
 
 const TYPES = {
@@ -140,36 +140,108 @@ export default function Tasks() {
   const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState("taskDate");
   const [sortDir, setSortDir] = useState("desc");
-  const [viewMode, setViewMode] = useState("table");
+  const [viewMode, setViewMode] = useState(
+    () => localStorage.getItem("tasks:viewMode") || "table",
+  );
   const [previewTask, setPreviewTask] = useState(null);
   const [previewDescription, setPreviewDescription] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [sortedColumns, setSortedColumns] = useState({
+    pastTasks: [],
+    todayTasks: [],
+    futureTasks: [],
+  });
+
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  const fetchSortedColumns = async (signal) => {
+    const res = await fetch(`${API}/tasks/sort/${projectId}`, {
+      headers: authHeaders,
+      signal,
+    });
+    if (!res.ok) throw new Error("TASK_SORT_FETCH_FAILED");
+    const data = await res.json();
+    setSortedColumns({
+      pastTasks: Array.isArray(data?.pastTasks) ? data.pastTasks : [],
+      todayTasks: Array.isArray(data?.todayTasks) ? data.todayTasks : [],
+      futureTasks: Array.isArray(data?.futureTasks) ? data.futureTasks : [],
+    });
+  };
+
+  const fetchTasks = async (signal) => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+    if (filterStatus !== "all") params.set("status", filterStatus);
+    if (dateFrom) params.set("fromDate", dateFrom);
+    if (dateTo) params.set("toDate", dateTo);
+    const query = params.toString();
+    const url = `${API}/tasks/${projectId}${query ? `?${query}` : ""}`;
+    const res = await fetch(url, {
+      headers: authHeaders,
+      signal,
+    });
+    if (!res.ok) throw new Error("TASK_FETCH_FAILED");
+    const data = await res.json();
+    setTasks(Array.isArray(data) ? data : (data?.data ?? []));
+  };
+
+  useEffect(() => {
+    localStorage.setItem("tasks:viewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (search.trim()) params.set("search", search.trim());
+    else params.delete("search");
+
+    if (filterStatus !== "all") params.set("status", filterStatus);
+    else params.delete("status");
+
+    if (dateFrom) params.set("fromDate", dateFrom);
+    else params.delete("fromDate");
+
+    if (dateTo) params.set("toDate", dateTo);
+    else params.delete("toDate");
+
+    if (activeTab !== "all") params.set("tab", activeTab);
+    else params.delete("tab");
+
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [search, filterStatus, dateFrom, dateTo, activeTab]);
 
   useEffect(() => {
     if (!token || !projectId) {
       setLoading(false);
       return;
     }
-    (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setLoading(true);
       try {
-        const res = await fetch(`${API}/tasks/${projectId}`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setTasks(Array.isArray(data) ? data : (data.data ?? []));
-        }
+        await Promise.all([
+          fetchTasks(controller.signal),
+          fetchSortedColumns(controller.signal),
+        ]);
       } catch (err) {
-        console.error(err);
-        toast.error("Ma'lumotlar yuklanmadi");
+        if (err.name !== "AbortError") {
+          console.error(err);
+          toast.error("Ma'lumotlar yuklanmadi");
+        }
       } finally {
         setLoading(false);
       }
-    })();
-  }, []);
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [token, projectId, search, filterStatus, dateFrom, dateTo]);
 
   useEffect(() => {
     if (!previewTask) {
@@ -223,13 +295,11 @@ export default function Tasks() {
     try {
       const res = await fetch(`${API}/tasks/${task.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders,
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
+      await fetchSortedColumns();
     } catch {
       setTasks((p) =>
         p.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)),
@@ -238,19 +308,24 @@ export default function Tasks() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleCancelTask = async (task) => {
+    if (!task || task.status === "CANCELED") return;
     const prev = tasks;
-    setTasks((p) => p.filter((t) => t.id !== id));
+    setTasks((p) =>
+      p.map((t) => (t.id === task.id ? { ...t, status: "CANCELED" } : t)),
+    );
     try {
-      const res = await fetch(`${API}/tasks/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API}/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({ status: "CANCELED" }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Vazifa o'chirildi ✅");
+      await fetchSortedColumns();
+      toast.success("Vazifa bekor qilindi ✅");
     } catch {
       setTasks(prev);
-      toast.error("O'chirishda xato ❌");
+      toast.error("Bekor qilishda xato ❌");
     }
   };
 
@@ -263,9 +338,6 @@ export default function Tasks() {
   };
 
   const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
 
   const stats = {
     today: tasks.filter(
@@ -279,22 +351,9 @@ export default function Tasks() {
     return tasks
       .filter((t) => {
         const taskDay = t.taskDate ? t.taskDate.slice(0, 10) : "";
-        const lead = t.leads;
-        const leadName = lead
-          ? `${lead.firstName || ""} ${lead.lastName || ""}`.toLowerCase()
-          : "";
-        if (
-          search &&
-          !t.description?.toLowerCase().includes(search.toLowerCase()) &&
-          !leadName.includes(search.toLowerCase())
-        )
-          return false;
-        if (filterStatus !== "all" && t.status !== filterStatus) return false;
         if (activeTab === "today" && taskDay !== today) return false;
         if (activeTab === "overdue" && !isOverdue(t.taskDate, t.status))
           return false;
-        if (dateFrom && taskDay < dateFrom) return false;
-        if (dateTo && taskDay > dateTo) return false;
         return true;
       })
       .sort((a, b) => {
@@ -315,11 +374,7 @@ export default function Tasks() {
       });
   }, [
     tasks,
-    search,
-    filterStatus,
     activeTab,
-    dateFrom,
-    dateTo,
     sortBy,
     sortDir,
   ]);
@@ -496,48 +551,29 @@ export default function Tasks() {
 
       {/* ── Content ── */}
       <div className="relative z-10 flex-1 overflow-auto px-6 py-4">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <CheckCircle2 size={40} className="text-gray-700" />
-            <p className="text-sm font-medium text-gray-500">
-              Vazifalar topilmadi
-            </p>
-            <p className="text-xs text-gray-700">
-              Filter o'zgartiring yoki yangi vazifa qo'shing
-            </p>
-          </div>
-        ) : viewMode === "column" ? (
-          <div className="grid min-w-[980px] grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        {viewMode === "column" ? (
+          <div className="grid min-w-[980px] grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {[
               {
-                key: "all",
-                label: "Barchasi",
-                color: "#94a3b8",
-                getItems: (list) => list,
+                key: "past",
+                label: "O'tgan vazifalar",
+                color: "#ef4444",
+                tasks: sortedColumns.pastTasks,
               },
               {
                 key: "today",
-                label: "Bugun",
+                label: "Bugungi vazifalar",
                 color: "#0ea5e9",
-                getItems: (list) =>
-                  list.filter((t) => t.taskDate?.slice(0, 10) === today),
+                tasks: sortedColumns.todayTasks,
               },
               {
-                key: "overdue",
-                label: "Muddati o'tgan",
-                color: "#ef4444",
-                getItems: (list) =>
-                  list.filter((t) => isOverdue(t.taskDate, t.status)),
-              },
-              {
-                key: "tomorrow",
-                label: "Ertaga",
+                key: "future",
+                label: "Kelgusi vazifalar",
                 color: "#22c55e",
-                getItems: (list) =>
-                  list.filter((t) => t.taskDate?.slice(0, 10) === tomorrow),
+                tasks: sortedColumns.futureTasks,
               },
             ].map((column) => {
-              const columnTasks = column.getItems(filtered);
+              const columnTasks = Array.isArray(column.tasks) ? column.tasks : [];
               return (
                 <div
                   key={column.key}
@@ -568,6 +604,8 @@ export default function Tasks() {
                     ) : (
                       columnTasks.map((task, i) => {
                         const isDone = task.status === "FINISHED";
+                        const isCanceled = task.status === "CANCELED";
+                        const isResolved = isDone || isCanceled;
                         const overdue = isOverdue(task.taskDate, task.status);
                         const type = TYPES[task.type] || TYPES.task;
                         const lead = task.leads;
@@ -583,7 +621,7 @@ export default function Tasks() {
                         return (
                           <div
                             key={task.id}
-                            className={`group rounded-xl border border-white/5 bg-[#0a1d30] p-3 transition-colors hover:border-white/15 ${isDone ? "opacity-50" : ""}`}
+                            className={`group rounded-xl border border-white/5 bg-[#0a1d30] p-3 transition-colors hover:border-white/15 ${isResolved ? "opacity-60" : ""} ${isCanceled ? "border-red-500/20 bg-red-500/[0.04]" : ""}`}
                             style={{
                               animation: `taskIn .25s ease ${i * 0.03}s both`,
                             }}
@@ -606,10 +644,11 @@ export default function Tasks() {
                                 )}
                               </button>
                               <button
-                                onClick={() => handleDelete(task.id)}
-                                className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+                                onClick={() => handleCancelTask(task)}
+                                disabled={task.status === "CANCELED"}
+                                className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
                               >
-                                <Trash2 size={13} />
+                                <Ban size={13} />
                               </button>
                             </div>
 
@@ -625,9 +664,11 @@ export default function Tasks() {
                                 type="button"
                                 onClick={() => setPreviewTask(task)}
                                 className={`text-left text-sm transition-colors hover:text-white hover:underline ${
-                                  isDone
-                                    ? "text-gray-500 line-through"
-                                    : "text-gray-200"
+                                  isCanceled
+                                    ? "text-red-300/80 line-through decoration-red-400/70"
+                                    : isDone
+                                      ? "text-gray-500 line-through"
+                                      : "text-gray-200"
                                 }`}
                                 title={task.description || ""}
                               >
@@ -672,7 +713,7 @@ export default function Tasks() {
                                 <Calendar size={10} />
                                 {formatDate(task.taskDate)}
                               </span>
-                              {remaining != null && !isDone && (
+                              {remaining != null && !isResolved && (
                                 <span
                                   className={`flex items-center gap-1 ${remaining <= 1 ? "text-red-400" : ""}`}
                                 >
@@ -705,6 +746,16 @@ export default function Tasks() {
               );
             })}
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+            <CheckCircle2 size={40} className="text-gray-700" />
+            <p className="text-sm font-medium text-gray-500">
+              Vazifalar topilmadi
+            </p>
+            <p className="text-xs text-gray-700">
+              Filter o'zgartiring yoki yangi vazifa qo'shing
+            </p>
+          </div>
         ) : (
           <table className="w-full min-w-[860px] border-collapse">
             <thead>
@@ -734,10 +785,14 @@ export default function Tasks() {
             <tbody>
               {filtered.map((task, i) => {
                 const isDone = task.status === "FINISHED";
+                const isCanceled = task.status === "CANCELED";
+                const isResolved = isDone || isCanceled;
                 const overdue = isOverdue(task.taskDate, task.status);
                 const type = TYPES[task.type] || TYPES.task;
-                const statusInfo =
-                  API_STATUSES[task.status] || API_STATUSES.PENDING;
+                const statusInfo = API_STATUSES[task.status] || {
+                  label: "Noma'lum",
+                  color: "#6b7280",
+                };
                 const lead = task.leads;
                 const leadName = lead
                   ? `${lead.firstName || ""} ${lead.lastName || ""}`.trim()
@@ -752,7 +807,7 @@ export default function Tasks() {
                 return (
                   <tr
                     key={task.id}
-                    className={`group border-b border-white/[0.03] transition-colors hover:bg-white/[0.02] ${isDone ? "opacity-50" : ""}`}
+                    className={`group border-b border-white/[0.03] transition-colors hover:bg-white/[0.02] ${isResolved ? "opacity-60" : ""} ${isCanceled ? "bg-red-500/[0.03]" : ""}`}
                     style={{ animation: `taskIn .25s ease ${i * 0.03}s both` }}
                   >
                     {/* Holat */}
@@ -795,7 +850,13 @@ export default function Tasks() {
                               <Avatar name={leadName} size={5} />
                               <Link
                                 to={`/leadDetails?leadId=${lead?.id}`}
-                                className={`text-sm font-medium transition-colors hover:underline ${isDone ? "text-gray-500 line-through" : "text-white"}`}
+                                className={`text-sm font-medium transition-colors hover:underline ${
+                                  isCanceled
+                                    ? "text-red-300/80 line-through decoration-red-400/70"
+                                    : isDone
+                                      ? "text-gray-500 line-through"
+                                      : "text-white"
+                                }`}
                               >
                                 {leadName}
                               </Link>
@@ -841,9 +902,11 @@ export default function Tasks() {
                           type="button"
                           onClick={() => setPreviewTask(task)}
                           className={`text-left text-sm transition-colors hover:text-white hover:underline ${
-                            isDone
-                              ? "text-gray-500 line-through"
-                              : "text-gray-200"
+                            isCanceled
+                              ? "text-red-300/80 line-through decoration-red-400/70"
+                              : isDone
+                                ? "text-gray-500 line-through"
+                                : "text-gray-200"
                           }`}
                           title={task.description || ""}
                         >
@@ -893,6 +956,10 @@ export default function Tasks() {
                         <span className="text-[10px] text-green-500">
                           ✓ Tugadi
                         </span>
+                      ) : isCanceled ? (
+                        <span className="text-[10px] text-red-400">
+                          Bekor qilingan
+                        </span>
                       ) : overdue ? (
                         <span className="text-[10px] text-red-400">
                           Kechikdi
@@ -912,10 +979,11 @@ export default function Tasks() {
                     {/* Delete */}
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => handleDelete(task.id)}
-                        className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+                        onClick={() => handleCancelTask(task)}
+                        disabled={task.status === "CANCELED"}
+                        className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
                       >
-                        <Trash2 size={13} />
+                        <Ban size={13} />
                       </button>
                     </td>
                   </tr>
