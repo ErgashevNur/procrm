@@ -12,6 +12,8 @@ import {
   Upload,
   Download,
   MoreHorizontal,
+  Mic,
+  Sparkles,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "../components/ui/skeleton";
@@ -33,6 +35,12 @@ import {
 } from "@/components/ui/sheet";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useExcelWorker } from "../hooks/Useexcelworker";
 import { ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
@@ -262,6 +270,67 @@ const DEFAULT_SEARCH_PARAMS = {
 };
 const PAGE_LIMIT = 10;
 
+function normalizeAiPhone(raw) {
+  const cleaned = String(raw || "").replace(/[^\d+]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("+")) return cleaned;
+  if (cleaned.startsWith("998")) return `+${cleaned}`;
+  return cleaned;
+}
+
+function normalizeAiDate(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+    const [d, m, y] = value.split(".");
+    return `${y}-${m}-${d}`;
+  }
+  return "";
+}
+
+function parseAiLeadDraft(text) {
+  const source = String(text || "");
+  const pick = (regex) => source.match(regex)?.[1]?.trim() || "";
+
+  const firstName =
+    pick(/(?:ism|name)\s*[:\-]\s*([^\n,;]+)/i) ||
+    pick(/(?:mijoz|klient)\s*[:\-]\s*([^\n,;]+)/i);
+  const lastName = pick(/(?:familiya|surname|last name)\s*[:\-]\s*([^\n,;]+)/i);
+  const phone = normalizeAiPhone(
+    pick(/(?:telefon|phone|raqam)\s*[:\-]\s*([+()\d\s-]{7,})/i),
+  );
+  const extraPhone = normalizeAiPhone(
+    pick(/(?:qo'?shimcha|ikkinchi)\s*(?:telefon|phone)?\s*[:\-]\s*([+()\d\s-]{7,})/i),
+  );
+  const adress = pick(/(?:manzil|address)\s*[:\-]\s*([^\n]+)/i);
+  const budjet = pick(/(?:budjet|byudjet|budget)\s*[:\-]\s*([\d\s]+)/i).replace(
+    /\s+/g,
+    "",
+  );
+  const birthDate = normalizeAiDate(
+    pick(/(?:tug['’]?ilgan sana|birth ?date)\s*[:\-]\s*([0-9.\-]{8,10})/i),
+  );
+  const tagsRaw = pick(/(?:teg|tag|tags)\s*[:\-]\s*([^\n]+)/i);
+  const tags = tagsRaw
+    ? tagsRaw
+        .split(/[;,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+
+  return {
+    firstName,
+    lastName,
+    phone,
+    extraPhone,
+    adress,
+    budjet,
+    birthDate,
+    tags,
+  };
+}
+
 const SEARCH_DATE_KEYS = new Set([
   "birthDateFrom",
   "birthDateTo",
@@ -388,6 +457,11 @@ export default function Pipeline() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiListening, setAiListening] = useState(false);
+  const [aiTranscript, setAiTranscript] = useState("");
+  const [aiDraft, setAiDraft] = useState(parseAiLeadDraft(""));
+  const speechRef = useRef(null);
 
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -935,6 +1009,89 @@ export default function Pipeline() {
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
+  const applyAiDraftToForm = (draft) => {
+    setFormData((prev) => ({
+      ...prev,
+      firstName: draft.firstName || prev.firstName,
+      lastName: draft.lastName || prev.lastName,
+      phone: draft.phone || prev.phone,
+      extraPhone: draft.extraPhone || prev.extraPhone,
+      adress: draft.adress || prev.adress,
+      budjet: draft.budjet || prev.budjet,
+      birthDate: draft.birthDate || prev.birthDate,
+      tags:
+        Array.isArray(draft.tags) && draft.tags.length
+          ? draft.tags
+          : prev.tags?.length
+            ? prev.tags
+            : [""],
+    }));
+  };
+
+  const stopAiListening = () => {
+    if (speechRef.current) {
+      speechRef.current.onend = null;
+      speechRef.current.stop();
+      speechRef.current = null;
+    }
+    setAiListening(false);
+  };
+
+  const startAiListening = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast("Bu brauzerda mikrofon AI qidiruvi qo'llanmaydi", "error");
+      return;
+    }
+    if (aiListening) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "uz-UZ";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = (event) => {
+      let fullTranscript = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        fullTranscript += `${event.results[i][0].transcript} `;
+      }
+      setAiTranscript(fullTranscript.trim());
+    };
+
+    recognition.onerror = () => {
+      setAiListening(false);
+      showToast("Mikrofon orqali o'qishda xatolik yuz berdi", "error");
+    };
+
+    recognition.onend = () => {
+      setAiListening(false);
+      speechRef.current = null;
+    };
+
+    speechRef.current = recognition;
+    setAiListening(true);
+    recognition.start();
+  };
+
+  const handleApplyAi = () => {
+    const parsed = parseAiLeadDraft(aiTranscript);
+    applyAiDraftToForm(parsed);
+    setAiDialogOpen(false);
+    showToast("AI orqali forma to'ldirildi", "success");
+  };
+
+  useEffect(() => {
+    setAiDraft(parseAiLeadDraft(aiTranscript));
+  }, [aiTranscript]);
+
+  useEffect(
+    () => () => {
+      stopAiListening();
+    },
+    [],
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -1438,7 +1595,13 @@ export default function Pipeline() {
             open={sheetOpen}
             onOpenChange={(o) => {
               setSheetOpen(o);
-              if (!o) setFormData(EMPTY_FORM);
+              if (!o) {
+                setFormData(EMPTY_FORM);
+                setAiDialogOpen(false);
+                setAiTranscript("");
+                setAiDraft(parseAiLeadDraft(""));
+                stopAiListening();
+              }
             }}
           >
             <SheetTrigger asChild>
@@ -1450,6 +1613,16 @@ export default function Pipeline() {
               <SheetHeader>
                 <SheetTitle className="text-white">Lead qo'shish</SheetTitle>
               </SheetHeader>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAiDialogOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-md border border-[#2a4868] bg-[#11263a] px-3 py-2 text-xs text-gray-200 transition-colors hover:bg-[#1a3552] hover:text-white"
+                >
+                  <Sparkles size={14} className="text-cyan-300" />
+                  AI bilan to'ldirish
+                </button>
+              </div>
               <form className="mt-4 w-full text-white" onSubmit={handleSubmit}>
                 <FieldGroup>
                   <div className="grid grid-cols-2 gap-4">
@@ -1623,6 +1796,95 @@ export default function Pipeline() {
                   </Field>
                 </FieldGroup>
               </form>
+
+              <Dialog
+                open={aiDialogOpen}
+                onOpenChange={(open) => {
+                  setAiDialogOpen(open);
+                  if (!open) stopAiListening();
+                }}
+              >
+                <DialogContent className="border-[#21435b] bg-[#0f2236] text-white sm:max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Mic size={16} className="text-cyan-300" />
+                      AI orqali mijoz ma'lumotlarini kiritish
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <p className="text-xs text-gray-400">
+                    Mikrofonni yoqib ma'lumotlarni ayting yoki matnni qo'lda
+                    yozing. Masalan: Ism: Ali, Telefon: +998..., Budjet:
+                    150000.
+                  </p>
+
+                  <textarea
+                    value={aiTranscript}
+                    onChange={(e) => setAiTranscript(e.target.value)}
+                    rows={6}
+                    placeholder="Ism: ...; Familiya: ...; Telefon: ...; Manzil: ...; Budjet: ...; Teg: ..."
+                    className="w-full rounded-md border border-[#2a4868] bg-[#10263b] px-3 py-2 text-sm text-white outline-none"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Ism: {aiDraft.firstName || "-"}
+                    </div>
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Familiya: {aiDraft.lastName || "-"}
+                    </div>
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Telefon: {aiDraft.phone || "-"}
+                    </div>
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Qo'shimcha: {aiDraft.extraPhone || "-"}
+                    </div>
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Budjet: {aiDraft.budjet || "-"}
+                    </div>
+                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Tug'ilgan sana: {aiDraft.birthDate || "-"}
+                    </div>
+                    <div className="col-span-2 rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Manzil: {aiDraft.adress || "-"}
+                    </div>
+                    <div className="col-span-2 rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
+                      Teglar:{" "}
+                      {aiDraft.tags?.length ? aiDraft.tags.join(", ") : "-"}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-[#2a4868] bg-[#10263b] text-white hover:bg-[#1a3552]"
+                        onClick={aiListening ? stopAiListening : startAiListening}
+                      >
+                        <Mic className="mr-1 h-4 w-4" />
+                        {aiListening ? "To'xtatish" : "Mikrofonni yoqish"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-[#2a4868] bg-[#10263b] text-gray-300 hover:bg-[#1a3552] hover:text-white"
+                        onClick={() => setAiTranscript("")}
+                      >
+                        Tozalash
+                      </Button>
+                    </div>
+
+                    <Button
+                      type="button"
+                      className="border bg-[#07131d]"
+                      onClick={handleApplyAi}
+                    >
+                      Formaga qo'llash
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </SheetContent>
           </Sheet>
         </div>
