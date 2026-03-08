@@ -7,6 +7,8 @@ import {
   Trash2,
   Check,
   Zap,
+  Pen,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -127,7 +129,12 @@ function InfoCard({ label, value, color = "#6b7280" }) {
 function RoleBadge({ role }) {
   const map = {
     SUPERADMIN: { l: "Super Admin", c: "#f59e0b", b: "rgba(245,158,11,0.12)" },
-    ADMIN: { l: "Admin", c: "#3b82f6", b: "rgba(59,130,246,0.12)" },
+    ROP: { l: "ROP", c: "#3b82f6", b: "rgba(59,130,246,0.12)" },
+    SALESMANAGER: {
+      l: "Sales Manager",
+      c: "#10b981",
+      b: "rgba(16,185,129,0.12)",
+    },
     USER: { l: "Xodim", c: "#6b7280", b: "rgba(107,114,128,0.1)" },
   };
   const r = map[role] || map.USER;
@@ -144,6 +151,16 @@ function RoleBadge({ role }) {
 // ─────────────────────────────────────────────────────────────────────────
 export default function settings() {
   const projectId = localStorage.getItem("projectId");
+  const companyId = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw);
+      return Number(parsed?.user?.companyId || parsed?.companyId || 0);
+    } catch {
+      return 0;
+    }
+  })();
 
   const [active, setActive] = useState("general");
   const [saving, setSaving] = useState(false);
@@ -164,10 +181,17 @@ export default function settings() {
   // ── Users ─────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [inviteFullName, setInviteFullName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState("SALESMANAGER");
   const [inviting, setInviting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [editUserId, setEditUserId] = useState(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
 
   // ── Notifications ─────────────────────────────────────────────────────
   const [notif, setNotif] = useState({
@@ -187,26 +211,70 @@ export default function settings() {
   });
 
   // ── Load users when tab opened ────────────────────────────────────────
+  const extractUsersFromPayload = (payload) => {
+    const candidates = [
+      payload,
+      payload?.data,
+      payload?.items,
+      payload?.users,
+      payload?.results,
+      payload?.result,
+      payload?.data?.items,
+      payload?.data?.users,
+      payload?.data?.results,
+      payload?.result?.items,
+      payload?.result?.users,
+    ];
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) return candidate;
+    }
+    return [];
+  };
+
+  const normalizeUser = (user, fallbackRole) => ({
+    id: Number(user?.id ?? user?.userId ?? user?._id),
+    email: user?.email || "",
+    fullName:
+      user?.fullName ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
+    role: user?.role || fallbackRole,
+    createdAt: user?.createdAt || null,
+    companyId: Number(user?.companyId || companyId || 0),
+  });
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const [ropRes, smRes] = await Promise.all([
+        apiFetch(`${API}/user/all/rop`),
+        apiFetch(`${API}/user/all/sales-manager`),
+      ]);
+      const [ropPayload, smPayload] = await Promise.all([
+        ropRes?.ok ? ropRes.json() : Promise.resolve([]),
+        smRes?.ok ? smRes.json() : Promise.resolve([]),
+      ]);
+      const rops = extractUsersFromPayload(ropPayload).map((u) =>
+        normalizeUser(u, "ROP"),
+      );
+      const salesManagers = extractUsersFromPayload(smPayload).map((u) =>
+        normalizeUser(u, "SALESMANAGER"),
+      );
+      const merged = [...rops, ...salesManagers].filter((u) => u.id);
+      const unique = Array.from(
+        new Map(merged.map((u) => [String(u.id), u])).values(),
+      );
+      setUsers(unique);
+    } catch (e) {
+      console.error(e);
+      toast.error("Foydalanuvchilarni yuklab bo'lmadi");
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (active !== "users" || users.length > 0) return;
-    (async () => {
-      setUsersLoading(true);
-      try {
-        const res = await apiFetch(`${API}/users?projectId=${projectId}`);
-        if (!res) return;
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          setUsers(Array.isArray(data) ? data : (data?.data ?? []));
-        } catch {
-          /* empty */
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setUsersLoading(false);
-      }
-    })();
+    if (active !== "users") return;
+    loadUsers();
   }, [active]);
 
   // ── Save handlers ─────────────────────────────────────────────────────
@@ -234,20 +302,30 @@ export default function settings() {
   // ── Invite ────────────────────────────────────────────────────────────
   const handleInvite = async (e) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    if (!inviteFullName.trim() || !inviteEmail.trim() || !invitePassword.trim()) {
+      toast.error("Ism, email va parol majburiy");
+      return;
+    }
     setInviting(true);
     try {
-      const res = await apiFetch(`${API}/users/invite`, {
+      const endpoint =
+        inviteRole === "ROP" ? `${API}/user/rop` : `${API}/user/sales-manager`;
+      const res = await apiFetch(endpoint, {
         method: "POST",
         body: JSON.stringify({
+          fullName: inviteFullName.trim(),
           email: inviteEmail.trim(),
-          role: inviteRole,
-          projectId: Number(projectId),
+          companyId: Number(companyId || 0),
+          password: invitePassword,
+          permissions: ["CRM", "PROHOME"],
         }),
       });
       if (!res || !res.ok) throw new Error();
-      toast.success("Taklif yuborildi ✅");
+      toast.success("Foydalanuvchi qo'shildi ✅");
+      setInviteFullName("");
       setInviteEmail("");
+      setInvitePassword("");
+      await loadUsers();
     } catch {
       toast.error("Xatolik ❌");
     } finally {
@@ -256,10 +334,16 @@ export default function settings() {
   };
 
   // ── Delete user ───────────────────────────────────────────────────────
-  const handleDeleteUser = async (id) => {
+  const handleDeleteUser = async (id, role) => {
+    if (role !== "SALESMANAGER") {
+      toast.error("ROP ni o'chirish endpointi berilmagan");
+      return;
+    }
     setDeletingId(id);
     try {
-      const res = await apiFetch(`${API}/users/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`${API}/user/remove-sales-maneger/${id}`, {
+        method: "DELETE",
+      });
       if (!res || !res.ok) throw new Error();
       setUsers((p) => p.filter((u) => u.id !== id));
       toast.success("O'chirildi");
@@ -267,6 +351,55 @@ export default function settings() {
       toast.error("Xatolik ❌");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const startEditUser = (user) => {
+    setEditUserId(user.id);
+    setEditFullName(user.fullName || "");
+    setEditEmail(user.email || "");
+    setEditPassword("");
+  };
+
+  const cancelEditUser = () => {
+    setEditUserId(null);
+    setEditFullName("");
+    setEditEmail("");
+    setEditPassword("");
+  };
+
+  const handleUpdateUser = async (user) => {
+    if (!user?.id) return;
+    if (!editFullName.trim() || !editEmail.trim()) {
+      toast.error("Ism va email majburiy");
+      return;
+    }
+    setUpdatingId(user.id);
+    try {
+      const endpoint =
+        user.role === "ROP"
+          ? `${API}/user/update-rop/${user.id}`
+          : `${API}/user/update-sales-manager/${user.id}`;
+      const body = {
+        fullName: editFullName.trim(),
+        email: editEmail.trim(),
+        companyId: Number(user.companyId || companyId || 0),
+        permissions: ["CRM", "PROHOME"],
+      };
+      if (editPassword.trim()) body.password = editPassword.trim();
+
+      const res = await apiFetch(endpoint, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (!res || !res.ok) throw new Error();
+      toast.success("Foydalanuvchi yangilandi ✅");
+      await loadUsers();
+      cancelEditUser();
+    } catch {
+      toast.error("Yangilashda xatolik ❌");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -488,12 +621,27 @@ export default function settings() {
                   description="Отправьте приглашение сотруднику"
                 >
                   <form onSubmit={handleInvite}>
+                    <FieldRow label="ФИО">
+                      <StyledInput
+                        value={inviteFullName}
+                        onChange={setInviteFullName}
+                        placeholder="Ism Familiya"
+                      />
+                    </FieldRow>
                     <FieldRow label="Email">
                       <StyledInput
                         type="email"
                         value={inviteEmail}
                         onChange={setInviteEmail}
                         placeholder="xodim@company.uz"
+                      />
+                    </FieldRow>
+                    <FieldRow label="Пароль">
+                      <StyledInput
+                        type="password"
+                        value={invitePassword}
+                        onChange={setInvitePassword}
+                        placeholder="Kamida 6 belgi"
                       />
                     </FieldRow>
                     <FieldRow label="Роль">
@@ -509,7 +657,12 @@ export default function settings() {
                     <div className="flex justify-end bg-[#0f2030] px-6 py-4">
                       <button
                         type="submit"
-                        disabled={inviting || !inviteEmail.trim()}
+                        disabled={
+                          inviting ||
+                          !inviteFullName.trim() ||
+                          !inviteEmail.trim() ||
+                          !invitePassword.trim()
+                        }
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
                       >
                         {inviting ? (
@@ -554,30 +707,95 @@ export default function settings() {
                           {user.email?.[0]?.toUpperCase() || "?"}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm text-white">
-                            {user.email}
-                          </p>
-                          {user.fullName && (
-                            <p className="text-xs text-gray-600">
-                              {user.fullName}
-                            </p>
+                          {editUserId === user.id ? (
+                            <div className="grid max-w-xl grid-cols-1 gap-2 md:grid-cols-3">
+                              <input
+                                type="text"
+                                value={editFullName}
+                                onChange={(e) => setEditFullName(e.target.value)}
+                                placeholder="F.I.O"
+                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                              />
+                              <input
+                                type="email"
+                                value={editEmail}
+                                onChange={(e) => setEditEmail(e.target.value)}
+                                placeholder="Email"
+                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                              />
+                              <input
+                                type="password"
+                                value={editPassword}
+                                onChange={(e) => setEditPassword(e.target.value)}
+                                placeholder="Yangi parol (ixtiyoriy)"
+                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <p className="truncate text-sm text-white">
+                                {user.email}
+                              </p>
+                              {user.fullName && (
+                                <p className="text-xs text-gray-600">
+                                  {user.fullName}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                         <RoleBadge role={user.role} />
                         <span className="text-xs text-gray-600">
-                          {new Date(user.createdAt).toLocaleDateString("ru-RU")}
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString("ru-RU")
+                            : "—"}
                         </span>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          disabled={deletingId === user.id}
-                          className="ml-1 shrink-0 text-gray-700 transition-colors hover:text-red-400 disabled:opacity-40"
-                        >
-                          {deletingId === user.id ? (
-                            <Loader2 size={15} className="animate-spin" />
+                        <div className="ml-1 flex items-center gap-1">
+                          {editUserId === user.id ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdateUser(user)}
+                                disabled={updatingId === user.id}
+                                className="shrink-0 text-emerald-400 transition-colors hover:text-emerald-300 disabled:opacity-40"
+                              >
+                                {updatingId === user.id ? (
+                                  <Loader2 size={15} className="animate-spin" />
+                                ) : (
+                                  <Save size={15} />
+                                )}
+                              </button>
+                              <button
+                                onClick={cancelEditUser}
+                                className="shrink-0 text-gray-500 transition-colors hover:text-white"
+                              >
+                                <X size={15} />
+                              </button>
+                            </>
                           ) : (
-                            <Trash2 size={15} />
+                            <button
+                              onClick={() => startEditUser(user)}
+                              className="shrink-0 text-gray-500 transition-colors hover:text-blue-400"
+                            >
+                              <Pen size={15} />
+                            </button>
                           )}
-                        </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.role)}
+                            disabled={deletingId === user.id || user.role !== "SALESMANAGER"}
+                            className="shrink-0 text-gray-700 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                            title={
+                              user.role === "SALESMANAGER"
+                                ? "O'chirish"
+                                : "ROP delete endpoint berilmagan"
+                            }
+                          >
+                            {deletingId === user.id ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={15} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}

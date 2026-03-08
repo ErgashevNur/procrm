@@ -31,7 +31,7 @@ export const NAV_ITEMS = [
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
-    roles: [ROLES.SUPERADMIN, ROLES.ROP],
+    roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
   },
   {
     title: "Leadlar",
@@ -67,7 +67,7 @@ export const NAV_ITEMS = [
     title: "Sms/Rassilka",
     url: "/rassilka",
     icon: MessageSquare,
-    roles: [ROLES.SUPERADMIN, ROLES.ROP],
+    roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
   },
 ];
 

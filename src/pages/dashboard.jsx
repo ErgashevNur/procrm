@@ -268,8 +268,31 @@ export default function Dashboard() {
 
   if (!data) return null;
 
-  const { daily, weekly, monthly, totalLeads, byStatus, percentages, tasks } =
-    data;
+  const {
+    daily = 0,
+    weekly = 0,
+    monthly = 0,
+    totalLeads = 0,
+    byStatus = {
+      new: 0,
+      pending: 0,
+      success: 0,
+      canceled: 0,
+    },
+    percentages = {
+      new: 0,
+      pending: 0,
+      success: 0,
+      canceled: 0,
+    },
+    tasks = {
+      total: 0,
+      completed: 0,
+      overdue: 0,
+      pending: 0,
+      completionRate: 0,
+    },
+  } = data || {};
 
   return (
     <div className="crm-page overflow-y-auto">

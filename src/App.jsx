@@ -108,7 +108,7 @@ const router = createBrowserRouter([
       {
         path: "dashboard",
         element: (
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
               <Dashboard />
             </ProjectGate>
@@ -195,7 +195,7 @@ const router = createBrowserRouter([
       {
         path: "rassilka",
         element: (
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
               <SmsRassilka />
             </ProjectGate>
