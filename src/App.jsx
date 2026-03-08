@@ -4,34 +4,48 @@ import {
   Outlet,
   RouterProvider,
 } from "react-router-dom";
-import Dashboard from "./pages/dashboard";
-import Login from "./pages/login";
-import Mijozlar from "./pages/mijozlar";
-import Profile from "./pages/profile";
-import Projects from "./pages/project";
-import Kanban from "./pages/kanban";
-import Setting from "./pages/settings";
-import Tasks from "./pages/task";
-import LeadSource from "./pages/leadSource";
-import LeadDetails from "./pages/leadDetails";
+import { Suspense, lazy } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProjectGate from "./components/ProjectGate";
 import AppSidebar from "./components/AppSidebar";
 import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import SmsRassilka from "./pages/smsRassilka";
 import {
   getCurrentRole,
   getDefaultRouteByRole,
   isSupportedRole,
   ROLES,
 } from "@/lib/rbac";
-import AddStatus from "./pages/addStatus";
-import Analitika from "./pages/analitika";
-import AppErrorFallback from "./pages/error";
+
+const Dashboard = lazy(() => import("./pages/dashboard"));
+const Login = lazy(() => import("./pages/login"));
+const Mijozlar = lazy(() => import("./pages/mijozlar"));
+const Profile = lazy(() => import("./pages/profile"));
+const Projects = lazy(() => import("./pages/project"));
+const Kanban = lazy(() => import("./pages/kanban"));
+const Setting = lazy(() => import("./pages/settings"));
+const Tasks = lazy(() => import("./pages/task"));
+const LeadSource = lazy(() => import("./pages/leadSource"));
+const LeadDetails = lazy(() => import("./pages/leadDetails"));
+const SmsRassilka = lazy(() => import("./pages/smsRassilka"));
+const AddStatus = lazy(() => import("./pages/addStatus"));
+const Analitika = lazy(() => import("./pages/analitika"));
+const AppErrorFallback = lazy(() => import("./pages/error"));
 
 const MANAGEMENT_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 const CRM_ROLES = [ROLES.ROP, ROLES.SALESMANAGER, ROLES.SUPERADMIN];
+
+function RouteLoader() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#9ab8cc]">
+      Yuklanmoqda...
+    </div>
+  );
+}
+
+function withLazy(component) {
+  return <Suspense fallback={<RouteLoader />}>{component}</Suspense>;
+}
 
 function RoleHomeRedirect() {
   const role = getCurrentRole();
@@ -85,8 +99,8 @@ export function ProtectedLayout() {
 const router = createBrowserRouter([
   {
     path: "/login",
-    element: <Login />,
-    errorElement: <AppErrorFallback />,
+    element: withLazy(<Login />),
+    errorElement: withLazy(<AppErrorFallback />),
   },
   {
     path: "/403",
@@ -94,7 +108,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
-    errorElement: <AppErrorFallback />,
+    errorElement: withLazy(<AppErrorFallback />),
     element: (
       <ProtectedRoute>
         <ProtectedLayout />
@@ -110,20 +124,20 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <Dashboard />
+              {withLazy(<Dashboard />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
       },
       {
         path: "profile",
-        element: <Profile />,
+        element: withLazy(<Profile />),
       },
       {
         path: "kanban",
         element: (
           <ProjectGate>
-            <Kanban />
+            {withLazy(<Kanban />)}
           </ProjectGate>
         ),
       },
@@ -131,7 +145,7 @@ const router = createBrowserRouter([
         path: "tasks",
         element: (
           <ProjectGate>
-            <Tasks />
+            {withLazy(<Tasks />)}
           </ProjectGate>
         ),
       },
@@ -139,7 +153,7 @@ const router = createBrowserRouter([
         path: "leadDetails",
         element: (
           <ProjectGate>
-            <LeadDetails />
+            {withLazy(<LeadDetails />)}
           </ProjectGate>
         ),
       },
@@ -149,7 +163,7 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <Mijozlar />
+              {withLazy(<Mijozlar />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
@@ -160,7 +174,7 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <AddStatus />
+              {withLazy(<AddStatus />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
@@ -171,7 +185,7 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <LeadSource />
+              {withLazy(<LeadSource />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
@@ -180,7 +194,7 @@ const router = createBrowserRouter([
         path: "setting",
         element: (
           <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-            <Setting />
+            {withLazy(<Setting />)}
           </ProtectedRoute>
         ),
       },
@@ -188,7 +202,7 @@ const router = createBrowserRouter([
         path: "projects",
         element: (
           <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-            <Projects />
+            {withLazy(<Projects />)}
           </ProtectedRoute>
         ),
       },
@@ -197,7 +211,7 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <SmsRassilka />
+              {withLazy(<SmsRassilka />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
@@ -207,7 +221,7 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>
-              <Analitika />
+              {withLazy(<Analitika />)}
             </ProjectGate>
           </ProtectedRoute>
         ),
@@ -221,7 +235,7 @@ const router = createBrowserRouter([
   {
     path: "*",
     element: <Navigate to="/login" replace />,
-    errorElement: <AppErrorFallback />,
+    errorElement: withLazy(<AppErrorFallback />),
   },
 ]);
 
