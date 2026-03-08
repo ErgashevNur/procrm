@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
+import { Activity, Target, Wallet, Layers3, Users } from "lucide-react";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -50,11 +51,13 @@ async function apiFetch(url, options = {}) {
       ...options.headers,
     },
   });
+
   if (res.status === 401) {
     localStorage.clear();
     window.location.href = "/login";
     return null;
   }
+
   return res;
 }
 
@@ -103,11 +106,8 @@ function bucketLabel(d, mode) {
   if (mode === "week") {
     const end = addDays(d, 6);
     const s = d.toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit" });
-    const e = end.toLocaleDateString("uz-UZ", {
-      day: "2-digit",
-      month: "2-digit",
-    });
-    return `${s}-${e}`;
+    const e = end.toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit" });
+    return `${s} - ${e}`;
   }
   return d.toLocaleDateString("uz-UZ", { month: "short", year: "2-digit" });
 }
@@ -252,6 +252,19 @@ async function fetchAllLeadsByStatus(statusId) {
   return all;
 }
 
+function StatCard({ title, value, caption, icon: Icon, valueClass = "text-slate-100" }) {
+  return (
+    <div className="rounded-2xl border border-[#2f4e67] bg-gradient-to-br from-[#0b2437] to-[#102f47] p-4 shadow-[0_10px_28px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center justify-between">
+        <p className="text-xs tracking-widest text-slate-400 uppercase">{title}</p>
+        <Icon size={15} className="text-cyan-300" />
+      </div>
+      <p className={`mt-2 text-3xl font-semibold ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-[11px] text-slate-500">{caption}</p>
+    </div>
+  );
+}
+
 export default function Analitika() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -289,9 +302,7 @@ export default function Analitika() {
         );
 
         const leads = dedupeLeadsById(
-          chunks
-          .flat()
-          .map((x) => ({
+          chunks.flat().map((x) => ({
             ...x,
             __statusName: pickStatusName(x, statusMap),
           })),
@@ -376,38 +387,57 @@ export default function Analitika() {
     : 0;
 
   return (
-    <div className="crm-page h-full overflow-y-auto overflow-x-hidden text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1300px] flex-col gap-4 pb-6">
-        <section className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-[#3d5b72] bg-[#0b2437] px-4 py-3">
-            <p className="text-xs tracking-wide text-slate-400 uppercase">Jami deal</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-100">{analytics.totalDeals}</p>
-          </div>
-          <div className="rounded-xl border border-[#3d5b72] bg-[#0b2437] px-4 py-3">
-            <p className="text-xs tracking-wide text-slate-400 uppercase">Yopilish darajasi</p>
-            <p className="mt-1 text-3xl font-semibold text-emerald-300">{closeRate}%</p>
-          </div>
-          <div className="rounded-xl border border-[#3d5b72] bg-[#0b2437] px-4 py-3">
-            <p className="text-xs tracking-wide text-slate-400 uppercase">Jami summa</p>
-            <p className="mt-1 text-3xl font-semibold text-cyan-300">
-              {formatMoney(analytics.totalAmount)}
-            </p>
-          </div>
+    <div className="h-screen overflow-y-auto overflow-x-hidden bg-[#071828] text-slate-100">
+      <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-4 px-4 py-4 pb-8 md:px-6 md:py-5">
+        <div className="rounded-2xl border border-[#2f4e67] bg-gradient-to-r from-[#0b2437] to-[#10344c] px-4 py-4 md:px-5 md:py-5">
+          <p className="text-xs tracking-widest text-cyan-300/80 uppercase">Analitika</p>
+          <h1 className="mt-1 text-xl font-semibold text-slate-100 md:text-2xl">
+            Loyiha samaradorligi va deallar dinamikasi
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Barcha metrikalar real lead ma'lumotlari asosida hisoblanmoqda
+          </p>
+        </div>
+
+        <section className="grid gap-3 md:grid-cols-3">
+          <StatCard
+            title="Jami Deal"
+            value={analytics.totalDeals}
+            caption="Barcha leadlar soni"
+            icon={Activity}
+          />
+          <StatCard
+            title="Yopilish Darajasi"
+            value={`${closeRate}%`}
+            caption="Muvaffaqiyatga chiqqanlar ulushi"
+            icon={Target}
+            valueClass="text-emerald-300"
+          />
+          <StatCard
+            title="Jami Summasi"
+            value={formatMoney(analytics.totalAmount)}
+            caption="Lead budjetlari yig'indisi"
+            icon={Wallet}
+            valueClass="text-cyan-300"
+          />
         </section>
 
-        <section className="rounded-xl border border-[#3d5b72] bg-[#0b2437] px-4 py-3 md:px-5 md:py-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold tracking-wide text-slate-100">DEALS</h2>
-            <div className="flex items-center gap-3 text-xs font-semibold text-cyan-200/60">
+        <section className="rounded-2xl border border-[#2f4e67] bg-[#0b2437] p-4 md:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs tracking-widest text-cyan-300/70 uppercase">Trend</p>
+              <h2 className="text-lg font-semibold text-slate-100">Deal harakati</h2>
+            </div>
+            <div className="flex items-center gap-1 rounded-xl border border-[#355774] bg-[#0f2a40] p-1">
               {TABS.map((item) => (
                 <button
                   key={item.key}
                   type="button"
                   onClick={() => setTab(item.key)}
-                  className={`border-b pb-1 transition ${
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     tab === item.key
-                      ? "border-cyan-400 text-cyan-300"
-                      : "border-transparent hover:text-cyan-200"
+                      ? "bg-cyan-500/20 text-cyan-200"
+                      : "text-cyan-200/70 hover:bg-white/5 hover:text-cyan-200"
                   }`}
                 >
                   {item.label}
@@ -417,9 +447,9 @@ export default function Analitika() {
           </div>
 
           {loading ? (
-            <div className="h-[360px] animate-pulse rounded-lg bg-[#123149]" />
+            <div className="h-[340px] animate-pulse rounded-xl bg-[#123149]" />
           ) : (
-            <div className="h-[360px] w-full">
+            <div className="h-[340px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={analytics.trend}>
                   <CartesianGrid stroke="#89a6bf2d" />
@@ -447,12 +477,7 @@ export default function Analitika() {
                     name="Barcha deal"
                     stroke="#0ea5e9"
                     strokeWidth={3}
-                    dot={{
-                      r: 3,
-                      fill: "#0f2231",
-                      stroke: "#bae6fd",
-                      strokeWidth: 2,
-                    }}
+                    dot={{ r: 3, fill: "#0f2231", stroke: "#bae6fd", strokeWidth: 2 }}
                   />
                   <Line
                     type="monotone"
@@ -460,12 +485,7 @@ export default function Analitika() {
                     name="Yopilgan deal"
                     stroke="#84cc16"
                     strokeWidth={2}
-                    dot={{
-                      r: 3,
-                      fill: "#0f2231",
-                      stroke: "#d9f99d",
-                      strokeWidth: 2,
-                    }}
+                    dot={{ r: 3, fill: "#0f2231", stroke: "#d9f99d", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -473,8 +493,13 @@ export default function Analitika() {
           )}
         </section>
 
-        <section className="rounded-xl border border-[#3d5b72] bg-[#0b2437] px-4 py-4 md:px-5 md:py-5">
-          <h3 className="mb-4 text-lg font-semibold tracking-wide text-slate-100">DEALS</h3>
+        <section className="rounded-2xl border border-[#2f4e67] bg-[#0b2437] p-4 md:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs tracking-widest text-cyan-300/70 uppercase">Kesim</p>
+              <h3 className="text-lg font-semibold text-slate-100">Etaplar va menejerlar</h3>
+            </div>
+          </div>
 
           {!!error && (
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -483,33 +508,31 @@ export default function Analitika() {
           )}
 
           {!loading && analytics.totalDeals === 0 ? (
-            <div className="rounded-lg border border-white/10 bg-[#0f2a40] p-6 text-center text-slate-300">
+            <div className="rounded-xl border border-white/10 bg-[#0f2a40] p-8 text-center text-slate-300">
               Analitika uchun lead ma'lumotlari topilmadi.
             </div>
           ) : (
-            <div className="grid gap-5 lg:grid-cols-3">
-              <div>
-                <p className="mb-3 text-xs font-semibold tracking-widest text-slate-400 uppercase">
-                  ETAPLAR
-                </p>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-xl border border-[#355774] bg-[#0f2a40]/75 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Layers3 size={14} className="text-cyan-300" />
+                  <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+                    Etaplar bo'yicha
+                  </p>
+                </div>
                 <div className="space-y-3">
                   {analytics.stages.length === 0 ? (
                     <p className="text-sm text-slate-400">Etaplar bo'yicha ma'lumot yo'q.</p>
                   ) : (
                     analytics.stages.map((item) => (
                       <div key={item.name} className="flex items-start gap-3">
-                        <p className="w-12 text-right text-4xl leading-9 font-light text-slate-200">
+                        <p className="w-12 text-right text-3xl leading-8 font-light text-slate-200">
                           {item.percent}%
                         </p>
-                        <div
-                          className="mt-1 h-10 w-[2px] rounded"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div>
-                          <p className="text-xl leading-none text-slate-200 md:text-2xl">
-                            {item.name}
-                          </p>
-                          <p className="text-sm text-slate-400">
+                        <div className="mt-1 h-9 w-[2px] rounded" style={{ backgroundColor: item.color }} />
+                        <div className="min-w-0">
+                          <p className="truncate text-lg leading-none text-slate-100">{item.name}</p>
+                          <p className="text-xs text-slate-400">
                             {item.deals} deals, {formatMoney(item.amount)}
                           </p>
                         </div>
@@ -519,57 +542,63 @@ export default function Analitika() {
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center">
-                <div className="relative h-[260px] w-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={analytics.donut}
-                        dataKey="value"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={96}
-                        outerRadius={116}
-                        startAngle={90}
-                        endAngle={-270}
-                        paddingAngle={2}
-                      >
-                        {analytics.donut.map((item) => (
-                          <Cell key={item.name} fill={item.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <p className="text-sm text-slate-500">{formatMoney(analytics.totalAmount)}</p>
-                    <p className="text-6xl font-light text-slate-100">{analytics.totalDeals}</p>
-                    <p className="text-base text-slate-400">Jami deals</p>
+              <div className="rounded-xl border border-[#355774] bg-[#0f2a40]/75 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Activity size={14} className="text-cyan-300" />
+                  <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+                    Umumiy ulush
+                  </p>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative h-[250px] w-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={analytics.donut}
+                          dataKey="value"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={88}
+                          outerRadius={112}
+                          startAngle={90}
+                          endAngle={-270}
+                          paddingAngle={2}
+                        >
+                          {analytics.donut.map((item) => (
+                            <Cell key={item.name} fill={item.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <p className="text-xs text-slate-500">{formatMoney(analytics.totalAmount)}</p>
+                      <p className="text-5xl font-light text-slate-100">{analytics.totalDeals}</p>
+                      <p className="text-sm text-slate-400">Jami deals</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <p className="mb-3 text-xs font-semibold tracking-widest text-slate-400 uppercase">
-                  MENEJER BO'YICHA
-                </p>
-                <div className="space-y-4">
+              <div className="rounded-xl border border-[#355774] bg-[#0f2a40]/75 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Users size={14} className="text-cyan-300" />
+                  <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+                    Menejer bo'yicha
+                  </p>
+                </div>
+                <div className="space-y-3">
                   {analytics.managers.length === 0 ? (
                     <p className="text-sm text-slate-400">Menejerlar bo'yicha ma'lumot yo'q.</p>
                   ) : (
                     analytics.managers.map((item) => (
                       <div key={item.name} className="flex items-start gap-3">
-                        <p className="w-12 text-right text-4xl leading-9 font-light text-slate-200">
+                        <p className="w-12 text-right text-3xl leading-8 font-light text-slate-200">
                           {item.percent}%
                         </p>
-                        <div
-                          className="mt-1 h-10 w-[2px] rounded"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div>
-                          <p className="max-w-[260px] truncate text-xl leading-none text-slate-100 md:text-2xl">
-                            {item.name}
-                          </p>
-                          <p className="text-sm text-slate-400">
+                        <div className="mt-1 h-9 w-[2px] rounded" style={{ backgroundColor: item.color }} />
+                        <div className="min-w-0">
+                          <p className="truncate text-lg leading-none text-slate-100">{item.name}</p>
+                          <p className="text-xs text-slate-400">
                             {item.deals} deals, {formatMoney(item.amount)}
                           </p>
                         </div>
