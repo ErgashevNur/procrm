@@ -195,16 +195,62 @@ function Shimmer({ className }) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const searchParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  const initialPeriod = searchParams?.get("period") || "today";
+  const initialFrom = searchParams?.get("from") || "";
+  const initialTo = searchParams?.get("to") || "";
+  const periodOptions = new Set(["all", "today", "week", "month", "custom"]);
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState(
+    periodOptions.has(initialPeriod) ? initialPeriod : "today",
+  );
+  const [fromDate, setFromDate] = useState(initialFrom);
+  const [toDate, setToDate] = useState(initialTo);
   const projectId = localStorage.getItem("projectId");
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (period && period !== "all") params.set("period", period);
+    else params.delete("period");
+
+    const useCustomDates = period === "custom" && fromDate && toDate;
+    if (useCustomDates) {
+      params.set("from", fromDate);
+      params.set("to", toDate);
+    } else {
+      params.delete("from");
+      params.delete("to");
+    }
+
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery
+      ? `${window.location.pathname}?${nextQuery}`
+      : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [period, fromDate, toDate]);
+
+  useEffect(() => {
     if (projectId) {
+      const hasOnlyOneDate = (fromDate && !toDate) || (!fromDate && toDate);
+      if (period === "custom" && hasOnlyOneDate) return;
+
       const load = async () => {
+        setLoading(true);
         try {
+          const params = new URLSearchParams();
+          if (period && period !== "all") params.set("period", period);
+          if (period === "custom" && fromDate && toDate) {
+            params.set("from", fromDate);
+            params.set("to", toDate);
+          }
+
           const res = await apiFetch(
-            `${API}/dashboard/crm/leads/statistik/${projectId}`,
+            `${API}/dashboard/crm/leads/statistik/${projectId}?${params.toString()}`,
           );
           if (!res) return;
           const json = await res.json();
@@ -244,7 +290,7 @@ export default function Dashboard() {
       });
       setLoading(false);
     }
-  }, []);
+  }, [projectId, period, fromDate, toDate]);
 
   if (loading) {
     return (
@@ -314,6 +360,51 @@ export default function Dashboard() {
       />
 
       <div className="relative mx-auto max-w-5xl space-y-5">
+        <div
+          className="crm-card"
+          style={{ animation: "fadeUp 0.45s ease 0.02s both" }}
+        >
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+              Davr
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400"
+              >
+                <option value="all">Hammasi</option>
+                <option value="today">Bugun</option>
+                <option value="week">Hafta</option>
+                <option value="month">Oy</option>
+                <option value="custom">Maxsus</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+              Boshlanish sanasi
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                disabled={period !== "custom"}
+                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+              Tugash sanasi
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                disabled={period !== "custom"}
+                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </label>
+
+          </div>
+        </div>
+
         {/* Title */}
         {/* <div style={{ animation: "fadeUp 0.4s ease both" }}>
           <h1 className="text-xl font-black tracking-tight text-white">
