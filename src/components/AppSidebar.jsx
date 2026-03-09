@@ -1,12 +1,7 @@
 import { useSidebar } from "@/components/ui/sidebar";
-import { LogOut, Settings } from "lucide-react";
+import { Lock, LogOut, Settings, ShoppingBag } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import {
-  NAV_ITEMS,
-  ROLE_LABELS,
-  ROLES,
-  isSupportedRole,
-} from "@/lib/rbac";
+import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -74,7 +69,9 @@ export default function AppSidebar() {
   const avatarUrl = getImageUrl(user.img);
   const avatarLetter = (user.fullName || user.email || "U")[0].toUpperCase();
   const safeRole = isSupportedRole(role) ? role : ROLES.SALESMANAGER;
-  const visibleMenus = NAV_ITEMS.filter((item) => item.roles.includes(safeRole));
+  const visibleMenus = NAV_ITEMS.filter((item) =>
+    item.roles.includes(safeRole),
+  );
   const roleLabel = ROLE_LABELS[safeRole] || safeRole;
   const canOpenSettings = SETTINGS_ROLES.includes(safeRole);
   const projectName = localStorage.getItem("projectName");
@@ -157,10 +154,58 @@ export default function AppSidebar() {
               </span>
             </NavLink>
           ))}
+
+          {/* Beta versiya */}
+          <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
+            <NavLink
+              key="crm-market"
+              to="/crm-market"
+              end
+              className={() =>
+                navCls(false, isCollapsed, "mx-2 my-0.5 ") +
+                "pointer-events-none opacity-50 select-none"
+              }
+              onClick={(e) => e.preventDefault()}
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <div className="relative shrink-0">
+                <ShoppingBag
+                  size={isCollapsed ? 22 : 18}
+                  className="shrink-0"
+                />
+                <Lock
+                  size={10}
+                  className="absolute -right-1 -bottom-1 text-amber-400"
+                />
+                {/* Beta badge — collapsed holda icon ustida */}
+                {isCollapsed && (
+                  <span className="absolute -top-1.5 -right-6 rounded border border-amber-400/30 bg-amber-400/20 px-0.5 py-px text-[7px] leading-none font-bold text-amber-400">
+                    BETA
+                  </span>
+                )}
+              </div>
+
+              <span
+                className={`flex items-center gap-1.5 leading-tight font-medium whitespace-nowrap ${
+                  isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
+                }`}
+              >
+                CRM Market
+                {!isCollapsed && (
+                  <span className="rounded border border-amber-400/30 bg-amber-400/20 px-1 py-0.5 text-[9px] leading-none font-semibold text-amber-400">
+                    BETA
+                  </span>
+                )}
+              </span>
+            </NavLink>
+          </div>
+          {/* Beta versiya */}
         </nav>
       </div>
 
       {/* BOTTOM */}
+      <div className="my-1 h-px bg-white/[0.06]" />
       <div className="p-2">
         {canOpenSettings && (
           <NavLink
