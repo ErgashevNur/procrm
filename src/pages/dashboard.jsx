@@ -18,129 +18,41 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function pickStatusValue(obj, keys) {
-  for (const key of keys) {
-    if (obj?.[key] != null) return toNumber(obj[key]);
-  }
-  return 0;
-}
-
-function normalizeByStatus(raw = {}) {
-  return {
-    new: pickStatusValue(raw, ["new"]),
-    pending: pickStatusValue(raw, ["pending", "inProgress", "in_progress"]),
-    success: pickStatusValue(raw, ["success", "successful", "done"]),
-    canceled: pickStatusValue(raw, ["canceled", "cancelled", "rejected"]),
-  };
-}
-
-function normalizePercentages(raw = {}) {
-  return {
-    new: pickStatusValue(raw, ["new"]),
-    pending: pickStatusValue(raw, ["pending", "inProgress", "in_progress"]),
-    success: pickStatusValue(raw, ["success", "successful", "done"]),
-    canceled: pickStatusValue(raw, ["canceled", "cancelled", "rejected"]),
-  };
-}
-
 function normalizeDashboardPayload(payload, selectedPeriodFallback) {
-  const json =
-    payload?.statsInPeriod || payload?.daily != null || payload?.byStatus
-      ? payload
-      : payload?.data || payload?.result || payload?.payload || payload;
+  const json = payload?.data || payload?.result || payload?.payload || payload;
 
   if (!json || typeof json !== "object") return null;
 
-  if (json?.statsInPeriod) {
-    const byStatus = normalizeByStatus(json.statsInPeriod.byStatus);
-    const percentages = normalizePercentages(json.statsInPeriod.percentages);
-    const totalLeads =
-      toNumber(json.statsInPeriod.leadsCount) ||
-      Object.values(byStatus).reduce((sum, val) => sum + toNumber(val), 0);
-
-    const selectedPeriod = json.selectedPeriod || selectedPeriodFallback || "today";
-    const daily =
-      json?.summary?.daily != null
-        ? toNumber(json.summary.daily)
-        : selectedPeriod === "today" || selectedPeriod === "day"
-          ? totalLeads
-          : 0;
-    const weekly =
-      json?.summary?.weekly != null
-        ? toNumber(json.summary.weekly)
-        : selectedPeriod === "week"
-          ? totalLeads
-          : 0;
-    const monthly =
-      json?.summary?.monthly != null
-        ? toNumber(json.summary.monthly)
-        : selectedPeriod === "month"
-          ? totalLeads
-          : 0;
-
-    return {
-      ...json,
-      totalLeads,
-      byStatus,
-      percentages,
-      daily,
-      weekly,
-      monthly,
-      tasks: json.tasksInPeriod || json.tasks,
-    };
-  }
-
-  const hasLegacyShape =
-    json?.daily != null ||
-    json?.weekly != null ||
-    json?.monthly != null ||
-    json?.totalLeads != null ||
-    json?.byStatus != null ||
-    json?.percentages != null ||
-    json?.tasks != null;
-
-  if (!hasLegacyShape) return null;
-
-  const legacy = {
-    ...json,
-    daily: toNumber(json.daily),
-    weekly: toNumber(json.weekly),
-    monthly: toNumber(json.monthly),
-    totalLeads: toNumber(json.totalLeads),
-    byStatus: normalizeByStatus(json.byStatus),
-    percentages: normalizePercentages(json.percentages),
-    tasks: json.tasks,
+  return {
+    selectedPeriod: json.selectedPeriod || selectedPeriodFallback || "today",
+    dateRange: {
+      from: json?.dateRange?.from || "",
+      to: json?.dateRange?.to || "",
+    },
+    daily: toNumber(json?.summary?.daily),
+    weekly: toNumber(json?.summary?.weekly),
+    monthly: toNumber(json?.summary?.monthly),
+    totalLeads: toNumber(json?.summary?.total),
+    byStatus: {
+      new: toNumber(json?.statsInPeriod?.byStatus?.new),
+      pending: toNumber(json?.statsInPeriod?.byStatus?.pending),
+      success: toNumber(json?.statsInPeriod?.byStatus?.success),
+      canceled: toNumber(json?.statsInPeriod?.byStatus?.canceled),
+    },
+    percentages: {
+      new: toNumber(json?.statsInPeriod?.percentages?.new),
+      pending: toNumber(json?.statsInPeriod?.percentages?.pending),
+      success: toNumber(json?.statsInPeriod?.percentages?.success),
+      canceled: toNumber(json?.statsInPeriod?.percentages?.canceled),
+    },
+    tasks: {
+      total: toNumber(json?.tasksInPeriod?.total),
+      completed: toNumber(json?.tasksInPeriod?.completed),
+      overdue: toNumber(json?.tasksInPeriod?.overdue),
+      pending: toNumber(json?.tasksInPeriod?.pending),
+      completionRate: toNumber(json?.tasksInPeriod?.completionRate),
+    },
   };
-
-  // If backend uses different wrapper keys, try to infer byStatus-like shape.
-  if (
-    legacy.totalLeads === 0 &&
-    Object.values(legacy.byStatus).every((v) => toNumber(v) === 0) &&
-    payload &&
-    typeof payload === "object"
-  ) {
-    const byStatusCandidate =
-      payload?.stats?.byStatus ||
-      payload?.dashboard?.byStatus ||
-      payload?.statistics?.byStatus;
-    const percentagesCandidate =
-      payload?.stats?.percentages ||
-      payload?.dashboard?.percentages ||
-      payload?.statistics?.percentages;
-    if (byStatusCandidate) {
-      const byStatus = normalizeByStatus(byStatusCandidate);
-      return {
-        ...legacy,
-        byStatus,
-        percentages: normalizePercentages(percentagesCandidate),
-        totalLeads:
-          toNumber(payload?.stats?.leadsCount) ||
-          Object.values(byStatus).reduce((sum, v) => sum + toNumber(v), 0),
-      };
-    }
-  }
-
-  return legacy;
 }
 
 async function apiFetch(url) {
@@ -212,7 +124,7 @@ function ArcProgress({ percent, color, size = 80, stroke = 7 }) {
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
+function StatCard({ icon: Icon, label, value, sub, note, color, delay = 0 }) {
   return (
     <div
       className="crm-card crm-hairline relative overflow-hidden"
@@ -244,6 +156,11 @@ function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
       <p className="mt-1 text-[11px] font-semibold tracking-[0.2em] text-[color:var(--crm-muted-2)] uppercase">
         {label}
       </p>
+      {note ? (
+        <p className="mt-2 text-xs leading-5 text-[color:var(--crm-muted)]">
+          {note}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -283,7 +200,9 @@ function StatusBar({ statusKey, count, total, percent }) {
           </span>
           <span className="text-xs font-bold text-white">
             {count}{" "}
-            <span className="font-normal text-[color:var(--crm-muted-2)]">({percent}%)</span>
+            <span className="font-normal text-[color:var(--crm-muted-2)]">
+              ({percent}%)
+            </span>
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.05]">
@@ -323,6 +242,17 @@ function TaskRing({ label, value, total, color }) {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function Shimmer({ className }) {
   return <div className={`crm-skeleton rounded-2xl ${className}`} />;
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("uz-UZ", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
@@ -459,6 +389,10 @@ export default function Dashboard() {
     weekly = 0,
     monthly = 0,
     totalLeads = 0,
+    dateRange = {
+      from: "",
+      to: "",
+    },
     byStatus = {
       new: 0,
       pending: 0,
@@ -488,6 +422,18 @@ export default function Dashboard() {
       month: "Oylik ko'rinish",
       custom: "Maxsus oraliq",
     }[period] || "Dashboard";
+
+  const periodHint =
+    {
+      all: "Hamma ma'lumot shu yerda ko'rsatilgan.",
+      today: "Bu yerda bugungi ma'lumotlar ko'rsatilgan.",
+      week: "Bu yerda shu haftadagi ma'lumotlar ko'rsatilgan.",
+      month: "Bu yerda shu oydagi ma'lumotlar ko'rsatilgan.",
+      custom:
+        "Bu yerda tanlangan sanalar oralig'idagi ma'lumotlar ko'rsatilgan.",
+    }[period] || "Bu yerda tanlangan vaqt bo'yicha ma'lumotlar ko'rsatilgan.";
+
+  const hasDateRange = dateRange.from && dateRange.to;
 
   return (
     <div className="crm-page relative min-h-full overflow-x-hidden">
@@ -520,18 +466,28 @@ export default function Dashboard() {
                 {periodLabel}
               </h1>
               <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
-                Leadlar va tasklar bo'yicha umumiy holat bir joyda jamlandi.
-                Filtrlar URL bilan sinxron bo'lib qoladi.
+                {periodHint}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
-                Jami leadlar: <span className="font-semibold text-white">{totalLeads}</span>
+                Jami leadlar:{" "}
+                <span className="font-semibold text-white">{totalLeads}</span>
               </div>
               <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
-                Tasklar: <span className="font-semibold text-white">{tasks.total}</span>
+                Tasklar:{" "}
+                <span className="font-semibold text-white">{tasks.total}</span>
               </div>
+              {hasDateRange ? (
+                <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
+                  Sana:{" "}
+                  <span className="font-semibold text-white">
+                    {formatDisplayDate(dateRange.from)} -{" "}
+                    {formatDisplayDate(dateRange.to)}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -589,6 +545,7 @@ export default function Dashboard() {
             icon={Users}
             label="Jami Leadlar"
             value={totalLeads}
+            note="Umumiy tushgan leadlar soni."
             color="#3b82f6"
             delay={0.05}
           />
@@ -596,6 +553,7 @@ export default function Dashboard() {
             icon={TrendingUp}
             label="Bugun"
             value={daily}
+            note="Bugun nechta lead tushgani."
             color="#22c55e"
             delay={0.1}
           />
@@ -603,6 +561,7 @@ export default function Dashboard() {
             icon={BarChart3}
             label="Bu hafta"
             value={weekly}
+            note="Shu haftada nechta lead tushgani."
             color="#f59e0b"
             delay={0.15}
           />
@@ -610,6 +569,7 @@ export default function Dashboard() {
             icon={CalendarCheck2}
             label="Bu oy"
             value={monthly}
+            note="Shu oyda nechta lead tushgani."
             color="#a78bfa"
             delay={0.2}
           />
@@ -625,9 +585,12 @@ export default function Dashboard() {
             }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <p className="crm-kicker">
-                Statuslar bo'yicha
-              </p>
+              <div>
+                <p className="crm-kicker">Statuslar bo'yicha</p>
+                <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
+                  Leadlar qaysi holatda turgani shu yerda ko'rinadi.
+                </p>
+              </div>
               <span className="text-xs font-semibold text-[color:var(--crm-muted-2)]">
                 {totalLeads} ta
               </span>
@@ -653,15 +616,20 @@ export default function Dashboard() {
             }}
           >
             <div className="mb-5 flex items-center justify-between">
-              <p className="crm-kicker">
-                Tasklar
-              </p>
+              <div>
+                <p className="crm-kicker">Tasklar</p>
+                <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
+                  Vazifalar holati shu yerda ko'rinadi.
+                </p>
+              </div>
               <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5">
                 <CalendarCheck2 size={11} className="text-blue-400" />
                 <span className="text-xs font-bold text-white">
                   {tasks.total}
                 </span>
-                <span className="text-[10px] text-[color:var(--crm-muted-2)]">jami</span>
+                <span className="text-[10px] text-[color:var(--crm-muted-2)]">
+                  jami
+                </span>
               </div>
             </div>
 
@@ -710,7 +678,9 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center gap-2">
                       <Icon size={12} style={{ color }} />
-                      <span className="text-xs text-[color:var(--crm-muted)]">{label}</span>
+                      <span className="text-xs text-[color:var(--crm-muted)]">
+                        {label}
+                      </span>
                     </div>
                     <span className="text-xs font-bold text-white">
                       {value}
@@ -751,9 +721,12 @@ export default function Dashboard() {
             animation: "fadeUp 0.5s ease 0.35s both",
           }}
         >
-          <p className="mb-4 crm-kicker">
-            Lead konversiyasi
-          </p>
+          <div className="mb-4">
+            <p className="crm-kicker">Lead konversiyasi</p>
+            <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
+              Jami leadlar qaysi holatda qancha ekanini ko'rsatadi.
+            </p>
+          </div>
           <div className="flex h-16 items-end gap-1">
             {Object.entries(byStatus).map(([key, count]) => {
               const meta = STATUS_META[key] || { color: "#6b7280", label: key };
@@ -776,7 +749,9 @@ export default function Dashboard() {
                       boxShadow: `0 -2px 8px ${meta.color}40`,
                     }}
                   />
-                  <span className="text-[9px] text-[color:var(--crm-muted-2)]">{meta.label}</span>
+                  <span className="text-[9px] text-[color:var(--crm-muted-2)]">
+                    {meta.label}
+                  </span>
                 </div>
               );
             })}
