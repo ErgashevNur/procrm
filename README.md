@@ -92,15 +92,6 @@ Dependency o'rnatish:
 npm install
 ```
 
-## Environment variables
-
-Loyiha API manzilini `VITE_VITE_API_KEY_PROHOME` orqali oladi.
-
-`.env` fayl namunasi:
-
-```env
-VITE_VITE_API_KEY_PROHOME=https://backend.prohome.uz/api/v1
-```
 
 ## Development rejimida ishga tushirish
 
