@@ -25,13 +25,16 @@ function ChartTooltipContent({
   label,
   indicator = "dot",
   formatter,
+  labelFormatter,
 }) {
   if (!active || !payload?.length) return null;
 
+  const resolvedLabel = labelFormatter ? labelFormatter(label, payload) : label;
+
   return (
     <div className="min-w-[150px] rounded-lg border border-white/10 bg-[#0b1b29]/95 px-3 py-2 shadow-xl backdrop-blur">
-      {label != null && (
-        <div className="mb-1 text-xs font-medium text-slate-300">{label}</div>
+      {resolvedLabel != null && (
+        <div className="mb-1 text-xs font-medium text-slate-300">{resolvedLabel}</div>
       )}
       <div className="space-y-1">
         {payload.map((item) => (
