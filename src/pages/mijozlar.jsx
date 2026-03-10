@@ -1116,9 +1116,10 @@ export default function Pipeline() {
       });
       if (!res || !res.ok) throw new Error();
       const newLead = await res.json();
+      const normalizedNewLead = normalizeLead(newLead);
       setStatuses((prev) =>
         prev.map((s, i) =>
-          i === 0 ? { ...s, leads: [newLead, ...s.leads] } : s,
+          i === 0 ? { ...s, leads: [normalizedNewLead, ...s.leads] } : s,
         ),
       );
       setSheetOpen(false);

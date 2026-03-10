@@ -55,45 +55,57 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --crm-bg: #071828;
-  --crm-surface: #0f2030;
-  --crm-surface-2: #10263a;
-  --crm-border: rgba(255, 255, 255, 0.08);
-  --crm-text: #e2e8f0;
-  --crm-muted: #7b90a5;
-  --crm-accent: #3b82f6;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.216 0.006 56.043);
+  --radius: 0.95rem;
+  --crm-bg: #020711;
+  --crm-bg-elevated: #071321;
+  --crm-surface: rgba(15, 26, 42, 0.72);
+  --crm-surface-2: rgba(20, 36, 58, 0.66);
+  --crm-surface-3: rgba(12, 22, 36, 0.82);
+  --crm-border: rgba(255, 255, 255, 0.1);
+  --crm-border-strong: rgba(255, 255, 255, 0.16);
+  --crm-text: #f5f7fb;
+  --crm-muted: #94a8bf;
+  --crm-muted-2: #6f8196;
+  --crm-accent: #69a7ff;
+  --crm-accent-2: #89b7ff;
+  --crm-accent-soft: rgba(105, 167, 255, 0.16);
+  --crm-success: #34c759;
+  --crm-warning: #ff9f0a;
+  --crm-danger: #ff453a;
+  --crm-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  --crm-shadow-soft: 0 20px 50px rgba(0, 0, 0, 0.22);
+  --crm-blur: blur(28px);
+  --background: oklch(0.147 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --card: oklch(0.216 0.006 56.043 / 72%);
+  --card-foreground: oklch(0.985 0.001 106.423);
+  --popover: oklch(0.216 0.006 56.043 / 85%);
+  --popover-foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.74 0.12 250);
   --primary-foreground: oklch(0.985 0.001 106.423);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
+  --secondary: oklch(0.24 0.01 250 / 72%);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.24 0.01 250 / 62%);
+  --muted-foreground: oklch(0.76 0.02 240);
+  --accent: oklch(0.26 0.012 250 / 72%);
+  --accent-foreground: oklch(0.985 0.001 106.423);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.709 0.01 56.259);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.78 0.08 250 / 45%);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0.001 106.423);
-  --sidebar-foreground: oklch(0.147 0.004 49.25);
-  --sidebar-primary: oklch(0.216 0.006 56.043);
+  --sidebar: oklch(0.216 0.006 56.043 / 76%);
+  --sidebar-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-primary: oklch(0.74 0.12 250);
   --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.97 0.001 106.424);
-  --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
-  --sidebar-border: oklch(0.923 0.003 48.717);
-  --sidebar-ring: oklch(0.709 0.01 56.259);
+  --sidebar-accent: oklch(0.26 0.012 250 / 72%);
+  --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.78 0.08 250 / 45%);
   --destructive-foreground: var(--color-red-800);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-900);
@@ -149,18 +161,65 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
+
+  *::selection {
+    background: rgba(105, 167, 255, 0.26);
+    color: #fff;
+  }
+
   body {
-    @apply text-foreground;
-    background: radial-gradient(
-        1200px 560px at 50% -220px,
-        rgba(59, 130, 246, 0.12),
-        transparent 70%
-      ),
-      var(--crm-bg);
+    @apply text-foreground antialiased;
+    font-family:
+      SF Pro Display,
+      SF Pro Text,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    background:
+      radial-gradient(900px 520px at 12% -10%, rgba(71, 135, 255, 0.18), transparent 60%),
+      radial-gradient(760px 460px at 88% 0%, rgba(90, 180, 255, 0.12), transparent 58%),
+      radial-gradient(900px 560px at 50% 115%, rgba(255, 255, 255, 0.05), transparent 62%),
+      linear-gradient(180deg, #040914 0%, #07111c 38%, #02060c 100%);
     color: var(--crm-text);
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.16));
+    background-clip: padding-box;
   }
 }
 
@@ -168,8 +227,13 @@
   .crm-skeleton {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(145deg, #0e2134, #0b1a2a);
+    border: 1px solid var(--crm-border);
+    border-radius: 1.5rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+      linear-gradient(160deg, rgba(14, 24, 38, 0.9), rgba(8, 14, 24, 0.82));
+    box-shadow: var(--crm-shadow-soft);
+    backdrop-filter: var(--crm-blur);
   }
 
   .crm-skeleton::after {
@@ -187,23 +251,91 @@
   }
 
   .crm-page {
-    @apply min-h-full p-5 md:p-6;
-    background: var(--crm-bg);
+    @apply relative min-h-full overflow-x-hidden p-4 md:p-6;
+    background: transparent;
   }
 
   .crm-card {
-    @apply rounded-2xl border p-4 md:p-5;
+    @apply relative rounded-[28px] border p-4 md:p-5;
     border-color: var(--crm-border);
-    background: linear-gradient(160deg, var(--crm-surface), var(--crm-surface-2));
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+      linear-gradient(160deg, var(--crm-surface), var(--crm-surface-2));
+    box-shadow: var(--crm-shadow-soft);
+    backdrop-filter: var(--crm-blur);
   }
 
   .crm-title {
-    @apply text-sm font-semibold tracking-wide text-white;
+    @apply text-sm font-semibold tracking-[0.01em] text-white;
   }
 
   .crm-subtitle {
     @apply text-xs;
     color: var(--crm-muted);
+  }
+
+  .crm-kicker {
+    @apply text-[11px] font-semibold tracking-[0.24em] uppercase;
+    color: var(--crm-muted-2);
+  }
+
+  .crm-glass {
+    border: 1px solid var(--crm-border);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02)),
+      linear-gradient(180deg, rgba(15, 24, 38, 0.78), rgba(9, 16, 28, 0.68));
+    box-shadow: var(--crm-shadow-soft);
+    backdrop-filter: var(--crm-blur);
+  }
+
+  .crm-glass-subtle {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(20px);
+  }
+
+  .crm-control {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+      rgba(7, 16, 27, 0.72);
+    color: var(--crm-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(18px);
+  }
+
+  .crm-control::placeholder {
+    color: var(--crm-muted-2);
+  }
+
+  .crm-control:focus-visible {
+    border-color: rgba(105, 167, 255, 0.5);
+    box-shadow:
+      0 0 0 4px rgba(105, 167, 255, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    outline: none;
+  }
+
+  .crm-hairline {
+    position: relative;
+  }
+
+  .crm-hairline::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02));
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
 }
 

@@ -57,6 +57,9 @@ function RoleHomeRedirect() {
 
 // 403 sahifasi
 function Forbidden() {
+  const role = getCurrentRole();
+  const homePath = isSupportedRole(role) ? getDefaultRouteByRole(role) : "/login";
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#0f2231] text-center">
       <p className="mb-3 text-7xl font-black text-[#162840]">403</p>
@@ -64,12 +67,22 @@ function Forbidden() {
       <p className="mb-8 text-sm text-[#456070]">
         Bu sahifani ko'rish uchun sizda yetarli huquq yo'q.
       </p>
-      <button
-        onClick={() => window.history.back()}
-        className="rounded border border-[#2a4560] bg-[#1a2e40] px-5 py-2 text-sm text-[#9ab8cc] transition-colors hover:border-[#3a5570]"
-      >
-        ← Orqaga
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => window.history.back()}
+          className="rounded border border-[#2a4560] bg-[#1a2e40] px-5 py-2 text-sm text-[#9ab8cc] transition-colors hover:border-[#3a5570]"
+        >
+          ← Orqaga
+        </button>
+        <button
+          onClick={() => {
+            window.location.href = homePath;
+          }}
+          className="rounded border border-[#2a4560] bg-[#223d56] px-5 py-2 text-sm text-white transition-colors hover:border-[#3a5570]"
+        >
+          Bosh sahifa
+        </button>
+      </div>
     </div>
   );
 }
@@ -77,11 +90,12 @@ function Forbidden() {
 export function ProtectedLayout() {
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="flex w-full overflow-hidden bg-gray-700">
+      <div className="relative flex h-svh w-full overflow-hidden bg-transparent">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(106,167,255,0.14),transparent_30%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.06),transparent_22%)]" />
         <AppSidebar />
-        <SidebarInset className="flex flex-col overflow-hidden bg-[#153043]">
+        <SidebarInset className="relative flex h-svh min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
           <main
-            className="flex-1 overflow-y-auto bg-[#0f2231]"
+            className="h-full min-h-0 flex-1 overflow-y-auto bg-transparent"
             style={{
               backgroundImage: `linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),
                       linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px)`,

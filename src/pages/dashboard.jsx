@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   TrendingUp,
   Users,
@@ -11,6 +12,136 @@ import {
 } from "lucide-react";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function pickStatusValue(obj, keys) {
+  for (const key of keys) {
+    if (obj?.[key] != null) return toNumber(obj[key]);
+  }
+  return 0;
+}
+
+function normalizeByStatus(raw = {}) {
+  return {
+    new: pickStatusValue(raw, ["new"]),
+    pending: pickStatusValue(raw, ["pending", "inProgress", "in_progress"]),
+    success: pickStatusValue(raw, ["success", "successful", "done"]),
+    canceled: pickStatusValue(raw, ["canceled", "cancelled", "rejected"]),
+  };
+}
+
+function normalizePercentages(raw = {}) {
+  return {
+    new: pickStatusValue(raw, ["new"]),
+    pending: pickStatusValue(raw, ["pending", "inProgress", "in_progress"]),
+    success: pickStatusValue(raw, ["success", "successful", "done"]),
+    canceled: pickStatusValue(raw, ["canceled", "cancelled", "rejected"]),
+  };
+}
+
+function normalizeDashboardPayload(payload, selectedPeriodFallback) {
+  const json =
+    payload?.statsInPeriod || payload?.daily != null || payload?.byStatus
+      ? payload
+      : payload?.data || payload?.result || payload?.payload || payload;
+
+  if (!json || typeof json !== "object") return null;
+
+  if (json?.statsInPeriod) {
+    const byStatus = normalizeByStatus(json.statsInPeriod.byStatus);
+    const percentages = normalizePercentages(json.statsInPeriod.percentages);
+    const totalLeads =
+      toNumber(json.statsInPeriod.leadsCount) ||
+      Object.values(byStatus).reduce((sum, val) => sum + toNumber(val), 0);
+
+    const selectedPeriod = json.selectedPeriod || selectedPeriodFallback || "today";
+    const daily =
+      json?.summary?.daily != null
+        ? toNumber(json.summary.daily)
+        : selectedPeriod === "today" || selectedPeriod === "day"
+          ? totalLeads
+          : 0;
+    const weekly =
+      json?.summary?.weekly != null
+        ? toNumber(json.summary.weekly)
+        : selectedPeriod === "week"
+          ? totalLeads
+          : 0;
+    const monthly =
+      json?.summary?.monthly != null
+        ? toNumber(json.summary.monthly)
+        : selectedPeriod === "month"
+          ? totalLeads
+          : 0;
+
+    return {
+      ...json,
+      totalLeads,
+      byStatus,
+      percentages,
+      daily,
+      weekly,
+      monthly,
+      tasks: json.tasksInPeriod || json.tasks,
+    };
+  }
+
+  const hasLegacyShape =
+    json?.daily != null ||
+    json?.weekly != null ||
+    json?.monthly != null ||
+    json?.totalLeads != null ||
+    json?.byStatus != null ||
+    json?.percentages != null ||
+    json?.tasks != null;
+
+  if (!hasLegacyShape) return null;
+
+  const legacy = {
+    ...json,
+    daily: toNumber(json.daily),
+    weekly: toNumber(json.weekly),
+    monthly: toNumber(json.monthly),
+    totalLeads: toNumber(json.totalLeads),
+    byStatus: normalizeByStatus(json.byStatus),
+    percentages: normalizePercentages(json.percentages),
+    tasks: json.tasks,
+  };
+
+  // If backend uses different wrapper keys, try to infer byStatus-like shape.
+  if (
+    legacy.totalLeads === 0 &&
+    Object.values(legacy.byStatus).every((v) => toNumber(v) === 0) &&
+    payload &&
+    typeof payload === "object"
+  ) {
+    const byStatusCandidate =
+      payload?.stats?.byStatus ||
+      payload?.dashboard?.byStatus ||
+      payload?.statistics?.byStatus;
+    const percentagesCandidate =
+      payload?.stats?.percentages ||
+      payload?.dashboard?.percentages ||
+      payload?.statistics?.percentages;
+    if (byStatusCandidate) {
+      const byStatus = normalizeByStatus(byStatusCandidate);
+      return {
+        ...legacy,
+        byStatus,
+        percentages: normalizePercentages(percentagesCandidate),
+        totalLeads:
+          toNumber(payload?.stats?.leadsCount) ||
+          Object.values(byStatus).reduce((sum, v) => sum + toNumber(v), 0),
+      };
+    }
+  }
+
+  return legacy;
+}
 
 async function apiFetch(url) {
   const token = localStorage.getItem("user");
@@ -84,9 +215,8 @@ function ArcProgress({ percent, color, size = 80, stroke = 7 }) {
 function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
   return (
     <div
-      className="crm-card relative overflow-hidden"
+      className="crm-card crm-hairline relative overflow-hidden"
       style={{
-        background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)",
         animation: `fadeUp 0.5s ease ${delay}s both`,
       }}
     >
@@ -97,19 +227,21 @@ function StatCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
       />
       <div className="flex items-start justify-between">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl"
           style={{ background: `${color}18`, border: `1px solid ${color}30` }}
         >
           <Icon size={18} style={{ color }} />
         </div>
         {sub != null && (
-          <span className="text-xs font-semibold text-gray-500">{sub}</span>
+          <span className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold tracking-[0.16em] text-[color:var(--crm-muted)] uppercase">
+            {sub}
+          </span>
         )}
       </div>
-      <p className="mt-4 text-3xl font-black tracking-tight text-white">
+      <p className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-white md:text-[2rem]">
         <Counter value={value} />
       </p>
-      <p className="mt-1 text-xs font-medium tracking-widest text-gray-500 uppercase">
+      <p className="mt-1 text-[11px] font-semibold tracking-[0.2em] text-[color:var(--crm-muted-2)] uppercase">
         {label}
       </p>
     </div>
@@ -146,15 +278,15 @@ function StatusBar({ statusKey, count, total, percent }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-400">
+          <span className="text-xs font-medium text-[color:var(--crm-muted)]">
             {meta.label}
           </span>
           <span className="text-xs font-bold text-white">
             {count}{" "}
-            <span className="font-normal text-gray-600">({percent}%)</span>
+            <span className="font-normal text-[color:var(--crm-muted-2)]">({percent}%)</span>
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.05]">
           <div
             className="h-full rounded-full transition-all duration-1000"
             style={{
@@ -180,7 +312,7 @@ function TaskRing({ label, value, total, color }) {
           <span className="text-sm font-black text-white">{pct}%</span>
         </div>
       </div>
-      <p className="text-center text-[11px] leading-tight font-medium text-gray-500">
+      <p className="text-center text-[11px] leading-tight font-medium text-[color:var(--crm-muted)]">
         {label}
       </p>
       <p className="text-sm font-bold text-white">{value}</p>
@@ -195,6 +327,7 @@ function Shimmer({ className }) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const navigate = useNavigate();
   const searchParams =
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search)
@@ -206,6 +339,7 @@ export default function Dashboard() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [period, setPeriod] = useState(
     periodOptions.has(initialPeriod) ? initialPeriod : "today",
   );
@@ -241,6 +375,7 @@ export default function Dashboard() {
 
       const load = async () => {
         setLoading(true);
+        setError("");
         try {
           const params = new URLSearchParams();
           if (period && period !== "all") params.set("period", period);
@@ -253,49 +388,37 @@ export default function Dashboard() {
             `${API}/dashboard/crm/leads/statistik/${projectId}?${params.toString()}`,
           );
           if (!res) return;
+          if (res.status === 403) {
+            navigate("/403", { replace: true });
+            return;
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json();
-          setData(json);
+          const normalized = normalizeDashboardPayload(json, period);
+          if (!normalized) {
+            throw new Error("Dashboard API formati kutilgan ko'rinishda emas");
+          }
+          setData(normalized);
         } catch (e) {
           console.error(e);
+          setError(e?.message || "Dashboard ma'lumotlarini olishda xatolik");
         } finally {
           setLoading(false);
         }
       };
       load();
     } else {
-      setData({
-        daily: 0,
-        weekly: 0,
-        monthly: 0,
-        totalLeads: 0,
-        byStatus: {
-          new: 0,
-          pending: 0,
-          success: 0,
-          canceled: 0,
-        },
-        percentages: {
-          success: 0,
-          pending: 0,
-          canceled: 0,
-          new: 0,
-        },
-        tasks: {
-          total: 0,
-          completed: 0,
-          overdue: 0,
-          pending: 0,
-          completionRate: 0,
-        },
-      });
+      setData(null);
+      setError("Loyiha tanlanmagan");
       setLoading(false);
     }
-  }, [projectId, period, fromDate, toDate]);
+  }, [projectId, period, fromDate, toDate, navigate]);
 
   if (loading) {
     return (
       <div className="crm-page">
         <div className="mx-auto max-w-5xl space-y-4">
+          <Shimmer className="h-28" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {Array(4)
               .fill(0)
@@ -312,7 +435,24 @@ export default function Dashboard() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="crm-page p-6">
+        <div className="crm-card crm-hairline mx-auto max-w-5xl p-8 text-center">
+          <p className="text-lg font-semibold tracking-[-0.02em] text-white">
+            Dashboard ma'lumotlari topilmadi
+          </p>
+          {error ? (
+            <p className="mt-2 text-sm text-rose-300">{error}</p>
+          ) : (
+            <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+              API dan javob kelmagan yoki noto'g'ri formatda.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const {
     daily = 0,
@@ -340,11 +480,20 @@ export default function Dashboard() {
     },
   } = data || {};
 
+  const periodLabel =
+    {
+      all: "Umumiy ko'rinish",
+      today: "Bugungi holat",
+      week: "Haftalik ko'rinish",
+      month: "Oylik ko'rinish",
+      custom: "Maxsus oraliq",
+    }[period] || "Dashboard";
+
   return (
-    <div className="crm-page overflow-y-auto">
+    <div className="crm-page relative min-h-full overflow-x-hidden">
       {/* Grid bg */}
       <div
-        className="pointer-events-none fixed inset-0 opacity-[0.015]"
+        className="pointer-events-none absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage: `linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)`,
           backgroundSize: "48px 48px",
@@ -352,25 +501,47 @@ export default function Dashboard() {
       />
       {/* Top glow */}
       <div
-        className="pointer-events-none fixed top-0 left-1/2 h-72 w-150 -translate-x-1/2 opacity-[0.07]"
+        className="pointer-events-none absolute top-0 left-1/2 h-72 w-150 -translate-x-1/2 opacity-[0.07]"
         style={{
           background: "radial-gradient(ellipse,#3b82f6,transparent)",
           filter: "blur(50px)",
         }}
       />
 
-      <div className="relative mx-auto max-w-5xl space-y-5">
+      <div className="relative mx-auto max-w-6xl space-y-5">
         <div
-          className="crm-card"
+          className="crm-card crm-hairline overflow-hidden"
           style={{ animation: "fadeUp 0.45s ease 0.02s both" }}
         >
+          <div className="mb-6 flex flex-col gap-4 border-b border-white/6 pb-5 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl">
+              <p className="crm-kicker">Overview</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white md:text-[2rem]">
+                {periodLabel}
+              </h1>
+              <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+                Leadlar va tasklar bo'yicha umumiy holat bir joyda jamlandi.
+                Filtrlar URL bilan sinxron bo'lib qoladi.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
+                Jami leadlar: <span className="font-semibold text-white">{totalLeads}</span>
+              </div>
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
+                Tasklar: <span className="font-semibold text-white">{tasks.total}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+            <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
               Davr
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400"
+                className="crm-control h-11 rounded-2xl px-3.5 text-sm text-white outline-none"
               >
                 <option value="all">Hammasi</option>
                 <option value="today">Bugun</option>
@@ -380,28 +551,27 @@ export default function Dashboard() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+            <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
               Boshlanish sanasi
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 disabled={period !== "custom"}
-                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                className="crm-control h-11 rounded-2xl px-3.5 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
             </label>
 
-            <label className="flex flex-col gap-1.5 text-xs text-gray-500">
+            <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
               Tugash sanasi
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 disabled={period !== "custom"}
-                className="h-10 rounded-lg border border-white/10 bg-[#0a1b2a] px-3 text-sm text-white outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                className="crm-control h-11 rounded-2xl px-3.5 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
             </label>
-
           </div>
         </div>
 
@@ -455,10 +625,10 @@ export default function Dashboard() {
             }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+              <p className="crm-kicker">
                 Statuslar bo'yicha
               </p>
-              <span className="text-xs font-semibold text-gray-600">
+              <span className="text-xs font-semibold text-[color:var(--crm-muted-2)]">
                 {totalLeads} ta
               </span>
             </div>
@@ -483,15 +653,15 @@ export default function Dashboard() {
             }}
           >
             <div className="mb-5 flex items-center justify-between">
-              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+              <p className="crm-kicker">
                 Tasklar
               </p>
-              <div className="flex items-center gap-1.5 rounded-lg border border-white/6 bg-white/3 px-2.5 py-1">
+              <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5">
                 <CalendarCheck2 size={11} className="text-blue-400" />
                 <span className="text-xs font-bold text-white">
                   {tasks.total}
                 </span>
-                <span className="text-[10px] text-gray-600">jami</span>
+                <span className="text-[10px] text-[color:var(--crm-muted-2)]">jami</span>
               </div>
             </div>
 
@@ -508,7 +678,7 @@ export default function Dashboard() {
                   <span className="text-lg leading-none font-black text-white">
                     {tasks.completionRate}%
                   </span>
-                  <span className="mt-0.5 text-[9px] text-gray-500">
+                  <span className="mt-0.5 text-[9px] text-[color:var(--crm-muted)]">
                     bajarildi
                   </span>
                 </div>
@@ -540,7 +710,7 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center gap-2">
                       <Icon size={12} style={{ color }} />
-                      <span className="text-xs text-gray-500">{label}</span>
+                      <span className="text-xs text-[color:var(--crm-muted)]">{label}</span>
                     </div>
                     <span className="text-xs font-bold text-white">
                       {value}
@@ -551,7 +721,7 @@ export default function Dashboard() {
             </div>
 
             {/* Mini rings */}
-            <div className="grid grid-cols-3 gap-2 border-t border-white/4 pt-4">
+            <div className="grid grid-cols-3 gap-2 border-t border-white/6 pt-4">
               <TaskRing
                 label="Bajarilgan"
                 value={tasks.completed}
@@ -581,7 +751,7 @@ export default function Dashboard() {
             animation: "fadeUp 0.5s ease 0.35s both",
           }}
         >
-          <p className="mb-4 text-xs font-bold tracking-widest text-gray-500 uppercase">
+          <p className="mb-4 crm-kicker">
             Lead konversiyasi
           </p>
           <div className="flex h-16 items-end gap-1">
@@ -606,7 +776,7 @@ export default function Dashboard() {
                       boxShadow: `0 -2px 8px ${meta.color}40`,
                     }}
                   />
-                  <span className="text-[9px] text-gray-600">{meta.label}</span>
+                  <span className="text-[9px] text-[color:var(--crm-muted-2)]">{meta.label}</span>
                 </div>
               );
             })}

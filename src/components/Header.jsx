@@ -49,13 +49,13 @@ export default function Header() {
   };
 
   return (
-    <div className="flex w-full items-center justify-between gap-3">
+    <div className="crm-glass crm-hairline flex w-full items-center justify-between gap-3 rounded-[28px] px-4 py-3">
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold tracking-wide text-white">
+        <p className="truncate text-sm font-semibold tracking-[0.01em] text-white">
           {title}
         </p>
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
+        <div className="flex items-center gap-2 text-[11px] text-[color:var(--crm-muted)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5">
             <BadgeCheck size={12} />
             {ROLE_LABELS[safeRole]}
           </span>
@@ -69,12 +69,12 @@ export default function Header() {
 
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#10263a] px-2 py-2"
+          className="crm-control flex h-10 w-10 items-center justify-center rounded-full px-2 py-2"
           render={<Button variant="outline" />}
         >
-          <User className="text-gray-100 hover:text-gray-300" />
+          <User className="text-gray-100 hover:text-white" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-48 bg-[#0f2030] text-white">
+        <DropdownMenuContent className="w-52 text-white">
           <DropdownMenuGroup>
             <DropdownMenuLabel>Hisob</DropdownMenuLabel>
             <DropdownMenuItem onClick={handleNavigate}>

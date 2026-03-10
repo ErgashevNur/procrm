@@ -16,38 +16,38 @@ const SETTINGS_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 // NavLink className orqali active holat — inline style ishlatmaymiz
 function navCls(isActive, isCollapsed, extra = "") {
   return [
-    "flex items-center rounded-lg no-underline transition-colors duration-150",
+    "flex items-center rounded-[22px] border no-underline transition-all duration-200",
     isCollapsed
-      ? "flex-col justify-center gap-1 px-0 py-2.5"
-      : "flex-row justify-start gap-3 px-4 py-2.5",
+      ? "flex-col justify-center gap-1 px-0 py-3"
+      : "flex-row justify-start gap-3 px-4 py-3",
     isActive
-      ? "bg-blue-600 text-white"
-      : "text-slate-400 hover:bg-white/[0.07] hover:text-white",
+      ? "border-white/14 bg-[linear-gradient(180deg,rgba(111,170,255,0.22),rgba(111,170,255,0.08))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_28px_rgba(51,110,255,0.14)]"
+      : "border-transparent text-slate-400 hover:border-white/8 hover:bg-white/[0.05] hover:text-white",
     extra,
   ].join(" ");
 }
 
 function profileCls(isActive, isCollapsed) {
   return [
-    "mb-1 flex items-center rounded-lg no-underline transition-colors duration-150",
+    "mb-1 flex items-center rounded-[22px] border no-underline transition-all duration-200",
     isCollapsed
-      ? "flex-col justify-center gap-1 px-0 py-2.5"
-      : "flex-row justify-start gap-2.5 px-3 py-2.5",
+      ? "flex-col justify-center gap-1 px-0 py-3"
+      : "flex-row justify-start gap-2.5 px-3 py-3",
     isActive
-      ? "bg-blue-600 text-white"
-      : "text-slate-400 hover:bg-white/[0.07]",
+      ? "border-white/14 bg-[linear-gradient(180deg,rgba(111,170,255,0.18),rgba(111,170,255,0.08))] text-white"
+      : "border-transparent text-slate-300 hover:border-white/8 hover:bg-white/[0.05]",
   ].join(" ");
 }
 
 function settingCls(isActive, isCollapsed) {
   return [
-    "mb-1 flex items-center rounded-lg no-underline transition-colors duration-150",
+    "mb-1 flex items-center rounded-[22px] border no-underline transition-all duration-200",
     isCollapsed
-      ? "flex-col justify-center gap-1 px-0 py-2.5"
-      : "flex-row justify-start gap-2.5 px-3 py-2.5",
+      ? "flex-col justify-center gap-1 px-0 py-3"
+      : "flex-row justify-start gap-2.5 px-3 py-3",
     isActive
-      ? "bg-blue-600 text-white"
-      : "text-slate-400 hover:bg-white/[0.07]",
+      ? "border-white/14 bg-[linear-gradient(180deg,rgba(111,170,255,0.18),rgba(111,170,255,0.08))] text-white"
+      : "border-transparent text-slate-400 hover:border-white/8 hover:bg-white/[0.05]",
   ].join(" ");
 }
 
@@ -80,12 +80,12 @@ export default function AppSidebar() {
     <div
       className={`${
         isCollapsed ? "w-20" : "w-[236px]"
-      } sticky top-0 flex h-screen min-h-[80vh] flex-shrink-0 flex-col justify-between border-r border-white/8 bg-gradient-to-b from-[#081521] via-[#07131d] to-[#060f18] transition-[width] duration-[250ms] ease-in-out`}
+      } crm-hairline flex h-svh flex-shrink-0 flex-col justify-between self-start border-r border-white/8 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.88))] shadow-[24px_0_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-[width] duration-[250ms] ease-in-out`}
     >
       {/* TOP */}
-      <div>
+      <div className="min-h-0">
         {/* Profile link */}
-        <div className="border-b border-white/6 px-2 pt-2 pb-2">
+        <div className="border-b border-white/6 px-2 pt-2 pb-3">
           <NavLink
             to="/profile"
             className={({ isActive }) => profileCls(isActive, isCollapsed)}
@@ -121,24 +121,24 @@ export default function AppSidebar() {
                   {roleLabel}
                 </div>
               </div>
-            )}
-          </NavLink>
+          )}
+        </NavLink>
           {!isCollapsed && (
-            <div className="mt-1 rounded-md border border-cyan-400/15 bg-cyan-500/8 px-2 py-1 text-[11px] text-cyan-100">
+            <div className="mt-2 rounded-2xl border border-cyan-300/18 bg-cyan-400/8 px-3 py-2 text-[11px] text-cyan-100 backdrop-blur-xl">
               {projectName || "Loyiha tanlanmagan"}
             </div>
           )}
         </div>
 
         {/* Menu items */}
-        <nav className="py-3">
+        <nav className="scrollbar-hide overflow-y-auto px-2 py-3">
           {visibleMenus.map((item) => (
             <NavLink
               key={item.title}
               to={item.url}
               end={item.url === "/"}
               className={({ isActive }) =>
-                navCls(isActive, isCollapsed, "mx-2 my-0.5")
+                navCls(isActive, isCollapsed, "mx-0 my-0.5")
               }
             >
               <item.icon
@@ -162,7 +162,7 @@ export default function AppSidebar() {
               to="/crm-market"
               end
               className={() =>
-                navCls(false, isCollapsed, "mx-2 my-0.5 ") +
+                navCls(false, isCollapsed, "mx-0 my-0.5 ") +
                 "pointer-events-none opacity-50 select-none"
               }
               onClick={(e) => e.preventDefault()}
@@ -227,10 +227,10 @@ export default function AppSidebar() {
         <NavLink
           to="/login"
           onClick={() => localStorage.clear()}
-          className={`flex items-center rounded-lg text-slate-400 no-underline transition-colors duration-150 hover:bg-red-500/20 hover:text-red-400 ${
+          className={`flex items-center rounded-[22px] border border-transparent text-slate-400 no-underline transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/12 hover:text-red-300 ${
             isCollapsed
-              ? "flex-col justify-center gap-1 px-0 py-2.5"
-              : "flex-row justify-start gap-2.5 px-3 py-2.5"
+              ? "flex-col justify-center gap-1 px-0 py-3"
+              : "flex-row justify-start gap-2.5 px-3 py-3"
           }`}
         >
           <LogOut size={isCollapsed ? 22 : 18} className="flex-shrink-0" />
