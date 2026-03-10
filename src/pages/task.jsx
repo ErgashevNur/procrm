@@ -53,6 +53,11 @@ function isOverdue(dateStr, status) {
   return new Date(dateStr) < new Date(new Date().toDateString());
 }
 
+function isFutureTask(dateStr, status) {
+  if (status === "FINISHED" || !dateStr) return false;
+  return dateStr.slice(0, 10) > new Date().toISOString().slice(0, 10);
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("uz-UZ", {
@@ -344,6 +349,7 @@ export default function Tasks() {
       (t) => t.taskDate?.slice(0, 10) === today && t.status !== "FINISHED",
     ).length,
     overdue: tasks.filter((t) => isOverdue(t.taskDate, t.status)).length,
+    future: tasks.filter((t) => isFutureTask(t.taskDate, t.status)).length,
     all: tasks.length,
   };
 
@@ -353,6 +359,8 @@ export default function Tasks() {
         const taskDay = t.taskDate ? t.taskDate.slice(0, 10) : "";
         if (activeTab === "today" && taskDay !== today) return false;
         if (activeTab === "overdue" && !isOverdue(t.taskDate, t.status))
+          return false;
+        if (activeTab === "future" && !isFutureTask(t.taskDate, t.status))
           return false;
         return true;
       })
@@ -449,6 +457,12 @@ export default function Tasks() {
               count: stats.overdue,
               alert: stats.overdue > 0,
             },
+            {
+              key: "future",
+              label: "Kelgusi tasklar",
+              count: stats.future,
+              alert: stats.future > 0,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -461,7 +475,11 @@ export default function Tasks() {
             >
               {tab.label}
               <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tab.alert ? "bg-red-500/20 text-red-400" : "bg-white/5 text-gray-600"}`}
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  activeTab === tab.key
+                    ? "bg-white/12 text-white"
+                    : "bg-white/5 text-gray-500"
+                }`}
               >
                 {tab.count}
               </span>
