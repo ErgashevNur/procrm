@@ -26,7 +26,15 @@ import {
   Facebook,
   Youtube,
   Send,
-  Globe,
+  Type,
+  Mail,
+  Phone,
+  ListChecks,
+  SquareCheckBig,
+  FileText,
+  Sparkles,
+  LayoutTemplate,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
@@ -58,22 +66,12 @@ const COLORS = [
 
 const SOURCE_CARDS = [
   {
-    title: "Nerazobrannoe",
-    description: 'Pоступившие запросы в форме "Неразобранное"',
-    variant: "toggle",
-    active: true,
-  },
-  {
-    title: "Kontrol dubley",
-    description: "Установите параметры проверки входящей заявки на дубль",
-    variant: "link",
-    linkText: "Настроить правила",
-  },
-  {
-    title: "Forma #177262758",
-    description: "Konstructor form",
     variant: "template",
-    template: { name: "FORMA #177262758", color: "#3b82f6" },
+    template: {
+      id: "google-form",
+      name: "Google Form",
+      color: "#3b82f6",
+    },
   },
 ];
 
@@ -110,20 +108,433 @@ const SOCIAL_CHANNELS = [
     color: "#FF0000",
     bg: "rgba(255,0,0,0.14)",
   },
-  {
-    id: "website",
-    name: "Website",
-    hint: "https://...",
-    icon: Globe,
-    color: "#10b981",
-    bg: "rgba(16,185,129,0.14)",
-  },
 ];
 
 const CANCELED_TYPES = ["CANCELED", "CANCELLED"];
 const PROTECTED_TYPES = ["NEW", "SUCCESS", ...CANCELED_TYPES];
 
 const normalizeType = (type) => String(type || "").toUpperCase();
+const FORM_FIELD_TYPES = [
+  { value: "text", label: "Text", icon: Type },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "phone", label: "Phone", icon: Phone },
+  { value: "textarea", label: "Textarea", icon: FileText },
+  { value: "select", label: "Select", icon: ListChecks },
+  { value: "checkbox", label: "Checkbox", icon: SquareCheckBig },
+];
+
+const createField = (type = "text") => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  label: "",
+  type,
+  required: false,
+  placeholder: "",
+  options: type === "select" ? ["Variant 1", "Variant 2"] : [],
+});
+
+const getFormStorageKey = (projectId) => `prohome:source-forms:${projectId}`;
+
+function FormPreviewField({ field }) {
+  if (field.type === "textarea") {
+    return (
+      <textarea
+        disabled
+        placeholder={field.placeholder || "Javob..."}
+        className="min-h-20 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300 outline-none"
+      />
+    );
+  }
+
+  if (field.type === "select") {
+    return (
+      <select
+        disabled
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300 outline-none"
+      >
+        <option>Tanlang</option>
+        {field.options.map((option, index) => (
+          <option key={`${field.id}-${index}`}>{option}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.type === "checkbox") {
+    return (
+      <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300">
+        <input type="checkbox" disabled className="accent-blue-500" />
+        <span>{field.placeholder || "Tasdiqlash"}</span>
+      </label>
+    );
+  }
+
+  return (
+    <input
+      disabled
+      type={field.type === "phone" ? "tel" : field.type}
+      placeholder={field.placeholder || "Javob..."}
+      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-300 outline-none"
+    />
+  );
+}
+
+function FormBuilderDialog({
+  open,
+  onOpenChange,
+  source,
+  forms,
+  onSave,
+  onDelete,
+}) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [fields, setFields] = useState([createField("text")]);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(source ? `${source.name} lead form` : "");
+    setDescription("");
+    setFields([createField("text")]);
+  }, [open, source]);
+
+  const updateField = (fieldId, patch) => {
+    setFields((prev) =>
+      prev.map((field) =>
+        field.id === fieldId ? { ...field, ...patch } : field,
+      ),
+    );
+  };
+
+  const addField = (type) => {
+    setFields((prev) => [...prev, createField(type)]);
+  };
+
+  const removeField = (fieldId) => {
+    setFields((prev) =>
+      prev.length === 1 ? prev : prev.filter((field) => field.id !== fieldId),
+    );
+  };
+
+  const handleSave = () => {
+    if (!source) return;
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
+      toast.error("Forma nomini kiriting");
+      return;
+    }
+
+    const normalizedFields = fields
+      .map((field, index) => ({
+        ...field,
+        label: field.label.trim() || `Field ${index + 1}`,
+        placeholder: field.placeholder.trim(),
+        options:
+          field.type === "select"
+            ? field.options.map((option) => option.trim()).filter(Boolean)
+            : [],
+      }))
+      .filter((field) => field.type !== "select" || field.options.length > 0);
+
+    onSave({
+      id: `${Date.now()}`,
+      sourceId: source.id,
+      sourceName: source.name,
+      title: cleanTitle,
+      description: description.trim(),
+      fields: normalizedFields,
+      createdAt: new Date().toISOString(),
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>
+            {source
+              ? `${source.name} uchun Google Form creator`
+              : "Google Form creator"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="rounded-2xl border border-blue-400/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(15,34,49,0.7))] p-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-blue-200">
+              <Sparkles size={18} />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Tezkor oqim: nom bering, field qo'shing, preview ko'ring,
+                saqlang
+              </p>
+              <p className="mt-1 text-sm text-blue-100/80">
+                Bu vaqtinchalik frontend saqlash. Backend ulanganda shu formalar
+                API bilan almashtiriladi.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
+                  <LayoutTemplate size={15} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    1. Forma haqida ma'lumot
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Foydalanuvchi ko'radigan sarlavha va qisqa izoh
+                  </p>
+                </div>
+              </div>
+              <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                Forma nomi
+              </label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Masalan, Google Form lead form"
+                className="w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
+              />
+              <label className="mt-4 mb-2 block text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                Tavsif
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Forma nimaga ishlatiladi?"
+                className="min-h-24 w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
+                  <Plus size={15} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    2. Savollarni yig'ing
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Tepadagi tugmalardan field type tanlab qo'shing
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {FORM_FIELD_TYPES.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => addField(item.value)}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#091827] px-3 py-2 text-xs font-semibold text-white transition hover:border-white/30"
+                    >
+                      <Icon size={13} />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="rounded-2xl border border-white/10 bg-[#091827] p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">
+                        Field {index + 1}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => removeField(field.id)}
+                        className="text-xs font-semibold text-red-300 transition hover:text-red-200"
+                      >
+                        O'chirish
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <input
+                        value={field.label}
+                        onChange={(e) =>
+                          updateField(field.id, { label: e.target.value })
+                        }
+                        placeholder="Label"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                      />
+                      <select
+                        value={field.type}
+                        onChange={(e) =>
+                          updateField(field.id, {
+                            type: e.target.value,
+                            options:
+                              e.target.value === "select"
+                                ? field.options.length
+                                  ? field.options
+                                  : ["Variant 1", "Variant 2"]
+                                : [],
+                          })
+                        }
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                      >
+                        {FORM_FIELD_TYPES.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+                      <input
+                        value={field.placeholder}
+                        onChange={(e) =>
+                          updateField(field.id, { placeholder: e.target.value })
+                        }
+                        placeholder="Placeholder"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                      />
+                      <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-gray-200">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(e) =>
+                            updateField(field.id, {
+                              required: e.target.checked,
+                            })
+                          }
+                        />
+                        Majburiy
+                      </label>
+                    </div>
+
+                    {field.type === "select" && (
+                      <textarea
+                        value={field.options.join("\n")}
+                        onChange={(e) =>
+                          updateField(field.id, {
+                            options: e.target.value
+                              .split("\n")
+                              .map((option) => option.trim()),
+                          })
+                        }
+                        placeholder={"Har bir variantni yangi qatordan yozing"}
+                        className="mt-3 min-h-24 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
+                  <Eye size={15} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-white">3. Preview</p>
+                  <p className="text-xs text-gray-400">
+                    Forma foydalanuvchiga taxminan qanday ko'rinishini
+                    tekshiring
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-lg font-semibold text-white">
+                  {title || "Forma nomi"}
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {description || "Forma tavsifi shu yerda ko'rinadi"}
+                </p>
+                <div className="mt-4 space-y-3">
+                  {fields.map((field) => (
+                    <div key={`preview-${field.id}`}>
+                      <div className="mb-1 flex items-center gap-2">
+                        <p className="text-sm font-medium text-white">
+                          {field.label || "Field label"}
+                        </p>
+                        {field.required && (
+                          <span className="text-[10px] font-semibold tracking-widest text-blue-300 uppercase">
+                            Required
+                          </span>
+                        )}
+                      </div>
+                      <FormPreviewField field={field} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Saqlangan formalar
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Shu loyiha uchun yaratilgan Google Form variantlari
+                  </p>
+                </div>
+                <span className="text-xs text-gray-500">{forms.length} ta</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {forms.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                    Hali forma yaratilmagan
+                  </div>
+                ) : (
+                  forms.map((form) => (
+                    <div
+                      key={form.id}
+                      className="rounded-xl border border-white/10 bg-white/5 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {form.title}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                            <span>{form.fields.length} ta field</span>
+                            <span className="h-1 w-1 rounded-full bg-gray-500" />
+                            <span>
+                              {new Date(form.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(form.id)}
+                          className="text-xs font-semibold text-red-300 transition hover:text-red-200"
+                        >
+                          O'chirish
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <Button type="button" onClick={handleSave} className="w-full">
+              Formani saqlash
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const isProtected = (col) =>
@@ -310,6 +721,8 @@ export default function AddStatus() {
   const [activeId, setActiveId] = useState(null);
   const [templateModal, setTemplateModal] = useState(null);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
+  const [formBuilderSource, setFormBuilderSource] = useState(null);
+  const [channelForms, setChannelForms] = useState({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -336,6 +749,24 @@ export default function AddStatus() {
     }
     fetchColumns();
   }, []);
+
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      const raw = localStorage.getItem(getFormStorageKey(projectId));
+      setChannelForms(raw ? JSON.parse(raw) : {});
+    } catch {
+      setChannelForms({});
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    localStorage.setItem(
+      getFormStorageKey(projectId),
+      JSON.stringify(channelForms),
+    );
+  }, [channelForms, projectId]);
 
   const fetchColumns = async () => {
     try {
@@ -512,6 +943,28 @@ export default function AddStatus() {
     }
   };
 
+  const saveChannelForm = (form) => {
+    setChannelForms((prev) => {
+      const current = Array.isArray(prev[form.sourceId])
+        ? prev[form.sourceId]
+        : [];
+      return {
+        ...prev,
+        [form.sourceId]: [form, ...current],
+      };
+    });
+    toast.success("Google Form saqlandi");
+  };
+
+  const googleForms = channelForms["google-form"] || [];
+
+  const deleteChannelForm = (channelId, formId) => {
+    setChannelForms((prev) => ({
+      ...prev,
+      [channelId]: (prev[channelId] || []).filter((form) => form.id !== formId),
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex gap-0 overflow-x-auto bg-[#0a1929] p-6">
@@ -545,20 +998,19 @@ export default function AddStatus() {
           >
             <div>
               <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                Источники сделок
+                Google Form va boshqa kanallar
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="mt-5 text-xs text-gray-500">
                 Yangi mijozlar ushbu kanallardan kelishi mumkin
               </p>
             </div>
             <div className="mt-4 flex flex-col gap-3">
-              {SOURCE_CARDS.map((card) => (
+              {SOURCE_CARDS.map((card, index) => (
                 <div
-                  key={card.title}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200 shadow-[0_10px_30px_rgba(0,0,0,0.6)]"
+                  key={index}
+                  className="rounded-2xl p-3 text-sm text-gray-200"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">{card.title}</span>
                     {card.variant === "toggle" ? (
                       <span
                         className={`h-3 w-3 rounded-full ${
@@ -567,9 +1019,7 @@ export default function AddStatus() {
                       />
                     ) : null}
                   </div>
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    {card.description}
-                  </p>
+
                   {card.variant === "link" && (
                     <button
                       type="button"
@@ -579,14 +1029,37 @@ export default function AddStatus() {
                     </button>
                   )}
                   {card.variant === "template" && (
-                    <button
-                      type="button"
-                      onClick={() => setSourceModalOpen(true)}
-                      className="mt-2 inline-flex cursor-pointer items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-widest text-white uppercase transition hover:bg-white/20"
-                    >
-                      <Plus size={12} />
-                      Qo'shish
-                    </button>
+                    <>
+                      <div className="mt-3 rounded-xl border border-blue-400/15 bg-blue-500/10 p-3">
+                        <div className="space-y-2">
+                          {googleForms.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-white/15 bg-white/[0.04] px-3 py-3 text-[11px] text-blue-100/70">
+                              Hali Google Form yaratilmagan
+                            </div>
+                          ) : (
+                            googleForms.slice(0, 3).map((form) => (
+                              <div
+                                key={form.id}
+                                className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+                              >
+                                <FileText />
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFormBuilderSource(card.template)
+                                  }
+                                  className="block w-full truncate text-left text-[12px] font-semibold text-blue-200 underline decoration-blue-300/60 underline-offset-3 transition hover:text-blue-100"
+                                  title={form.title}
+                                >
+                                  {form.title}
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
@@ -875,6 +1348,11 @@ export default function AddStatus() {
                 <button
                   key={channel.id}
                   type="button"
+                  onClick={() =>
+                    toast.info(
+                      `${channel.name} integratsiyasi backend bilan ulanadi`,
+                    )
+                  }
                   className="flex items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-left transition hover:border-white/30 hover:bg-white/5"
                 >
                   <div className="flex items-center gap-2">
@@ -888,7 +1366,9 @@ export default function AddStatus() {
                       <p className="text-sm font-semibold text-white">
                         {channel.name}
                       </p>
-                      <p className="text-[11px] text-gray-500">{channel.hint}</p>
+                      <p className="text-[11px] text-gray-500">
+                        {channel.hint}
+                      </p>
                     </div>
                   </div>
                   <span className="text-[11px] font-semibold text-blue-400">
@@ -897,9 +1377,59 @@ export default function AddStatus() {
                 </button>
               );
             })}
+            <button
+              title="Lead yig'ish uchun Google Form uslubida savollar tuzing"
+              type="button"
+              onClick={() => {
+                setSourceModalOpen(false);
+                setFormBuilderSource(
+                  SOURCE_CARDS.find((card) => card.variant === "template")
+                    ?.template || null,
+                );
+              }}
+              className="group relative flex items-center justify-between overflow-hidden rounded-xl border border-blue-400/30 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(14,27,42,0.9))] p-4 text-left transition hover:border-blue-300/50 hover:bg-[linear-gradient(135deg,rgba(59,130,246,0.22),rgba(14,27,42,0.95))] sm:col-span-2"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
+                    <FileText size={15} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Google Form
+                    </p>
+                    <p className="text-[11px] text-blue-100/70">
+                      Dynamic forma yaratish
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-blue-300 transition group-hover:text-blue-200">
+                  Yaratish
+                </span>
+              </div>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <FormBuilderDialog
+        open={!!formBuilderSource}
+        onOpenChange={(open) => {
+          if (!open) setFormBuilderSource(null);
+        }}
+        source={formBuilderSource}
+        forms={
+          formBuilderSource ? channelForms[formBuilderSource.id] || [] : []
+        }
+        onSave={saveChannelForm}
+        onDelete={(formId) => {
+          if (!formBuilderSource) return;
+          deleteChannelForm(formBuilderSource.id, formId);
+        }}
+      />
     </div>
   );
 }
