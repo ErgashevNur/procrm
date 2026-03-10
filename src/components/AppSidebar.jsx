@@ -197,51 +197,8 @@ export default function AppSidebar() {
                 )}
               </span>
             </NavLink>
-          </div> */}{" "}
-          {/* <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
-            <NavLink
-              key="crm-market"
-              to="/crm-market"
-              end
-              className={() =>
-                navCls(false, isCollapsed, "mx-0 my-0.5 ") +
-                "pointer-events-none opacity-50 select-none"
-              }
-              onClick={(e) => e.preventDefault()}
-              tabIndex={-1}
-              aria-disabled="true"
-            >
-              <div className="relative shrink-0">
-                <ShoppingBag
-                  size={isCollapsed ? 22 : 18}
-                  className="shrink-0"
-                />
-                <Lock
-                  size={10}
-                  className="absolute -right-1 -bottom-1 text-amber-400"
-                />
-                {isCollapsed && (
-                  <span className="absolute -top-1.5 -right-6 rounded border border-amber-400/30 bg-amber-400/20 px-0.5 py-px text-[7px] leading-none font-bold text-amber-400">
-                    BETA
-                  </span>
-                )}
-              </div>
-
-              <span
-                className={`flex items-center gap-1.5 leading-tight font-medium whitespace-nowrap ${
-                  isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
-                }`}
-              >
-                CRM Market
-                {!isCollapsed && (
-                  <span className="rounded border border-amber-400/30 bg-amber-400/20 px-1 py-0.5 text-[9px] leading-none font-semibold text-amber-400">
-                    BETA
-                  </span>
-                )}
-              </span>
-            </NavLink>
-          </div>
-          {/* Beta versiya */}
+          </div> */}
+          {/* Beta versiya*/}
         </nav>
       </div>
 
