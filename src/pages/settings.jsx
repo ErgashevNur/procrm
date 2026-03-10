@@ -9,6 +9,8 @@ import {
   Zap,
   Pen,
   X,
+  CreditCard,
+  Users2,
   Headset,
   MessageCircle,
   Mail,
@@ -17,8 +19,17 @@ import {
   ShieldCheck,
   HelpCircle,
   ExternalLink,
+  SendHorizonal,
+  ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -42,10 +53,10 @@ async function apiFetch(url, options = {}) {
 
 // ── Sidebar sections ──────────────────────────────────────────────────────
 const SECTIONS = [
-  { key: "billing", label: "Счет и оплата" }, // Hisob va to'lov
-  { key: "users", label: "Пользователи" }, // Foydalanuvchilar
-  { key: "integrations", label: "Чаты и мессенджеры" }, // Integratsiyalar
-  { key: "support", label: "Поддержка" }, // Support
+  { key: "billing", label: "Счет и оплата", icon: CreditCard }, // Hisob va to'lov
+  { key: "users", label: "Пользователи", icon: Users2 }, // Foydalanuvchilar
+  { key: "integrations", label: "Чаты и мессенджеры", icon: MessageCircle }, // Integratsiyalar
+  { key: "support", label: "Поддержка", icon: Headset }, // Support
 ];
 
 // ── Small UI components ───────────────────────────────────────────────────
@@ -160,6 +171,7 @@ function RoleBadge({ role }) {
 // ─────────────────────────────────────────────────────────────────────────
 export default function settings() {
   const projectId = localStorage.getItem("projectId");
+  const projectName = localStorage.getItem("projectName") || "";
   const companyId = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -168,6 +180,16 @@ export default function settings() {
       return Number(parsed?.user?.companyId || parsed?.companyId || 0);
     } catch {
       return 0;
+    }
+  })();
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed?.user || parsed || {};
+    } catch {
+      return {};
     }
   })();
 
@@ -218,6 +240,15 @@ export default function settings() {
     instagram: { connected: false, token: "" },
     whatsapp: { connected: false, token: "" },
   });
+  const [supportForm, setSupportForm] = useState({
+    fullName: currentUser?.fullName || "",
+    phone: currentUser?.phone || "",
+    companyName: projectName || "",
+    problem: "",
+  });
+  const [supportScreenshot, setSupportScreenshot] = useState(null);
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
 
   // ── Load users when tab opened ────────────────────────────────────────
   const extractUsersFromPayload = (payload) => {
@@ -429,6 +460,31 @@ export default function settings() {
     setSaving(false);
   };
 
+  const handleSupportFieldChange = (key, value) => {
+    setSupportForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSupportSubmit = async (e) => {
+    e.preventDefault();
+    if (
+      !supportForm.fullName.trim() ||
+      !supportForm.phone.trim() ||
+      !supportForm.companyName.trim() ||
+      !supportForm.problem.trim()
+    ) {
+      toast.error("Ism, telefon, kompaniya nomi va muammo majburiy");
+      return;
+    }
+
+    setSupportSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      toast.info("Backend endpoint tayyor bo'lgach shu form ulanadi");
+    } finally {
+      setSupportSubmitting(false);
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#071828]">
@@ -454,11 +510,11 @@ export default function settings() {
       <div className="flex flex-1 overflow-hidden">
         {/* ═══ LEFT SIDEBAR ═══ */}
         <div className="flex w-56 shrink-0 flex-col border-r border-[#1a3045] bg-[#071828] py-3">
-          {SECTIONS.map(({ key, label }) => (
+          {SECTIONS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActive(key)}
-              className="flex w-full items-center justify-between px-5 py-3 text-sm transition-colors"
+              className="flex w-full items-center gap-3 px-5 py-3 text-sm transition-colors"
               style={{
                 color: active === key ? "#60a5fa" : "#9ca3af",
                 background:
@@ -469,7 +525,8 @@ export default function settings() {
                     : "2px solid transparent",
               }}
             >
-              {label}
+              <Icon size={16} className="shrink-0" />
+              <span>{label}</span>
             </button>
           ))}
         </div>
@@ -928,22 +985,22 @@ export default function settings() {
                     {[
                       {
                         title: "Telegram support",
-                        value: "@codenur",
-                        hint: "Eng tezkor aloqa kanali. Odatda 5-15 daqiqa ichida javob.",
+                        value: "Backend endpoint kutilmoqda",
+                        hint: "Support form backendga ulangach Telegram support oqimi shu yerdan ishlaydi.",
                         icon: MessageCircle,
                         color: "#38bdf8",
                       },
                       {
                         title: "Email",
-                        value: "muhammadnurullohergashev@gmail.com",
-                        hint: "Texnik tafsilot, screenshot va murojaat tarixini yuborish uchun qulay.",
+                        value: "support@company.com",
+                        hint: "Haqiqiy support email backend va domen tayyor bo'lgach almashtiriladi.",
                         icon: Mail,
                         color: "#a78bfa",
                       },
                       {
                         title: "Telefon",
-                        value: "+998 90 844 47 70",
-                        hint: "Kritik holatlar yoki onboarding vaqtida qo'ng'iroq orqali yordam.",
+                        value: "+998 XX XXX XX XX",
+                        hint: "Haqiqiy support raqami keyin ulanadi.",
                         icon: PhoneCall,
                         color: "#34d399",
                       },
@@ -956,14 +1013,22 @@ export default function settings() {
                       },
                     ].map((item) => {
                       const Icon = item.icon;
+                      const isTelegramSupport = item.title === "Telegram support";
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={item.title}
-                          className="rounded-2xl border border-[#1a3045] bg-[linear-gradient(180deg,rgba(10,23,37,0.94),rgba(7,24,40,0.82))] p-4 shadow-[0_14px_32px_rgba(0,0,0,0.2)]"
+                          onClick={() => {
+                            if (isTelegramSupport) setSupportModalOpen(true);
+                          }}
+                          className="rounded-2xl border border-[#1a3045] bg-[linear-gradient(180deg,rgba(10,23,37,0.94),rgba(7,24,40,0.82))] p-6 text-center shadow-[0_14px_32px_rgba(0,0,0,0.2)]"
+                          style={{
+                            cursor: isTelegramSupport ? "pointer" : "default",
+                          }}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex flex-col items-center">
                             <div
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                              className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
                               style={{
                                 background: `${item.color}18`,
                                 color: item.color,
@@ -981,12 +1046,17 @@ export default function settings() {
                               >
                                 {item.value}
                               </p>
-                              <p className="mt-2 text-xs leading-5 text-gray-500">
+                              <p className="mt-4 text-xs leading-6 text-gray-500">
                                 {item.hint}
                               </p>
+                              {isTelegramSupport && (
+                                <span className="mt-4 inline-flex rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold text-cyan-200">
+                                  Endpoint kutilmoqda
+                                </span>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1103,6 +1173,117 @@ export default function settings() {
           </div>
         </div>
       </div>
+
+      <Dialog open={supportModalOpen} onOpenChange={setSupportModalOpen}>
+        <DialogContent className="border-[#1a3045] bg-[#0b1b2a] text-white sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI-CRM Support</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Backend endpoint tayyor bo'lgach shu forma xavfsiz tarzda support botga ulanadi.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSupportSubmit} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                  Ism
+                </label>
+                <StyledInput
+                  value={supportForm.fullName}
+                  onChange={(value) => handleSupportFieldChange("fullName", value)}
+                  placeholder="Ism Familiya"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                  Telefon
+                </label>
+                <StyledInput
+                  value={supportForm.phone}
+                  onChange={(value) => handleSupportFieldChange("phone", value)}
+                  placeholder="+998 90 123 45 67"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                Kompaniya nomi
+              </label>
+              <StyledInput
+                value={supportForm.companyName}
+                onChange={(value) => handleSupportFieldChange("companyName", value)}
+                placeholder="Kompaniya yoki loyiha nomi"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                Muammo
+              </label>
+              <textarea
+                value={supportForm.problem}
+                onChange={(e) => handleSupportFieldChange("problem", e.target.value)}
+                placeholder="Muammoni iloji boricha aniq yozing..."
+                className="min-h-32 w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                Screenshot
+              </label>
+              <div className="flex flex-col gap-3">
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#2a4c69] bg-[#071828] px-3 py-2 text-sm text-gray-300 transition-colors hover:border-blue-400/50 hover:text-white">
+                  <ImagePlus size={15} />
+                  Screenshot yuklash
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSupportScreenshot(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+                {supportScreenshot ? (
+                  <div className="flex items-center justify-between rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-gray-400">
+                    <span className="truncate">{supportScreenshot.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSupportScreenshot(null)}
+                      className="text-red-400 transition-colors hover:text-red-300"
+                    >
+                      Olib tashlash
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">
+                    PNG, JPG yoki WebP screenshot yuborishingiz mumkin
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3">
+              <p className="text-xs text-gray-500">
+                Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu joy ulanadi.
+              </p>
+              <button
+                type="submit"
+                disabled={supportSubmitting}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
+              >
+                {supportSubmitting ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <SendHorizonal size={14} />
+                )}
+                Endpoint kutilmoqda
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
