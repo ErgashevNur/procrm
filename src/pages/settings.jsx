@@ -9,6 +9,14 @@ import {
   Zap,
   Pen,
   X,
+  Headset,
+  MessageCircle,
+  Mail,
+  PhoneCall,
+  Clock3,
+  ShieldCheck,
+  HelpCircle,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +45,7 @@ const SECTIONS = [
   { key: "billing", label: "Счет и оплата" }, // Hisob va to'lov
   { key: "users", label: "Пользователи" }, // Foydalanuvchilar
   { key: "integrations", label: "Чаты и мессенджеры" }, // Integratsiyalar
+  { key: "support", label: "Поддержка" }, // Support
 ];
 
 // ── Small UI components ───────────────────────────────────────────────────
@@ -162,7 +171,7 @@ export default function settings() {
     }
   })();
 
-  const [active, setActive] = useState("general");
+  const [active, setActive] = useState("billing");
   const [saving, setSaving] = useState(false);
 
   // ── General ───────────────────────────────────────────────────────────
@@ -302,7 +311,11 @@ export default function settings() {
   // ── Invite ────────────────────────────────────────────────────────────
   const handleInvite = async (e) => {
     e.preventDefault();
-    if (!inviteFullName.trim() || !inviteEmail.trim() || !invitePassword.trim()) {
+    if (
+      !inviteFullName.trim() ||
+      !inviteEmail.trim() ||
+      !invitePassword.trim()
+    ) {
       toast.error("Ism, email va parol majburiy");
       return;
     }
@@ -712,7 +725,9 @@ export default function settings() {
                               <input
                                 type="text"
                                 value={editFullName}
-                                onChange={(e) => setEditFullName(e.target.value)}
+                                onChange={(e) =>
+                                  setEditFullName(e.target.value)
+                                }
                                 placeholder="F.I.O"
                                 className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                               />
@@ -726,7 +741,9 @@ export default function settings() {
                               <input
                                 type="password"
                                 value={editPassword}
-                                onChange={(e) => setEditPassword(e.target.value)}
+                                onChange={(e) =>
+                                  setEditPassword(e.target.value)
+                                }
                                 placeholder="Yangi parol (ixtiyoriy)"
                                 className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                               />
@@ -747,7 +764,9 @@ export default function settings() {
                         <RoleBadge role={user.role} />
                         <span className="text-xs text-gray-600">
                           {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString("ru-RU")
+                            ? new Date(user.createdAt).toLocaleDateString(
+                                "ru-RU",
+                              )
                             : "—"}
                         </span>
                         <div className="ml-1 flex items-center gap-1">
@@ -781,7 +800,10 @@ export default function settings() {
                           )}
                           <button
                             onClick={() => handleDeleteUser(user.id, user.role)}
-                            disabled={deletingId === user.id || user.role !== "SALESMANAGER"}
+                            disabled={
+                              deletingId === user.id ||
+                              user.role !== "SALESMANAGER"
+                            }
                             className="shrink-0 text-gray-700 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
                             title={
                               user.role === "SALESMANAGER"
@@ -893,6 +915,189 @@ export default function settings() {
                     </Section>
                   );
                 })}
+              </>
+            )}
+
+            {active === "support" && (
+              <>
+                <Section
+                  title="Поддержка AI-CRM"
+                  description="Savollar, texnik muammo yoki onboarding bo'yicha yordam olish uchun tezkor kanallar."
+                >
+                  <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-2">
+                    {[
+                      {
+                        title: "Telegram support",
+                        value: "@codenur",
+                        hint: "Eng tezkor aloqa kanali. Odatda 5-15 daqiqa ichida javob.",
+                        icon: MessageCircle,
+                        color: "#38bdf8",
+                      },
+                      {
+                        title: "Email",
+                        value: "muhammadnurullohergashev@gmail.com",
+                        hint: "Texnik tafsilot, screenshot va murojaat tarixini yuborish uchun qulay.",
+                        icon: Mail,
+                        color: "#a78bfa",
+                      },
+                      {
+                        title: "Telefon",
+                        value: "+998 90 844 47 70",
+                        hint: "Kritik holatlar yoki onboarding vaqtida qo'ng'iroq orqali yordam.",
+                        icon: PhoneCall,
+                        color: "#34d399",
+                      },
+                      {
+                        title: "Ish vaqti",
+                        value: "Du-Sha, 09:00-18:00",
+                        hint: "O'zbekiston/Farg'ona bo'yicha. Kritik murojaatlar navbatdan tashqari ko'riladi.",
+                        icon: Clock3,
+                        color: "#f59e0b",
+                      },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.title}
+                          className="rounded-2xl border border-[#1a3045] bg-[linear-gradient(180deg,rgba(10,23,37,0.94),rgba(7,24,40,0.82))] p-4 shadow-[0_14px_32px_rgba(0,0,0,0.2)]"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                              style={{
+                                background: `${item.color}18`,
+                                color: item.color,
+                              }}
+                            >
+                              <Icon size={18} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-white">
+                                {item.title}
+                              </p>
+                              <p
+                                className="mt-1 text-sm font-medium"
+                                style={{ color: item.color }}
+                              >
+                                {item.value}
+                              </p>
+                              <p className="mt-2 text-xs leading-5 text-gray-500">
+                                {item.hint}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+
+                <Section
+                  title="Tezkor yordam"
+                  description="Ko'p uchraydigan support scenariylari uchun tayyor yo'nalishlar."
+                >
+                  <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-3">
+                    {[
+                      {
+                        title: "Texnik muammo",
+                        text: "Sahifa ishlamay qolsa, xatolik matni va screenshot bilan supportga yozing.",
+                        icon: Headset,
+                        tone: "#60a5fa",
+                      },
+                      {
+                        title: "Xavfsizlik",
+                        text: "Rol, access yoki login muammolari bo'lsa prioritet tartibda ko'rib chiqiladi.",
+                        icon: ShieldCheck,
+                        tone: "#34d399",
+                      },
+                      {
+                        title: "Qo'llanma",
+                        text: "Status, lead manbasi yoki integratsiyalar bo'yicha qisqa yo'riqnoma olishingiz mumkin.",
+                        icon: HelpCircle,
+                        tone: "#f59e0b",
+                      },
+                    ].map((card) => {
+                      const Icon = card.icon;
+                      return (
+                        <div
+                          key={card.title}
+                          className="rounded-2xl border border-[#1a3045] bg-[#0a1b2c] p-5"
+                        >
+                          <div
+                            className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl"
+                            style={{
+                              background: `${card.tone}16`,
+                              color: card.tone,
+                            }}
+                          >
+                            <Icon size={18} />
+                          </div>
+                          <p className="text-sm font-semibold text-white">
+                            {card.title}
+                          </p>
+                          <p className="mt-2 text-xs leading-5 text-gray-500">
+                            {card.text}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+
+                <Section
+                  title="Murojaat yuborishdan oldin"
+                  description="Support tezroq yordam berishi uchun quyidagilarni tayyorlab yuboring."
+                >
+                  {[
+                    "Qaysi loyiha ichida muammo yuz berganini yozing.",
+                    "Muammo qachon boshlanganini va takrorlash qadamlarini ko'rsating.",
+                    "Agar xatolik chiqsa, screenshot yoki video qo'shing.",
+                    "Qaysi foydalanuvchi rolida muammo kuzatilganini yozing.",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-3 bg-[#0f2030] px-6 py-4"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">
+                        •
+                      </span>
+                      <p className="text-sm text-gray-300">{item}</p>
+                    </div>
+                  ))}
+                </Section>
+
+                <Section
+                  title="Foydali havolalar"
+                  description="Keyinchalik haqiqiy knowledge base yoki docs bilan almashtiriladi."
+                >
+                  {[
+                    {
+                      label: "CRM bo'yicha qisqa yo'riqnoma",
+                      href: "#",
+                    },
+                    {
+                      label: "Lead va status bilan ishlash",
+                      href: "#",
+                    },
+                    {
+                      label: "Integratsiyalarni ulash bo'yicha checklist",
+                      href: "#",
+                    },
+                  ].map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toast.info("Knowledge base linki keyin ulanadi");
+                      }}
+                      className="flex items-center justify-between bg-[#0f2030] px-6 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white"
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink size={14} className="text-gray-500" />
+                    </a>
+                  ))}
+                </Section>
               </>
             )}
           </div>
