@@ -80,10 +80,10 @@ export default function AppSidebar() {
     <div
       className={`${
         isCollapsed ? "w-20" : "w-[236px]"
-      } crm-hairline flex h-svh flex-shrink-0 flex-col justify-between self-start border-r border-white/8 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.88))] shadow-[24px_0_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-[width] duration-[250ms] ease-in-out`}
+      } crm-hairline relative z-20 isolate flex h-svh flex-shrink-0 flex-col self-start overflow-hidden border-r border-white/8 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.88))] shadow-[24px_0_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-[width] duration-[250ms] ease-in-out`}
     >
       {/* TOP */}
-      <div className="min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Profile link */}
         <div className="border-b border-white/6 px-2 pt-2 pb-3">
           <NavLink
@@ -131,7 +131,7 @@ export default function AppSidebar() {
         </div>
 
         {/* Menu items */}
-        <nav className="scrollbar-hide overflow-y-auto px-2 py-3">
+        <nav className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-2 py-3">
           {visibleMenus.map((item) => (
             <NavLink
               key={item.title}
@@ -155,7 +155,7 @@ export default function AppSidebar() {
             </NavLink>
           ))}
           {/* Beta versiya */}
-          {/* <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
+          <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
             <NavLink
               key="crm-market"
               to="/crm-market"
@@ -197,13 +197,13 @@ export default function AppSidebar() {
                 )}
               </span>
             </NavLink>
-          </div> */}
+          </div>
           {/* Beta versiya*/}
         </nav>
       </div>
 
       {/* BOTTOM */}
-      <div className="p-2">
+      <div className="relative z-10 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.94))] p-2">
         {canOpenSettings && (
           <NavLink
             to="/setting"

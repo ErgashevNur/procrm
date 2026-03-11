@@ -52,6 +52,12 @@ export const NAV_ITEMS = [
     roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
   },
   {
+    title: "Sms/Rassilka",
+    url: "/rassilka",
+    icon: MessageSquare,
+    roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
+  },
+  {
     title: "Lead manbasi",
     url: "/leadSource",
     icon: Share2,
@@ -62,12 +68,6 @@ export const NAV_ITEMS = [
     url: "/projects",
     icon: FolderOpenDot,
     roles: [ROLES.SUPERADMIN, ROLES.ROP],
-  },
-  {
-    title: "Sms/Rassilka",
-    url: "/rassilka",
-    icon: MessageSquare,
-    roles: [ROLES.SUPERADMIN, ROLES.ROP, ROLES.SALESMANAGER],
   },
 ];
 

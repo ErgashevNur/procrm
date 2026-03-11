@@ -10,6 +10,7 @@ import {
 import {
   SortableContext,
   horizontalListSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
@@ -35,6 +36,8 @@ import {
   Sparkles,
   LayoutTemplate,
   Eye,
+  GripVertical,
+  ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
@@ -101,12 +104,12 @@ const SOCIAL_CHANNELS = [
     bg: "rgba(34,158,217,0.14)",
   },
   {
-    id: "youtube",
-    name: "YouTube",
-    hint: "Channel",
-    icon: Youtube,
-    color: "#FF0000",
-    bg: "rgba(255,0,0,0.14)",
+    id: "whatsapp",
+    name: "WhatsApp",
+    hint: "@username",
+    icon: Send,
+    color: "#25D366",
+    bg: "rgba(37,211,102,0.14)",
   },
 ];
 
@@ -133,6 +136,64 @@ const createField = (type = "text") => ({
 });
 
 const getFormStorageKey = (projectId) => `prohome:source-forms:${projectId}`;
+const HEADER_IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
+const HEADER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
+const HEADER_IMAGE_MAX_WIDTH = 1600;
+const HEADER_IMAGE_MAX_HEIGHT = 600;
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Faylni o'qib bo'lmadi"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Rasmni yuklab bo'lmadi"));
+    img.src = src;
+  });
+}
+
+async function optimizeHeaderImage(file) {
+  if (!file) return null;
+  if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.type)) {
+    throw new Error("Faqat PNG, JPG yoki WEBP formatlari qo'llanadi");
+  }
+  if (file.size > HEADER_IMAGE_MAX_SIZE) {
+    throw new Error("Rasm hajmi 5 MB dan oshmasligi kerak");
+  }
+
+  const src = await readFileAsDataUrl(file);
+  const img = await loadImage(src);
+  const scale = Math.min(
+    1,
+    HEADER_IMAGE_MAX_WIDTH / img.width,
+    HEADER_IMAGE_MAX_HEIGHT / img.height,
+  );
+  const width = Math.max(1, Math.round(img.width * scale));
+  const height = Math.max(1, Math.round(img.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const dataUrl = canvas.toDataURL("image/webp", 0.86);
+
+  return {
+    name: file.name,
+    type: "image/webp",
+    dataUrl,
+    width,
+    height,
+  };
+}
 
 function FormPreviewField({ field }) {
   if (field.type === "textarea") {
@@ -178,6 +239,133 @@ function FormPreviewField({ field }) {
   );
 }
 
+function SortableFormField({
+  field,
+  index,
+  onUpdate,
+  onRemove,
+  totalFields,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="rounded-2xl border border-white/10 bg-[#091827] p-4"
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="inline-flex h-9 w-9 cursor-grab items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition hover:border-white/20 hover:text-white active:cursor-grabbing"
+            aria-label={`Field ${index + 1} ni ko'chirish`}
+          >
+            <GripVertical size={15} />
+          </button>
+          <p className="text-sm font-semibold text-white">Field {index + 1}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onRemove(field.id)}
+          className="text-xs font-semibold text-red-300 transition hover:text-red-200"
+        >
+          O'chirish
+        </button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <input
+          value={field.label}
+          onChange={(e) => onUpdate(field.id, { label: e.target.value })}
+          placeholder="Label"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+        />
+        <select
+          value={field.type}
+          onChange={(e) =>
+            onUpdate(field.id, {
+              type: e.target.value,
+              options:
+                e.target.value === "select"
+                  ? field.options.length
+                    ? field.options
+                    : ["Variant 1", "Variant 2"]
+                  : [],
+            })
+          }
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+        >
+          {FORM_FIELD_TYPES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+        <input
+          value={field.placeholder}
+          onChange={(e) =>
+            onUpdate(field.id, { placeholder: e.target.value })
+          }
+          placeholder="Placeholder"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+        />
+        <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-gray-200">
+          <input
+            type="checkbox"
+            checked={field.required}
+            onChange={(e) =>
+              onUpdate(field.id, {
+                required: e.target.checked,
+              })
+            }
+          />
+          Majburiy
+        </label>
+      </div>
+
+      {field.type === "select" && (
+        <textarea
+          value={field.options.join("\n")}
+          onChange={(e) =>
+            onUpdate(field.id, {
+              options: e.target.value
+                .split("\n")
+                .map((option) => option.trim()),
+            })
+          }
+          placeholder="Har bir variantni yangi qatordan yozing"
+          className="mt-3 min-h-24 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+        />
+      )}
+
+      {totalFields > 1 && (
+        <p className="mt-3 text-[11px] text-gray-500">
+          Drag & drop qilib field tartibini o'zgartirishingiz mumkin
+        </p>
+      )}
+    </div>
+  );
+}
+
 function FormBuilderDialog({
   open,
   onOpenChange,
@@ -189,12 +377,22 @@ function FormBuilderDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState([createField("text")]);
+  const [activeFieldId, setActiveFieldId] = useState(null);
+  const [headerImage, setHeaderImage] = useState(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const fieldSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   useEffect(() => {
     if (!open) return;
     setTitle(source ? `${source.name} lead form` : "");
     setDescription("");
     setFields([createField("text")]);
+    setHeaderImage(null);
+    setImageLoading(false);
   }, [open, source]);
 
   const updateField = (fieldId, patch) => {
@@ -213,6 +411,18 @@ function FormBuilderDialog({
     setFields((prev) =>
       prev.length === 1 ? prev : prev.filter((field) => field.id !== fieldId),
     );
+  };
+
+  const handleFieldDragEnd = ({ active, over }) => {
+    setActiveFieldId(null);
+    if (!over || active.id === over.id) return;
+
+    setFields((prev) => {
+      const oldIndex = prev.findIndex((field) => field.id === active.id);
+      const newIndex = prev.findIndex((field) => field.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const handleSave = () => {
@@ -241,10 +451,28 @@ function FormBuilderDialog({
       sourceName: source.name,
       title: cleanTitle,
       description: description.trim(),
+      headerImage,
       fields: normalizedFields,
       createdAt: new Date().toISOString(),
     });
     onOpenChange(false);
+  };
+
+  const handleHeaderImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImageLoading(true);
+    try {
+      const optimizedImage = await optimizeHeaderImage(file);
+      setHeaderImage(optimizedImage);
+      toast.success("Header rasmi qo'shildi");
+    } catch (error) {
+      toast.error(error.message || "Rasmni yuklab bo'lmadi");
+    } finally {
+      setImageLoading(false);
+      event.target.value = "";
+    }
   };
 
   return (
@@ -308,6 +536,60 @@ function FormBuilderDialog({
                 placeholder="Forma nimaga ishlatiladi?"
                 className="min-h-24 w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
+              <div className="mt-4 rounded-2xl border border-white/10 bg-[#091827] p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                      Header rasmi
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Mobilga mos banner. Tavsiya: 1600x600, PNG/JPG/WEBP, 5 MB gacha.
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={HEADER_IMAGE_ACCEPT}
+                    onChange={handleHeaderImageChange}
+                    className="hidden"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={imageLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/30 disabled:opacity-50"
+                    >
+                      <ImagePlus size={14} />
+                      {imageLoading ? "Yuklanmoqda..." : "Rasm tanlash"}
+                    </button>
+                    {headerImage && (
+                      <button
+                        type="button"
+                        onClick={() => setHeaderImage(null)}
+                        className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition hover:border-red-400/40 hover:bg-red-500/15"
+                      >
+                        Olib tashlash
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-white/[0.03]">
+                  {headerImage ? (
+                    <div className="relative aspect-[8/3] w-full bg-[#07111d]">
+                      <img
+                        src={headerImage.dataUrl}
+                        alt="Form header preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex aspect-[8/3] w-full items-center justify-center px-4 text-center text-xs text-gray-500">
+                      Header rasm yuklansa, form tepasida preview shu yerda ko'rinadi
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -341,97 +623,52 @@ function FormBuilderDialog({
                 })}
               </div>
 
-              <div className="mt-4 space-y-3">
-                {fields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="rounded-2xl border border-white/10 bg-[#091827] p-4"
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white">
-                        Field {index + 1}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => removeField(field.id)}
-                        className="text-xs font-semibold text-red-300 transition hover:text-red-200"
-                      >
-                        O'chirish
-                      </button>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <input
-                        value={field.label}
-                        onChange={(e) =>
-                          updateField(field.id, { label: e.target.value })
-                        }
-                        placeholder="Label"
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+              <DndContext
+                sensors={fieldSensors}
+                collisionDetection={closestCenter}
+                onDragStart={({ active }) => setActiveFieldId(active.id)}
+                onDragEnd={handleFieldDragEnd}
+                onDragCancel={() => setActiveFieldId(null)}
+              >
+                <SortableContext
+                  items={fields.map((field) => field.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="mt-4 space-y-3">
+                    {fields.map((field, index) => (
+                      <SortableFormField
+                        key={field.id}
+                        field={field}
+                        index={index}
+                        onUpdate={updateField}
+                        onRemove={removeField}
+                        totalFields={fields.length}
                       />
-                      <select
-                        value={field.type}
-                        onChange={(e) =>
-                          updateField(field.id, {
-                            type: e.target.value,
-                            options:
-                              e.target.value === "select"
-                                ? field.options.length
-                                  ? field.options
-                                  : ["Variant 1", "Variant 2"]
-                                : [],
-                          })
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
-                      >
-                        {FORM_FIELD_TYPES.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-                      <input
-                        value={field.placeholder}
-                        onChange={(e) =>
-                          updateField(field.id, { placeholder: e.target.value })
-                        }
-                        placeholder="Placeholder"
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
-                      />
-                      <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-gray-200">
-                        <input
-                          type="checkbox"
-                          checked={field.required}
-                          onChange={(e) =>
-                            updateField(field.id, {
-                              required: e.target.checked,
-                            })
-                          }
-                        />
-                        Majburiy
-                      </label>
-                    </div>
-
-                    {field.type === "select" && (
-                      <textarea
-                        value={field.options.join("\n")}
-                        onChange={(e) =>
-                          updateField(field.id, {
-                            options: e.target.value
-                              .split("\n")
-                              .map((option) => option.trim()),
-                          })
-                        }
-                        placeholder={"Har bir variantni yangi qatordan yozing"}
-                        className="mt-3 min-h-24 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
-                      />
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+
+                <DragOverlay>
+                  {activeFieldId ? (
+                    <div className="rounded-2xl border border-blue-400/40 bg-[#102235] p-4 shadow-2xl">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-300">
+                          <GripVertical size={15} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {fields.find((field) => field.id === activeFieldId)
+                              ?.label || "Field"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Joyini o'zgartirish
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </div>
           </div>
 
@@ -450,6 +687,17 @@ function FormBuilderDialog({
                 </div>
               </div>
               <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                {headerImage && (
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-white/10">
+                    <div className="aspect-[8/3] w-full bg-[#07111d]">
+                      <img
+                        src={headerImage.dataUrl}
+                        alt="Header preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
                 <p className="text-lg font-semibold text-white">
                   {title || "Forma nomi"}
                 </p>
@@ -499,6 +747,17 @@ function FormBuilderDialog({
                       key={form.id}
                       className="rounded-xl border border-white/10 bg-white/5 p-3"
                     >
+                      {form.headerImage?.dataUrl && (
+                        <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
+                          <div className="aspect-[8/3] w-full bg-[#07111d]">
+                            <img
+                              src={form.headerImage.dataUrl}
+                              alt={form.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-white">
@@ -506,6 +765,12 @@ function FormBuilderDialog({
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                             <span>{form.fields.length} ta field</span>
+                            {form.headerImage?.dataUrl && (
+                              <>
+                                <span className="h-1 w-1 rounded-full bg-gray-500" />
+                                <span>Header rasm bor</span>
+                              </>
+                            )}
                             <span className="h-1 w-1 rounded-full bg-gray-500" />
                             <span>
                               {new Date(form.createdAt).toLocaleDateString()}
