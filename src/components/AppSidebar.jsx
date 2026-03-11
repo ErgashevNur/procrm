@@ -79,8 +79,8 @@ export default function AppSidebar() {
   return (
     <div
       className={`${
-        isCollapsed ? "w-20" : "w-[236px]"
-      } crm-hairline relative z-20 isolate flex h-svh flex-shrink-0 flex-col self-start overflow-hidden border-r border-white/8 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.88))] shadow-[24px_0_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-[width] duration-[250ms] ease-in-out`}
+        isCollapsed ? "w-20" : "w-59"
+      } crm-hairline relative isolate z-20 flex h-svh shrink-0 flex-col self-start overflow-hidden border-r border-white/8 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.88))] shadow-[24px_0_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-[width] duration-250 ease-in-out`}
     >
       {/* TOP */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -141,10 +141,7 @@ export default function AppSidebar() {
                 navCls(isActive, isCollapsed, "mx-0 my-0.5")
               }
             >
-              <item.icon
-                size={isCollapsed ? 22 : 18}
-                className="flex-shrink-0"
-              />
+              <item.icon size={isCollapsed ? 22 : 18} className="shrink-0" />
               <span
                 className={`leading-tight font-medium whitespace-nowrap ${
                   isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
@@ -209,7 +206,7 @@ export default function AppSidebar() {
             to="/setting"
             className={({ isActive }) => settingCls(isActive, isCollapsed)}
           >
-            <Settings size={isCollapsed ? 22 : 18} className="flex-shrink-0" />
+            <Settings size={isCollapsed ? 22 : 18} className="shrink-0" />
             <span
               className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
             >
@@ -218,7 +215,7 @@ export default function AppSidebar() {
           </NavLink>
         )}
 
-        <div className="my-1 h-px bg-white/[0.06]" />
+        <div className="my-1 h-px bg-white/6" />
 
         {/* Logout */}
         <NavLink
@@ -230,7 +227,7 @@ export default function AppSidebar() {
               : "flex-row justify-start gap-2.5 px-3 py-3"
           }`}
         >
-          <LogOut size={isCollapsed ? 22 : 18} className="flex-shrink-0" />
+          <LogOut size={isCollapsed ? 22 : 18} className="shrink-0" />
           <span
             className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
           >
