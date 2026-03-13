@@ -75,6 +75,25 @@ export function useExcelWorker() {
     });
   }, []);
 
+  const pickImportFile = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+      input.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+          reject(new Error("Fayl tanlanmadi"));
+          return;
+        }
+        resolve(file);
+      };
+
+      input.click();
+    });
+  }, []);
+
   // ── EXPORT: statuses[] → CSV fayl yuklab oladi ───────────────────────────
   const exportCSV = useCallback((statuses, filename = "leads.csv") => {
     return new Promise((resolve, reject) => {
@@ -113,5 +132,5 @@ export function useExcelWorker() {
     });
   }, []);
 
-  return { importCSV, exportCSV, loading, error };
+  return { importCSV, pickImportFile, exportCSV, loading, error };
 }

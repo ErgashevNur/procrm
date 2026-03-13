@@ -44,6 +44,7 @@ import {
 import { useExcelWorker } from "../hooks/Useexcelworker";
 import { ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
+import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -55,13 +56,21 @@ const maxBirthDate = (() => {
 
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  if (
+    !(options.body instanceof FormData) &&
+    !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")
+  ) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
+    headers,
   });
   if (res.status === 401) {
     localStorage.clear();
@@ -301,7 +310,9 @@ function parseAiLeadDraft(text) {
     pick(/(?:telefon|phone|raqam)\s*[:\-]\s*([+()\d\s-]{7,})/i),
   );
   const extraPhone = normalizeAiPhone(
-    pick(/(?:qo'?shimcha|ikkinchi)\s*(?:telefon|phone)?\s*[:\-]\s*([+()\d\s-]{7,})/i),
+    pick(
+      /(?:qo'?shimcha|ikkinchi)\s*(?:telefon|phone)?\s*[:\-]\s*([+()\d\s-]{7,})/i,
+    ),
   );
   const adress = pick(/(?:manzil|address)\s*[:\-]\s*([^\n]+)/i);
   const budjet = pick(/(?:budjet|byudjet|budget)\s*[:\-]\s*([\d\s]+)/i).replace(
@@ -462,6 +473,7 @@ export default function Pipeline() {
   const [aiTranscript, setAiTranscript] = useState("");
   const [aiDraft, setAiDraft] = useState(parseAiLeadDraft(""));
   const speechRef = useRef(null);
+  const recorderControls = useVoiceVisualizer();
 
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -542,7 +554,8 @@ export default function Pipeline() {
     }
   };
 
-  const { importCSV, exportCSV, loading: workerLoading } = useExcelWorker();
+  const { pickImportFile, exportCSV, loading: workerLoading } =
+    useExcelWorker();
 
   const fetchLeadsByStatus = async (statusId, page = 1, append = false) => {
     setStatusMeta((prev) => ({
@@ -653,32 +666,54 @@ export default function Pipeline() {
   const handleImport = async () => {
     await toast.promise(
       (async () => {
-        const leads = await importCSV();
-        if (!leads.length) {
-          throw new Error("Fayl bo'sh yoki noto'g'ri format");
+        if (!currentProject?.id) {
+          throw new Error("Loyiha tanlanmagan");
         }
-        // Birinchi statusga qo'shamiz (optimistic)
-        setStatuses((prev) =>
-          prev.map((s, i) =>
-            i === 0
-              ? {
-                  ...s,
-                  leads: [
-                    ...leads.map((l) => ({
-                      ...l,
-                      id: Date.now() + Math.random(),
-                    })),
-                    ...s.leads,
-                  ],
-                }
-              : s,
-          ),
+        const file = await pickImportFile();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("projectId", String(currentProject.id));
+
+        const res = await apiFetch(`${API}/leeds/import-excel`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res) {
+          throw new Error("Sessiya tugagan");
+        }
+        if (!res.ok) {
+          const msg = await extractApiMessage(res, "Import xatosi");
+          throw new Error(msg);
+        }
+
+        const payload = await res.json().catch(() => ({}));
+        const importedCount = Number(
+          payload?.count ??
+            payload?.data?.count ??
+            payload?.importedCount ??
+            payload?.data?.importedCount ??
+            payload?.total ??
+            payload?.data?.total ??
+            (Array.isArray(payload?.data)
+              ? payload.data.length
+              : Array.isArray(payload)
+                ? payload.length
+                : 0),
         );
-        return leads.length;
+
+        await loadProject({
+          id: currentProject.id,
+          name: currentProject.name,
+        });
+
+        return importedCount;
       })(),
       {
         loading: "Import qilinmoqda...",
-        success: (count) => `${count} ta mijoz import qilindi`,
+        success: (count) =>
+          count > 0
+            ? `${count} ta mijoz import qilindi`
+            : "Mijozlar muvaffaqiyatli import qilindi",
         error: (err) => {
           if (err?.message === "Fayl tanlanmadi") return "Import bekor qilindi";
           return "Import xatosi: " + (err?.message || "noma'lum xato");
@@ -1009,6 +1044,19 @@ export default function Pipeline() {
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
+  const resetLeadForm = () => {
+    setFormData(EMPTY_FORM);
+    setAiDialogOpen(false);
+    setAiTranscript("");
+    setAiDraft(parseAiLeadDraft(""));
+    stopAiListening();
+  };
+
+  const closeLeadSheet = () => {
+    setSheetOpen(false);
+    resetLeadForm();
+  };
+
   const applyAiDraftToForm = (draft) => {
     setFormData((prev) => ({
       ...prev,
@@ -1122,8 +1170,7 @@ export default function Pipeline() {
           i === 0 ? { ...s, leads: [normalizedNewLead, ...s.leads] } : s,
         ),
       );
-      setSheetOpen(false);
-      setFormData(EMPTY_FORM);
+      closeLeadSheet();
       showToast("Lead qo\'shildi!", "success");
     } catch {
       showToast("Lead qo\'shishda xatolik", "error");
@@ -1597,11 +1644,7 @@ export default function Pipeline() {
             onOpenChange={(o) => {
               setSheetOpen(o);
               if (!o) {
-                setFormData(EMPTY_FORM);
-                setAiDialogOpen(false);
-                setAiTranscript("");
-                setAiDraft(parseAiLeadDraft(""));
-                stopAiListening();
+                resetLeadForm();
               }
             }}
           >
@@ -1618,10 +1661,10 @@ export default function Pipeline() {
                 <button
                   type="button"
                   onClick={() => setAiDialogOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-md border border-[#2a4868] bg-[#11263a] px-3 py-2 text-xs text-gray-200 transition-colors hover:bg-[#1a3552] hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-md border border-[#2a4868] bg-[#11263a] px-3 py-3 text-xs text-gray-200 transition-colors hover:bg-[#1a3552] hover:text-white"
                 >
                   <Sparkles size={14} className="text-cyan-300" />
-                  AI bilan to'ldirish
+                  AI yordamida to'ldirish
                 </button>
               </div>
               <form className="mt-4 w-full text-white" onSubmit={handleSubmit}>
@@ -1672,13 +1715,27 @@ export default function Pipeline() {
                   </div>
                   <Field>
                     <FieldLabel>Tug'ilgan sana</FieldLabel>
-                    <Input
-                      type="date"
-                      name="birthDate"
-                      value={formData.birthDate}
-                      onChange={handleChange}
-                      max={maxBirthDate}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        name="birthDate"
+                        value={formData.birthDate}
+                        onChange={handleChange}
+                        max={maxBirthDate}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0 border-[#2a4868] bg-[#11263a] text-white hover:bg-[#1a3552]"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, birthDate: "" }))
+                        }
+                        disabled={!formData.birthDate}
+                      >
+                        Sanani tozalash
+                      </Button>
+                    </div>
                     <p className="mt-0.5 text-[11px] text-gray-500">
                       18 yoshdan katta (max: {maxBirthDate.slice(0, 4)}-yil)
                     </p>
@@ -1778,10 +1835,10 @@ export default function Pipeline() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="text-[#07131d]"
-                      onClick={() => setSheetOpen(false)}
+                      className="border-[#2a4868] bg-[#11263a] text-white hover:bg-[#1a3552]"
+                      onClick={closeLeadSheet}
                     >
-                      Bekor
+                      Bekor qilish
                     </Button>
                     <Button
                       type="submit"
@@ -1807,82 +1864,13 @@ export default function Pipeline() {
               >
                 <DialogContent className="border-[#21435b] bg-[#0f2236] text-white sm:max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Mic size={16} className="text-cyan-300" />
-                      AI orqali mijoz ma'lumotlarini kiritish
-                    </DialogTitle>
+                    <DialogTitle>Voice recorder</DialogTitle>
                   </DialogHeader>
-
-                  <p className="text-xs text-gray-400">
-                    Mikrofonni yoqib ma'lumotlarni ayting yoki matnni qo'lda
-                    yozing. Masalan: Ism: Ali, Telefon: +998..., Budjet:
-                    150000.
-                  </p>
-
-                  <textarea
-                    value={aiTranscript}
-                    onChange={(e) => setAiTranscript(e.target.value)}
-                    rows={6}
-                    placeholder="Ism: ...; Familiya: ...; Telefon: ...; Manzil: ...; Budjet: ...; Teg: ..."
-                    className="w-full rounded-md border border-[#2a4868] bg-[#10263b] px-3 py-2 text-sm text-white outline-none"
-                  />
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Ism: {aiDraft.firstName || "-"}
-                    </div>
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Familiya: {aiDraft.lastName || "-"}
-                    </div>
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Telefon: {aiDraft.phone || "-"}
-                    </div>
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Qo'shimcha: {aiDraft.extraPhone || "-"}
-                    </div>
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Budjet: {aiDraft.budjet || "-"}
-                    </div>
-                    <div className="rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Tug'ilgan sana: {aiDraft.birthDate || "-"}
-                    </div>
-                    <div className="col-span-2 rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Manzil: {aiDraft.adress || "-"}
-                    </div>
-                    <div className="col-span-2 rounded-md border border-[#2a4868] bg-[#10263b] px-2 py-1.5">
-                      Teglar:{" "}
-                      {aiDraft.tags?.length ? aiDraft.tags.join(", ") : "-"}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-[#2a4868] bg-[#10263b] text-white hover:bg-[#1a3552]"
-                        onClick={aiListening ? stopAiListening : startAiListening}
-                      >
-                        <Mic className="mr-1 h-4 w-4" />
-                        {aiListening ? "To'xtatish" : "Mikrofonni yoqish"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-[#2a4868] bg-[#10263b] text-gray-300 hover:bg-[#1a3552] hover:text-white"
-                        onClick={() => setAiTranscript("")}
-                      >
-                        Tozalash
-                      </Button>
-                    </div>
-
-                    <Button
-                      type="button"
-                      className="border bg-[#07131d]"
-                      onClick={handleApplyAi}
-                    >
-                      Formaga qo'llash
-                    </Button>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-black">
+                    <VoiceVisualizer
+                      controls={recorderControls}
+                      isDownloadAudioButtonShown
+                    />
                   </div>
                 </DialogContent>
               </Dialog>
