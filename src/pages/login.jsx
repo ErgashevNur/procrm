@@ -6,16 +6,16 @@ import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 
 const slides = [
   {
+    // Tasks / Checklist animation
+    src: "/ai_agent.json",
+    title: "AI Yordamchi!",
+    desc: "AI yordamchingiz bilan ishlaringizni tezroq bajaring va samaradorlikni oshiring",
+  },
+  {
     // Leads / People / CRM - customers animation
     src: "/login.json",
     title: "Leadlarni boshqaring",
     desc: "Barcha mijozlaringizni va leadlarni bir joyda kuzatib boring",
-  },
-  {
-    // Tasks / Checklist animation
-    src: "/tasks.json",
-    title: "Vazifalarni nazorat qiling",
-    desc: "Jamoa vazifalarini rejalashtiring va muddatlarni kuzating",
   },
   {
     // Analytics / Chart animation
@@ -124,8 +124,44 @@ const getEmailError = (value) => {
 
 const getPasswordError = (value) => {
   if (!value) return "Parol kiritilishi shart";
-  if (value.length < 6) return "Kamida 6 ta belgi bo'lishi kerak";
   return "";
+};
+
+const parseJsonSafe = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
+const getResponseMessage = (payload) => {
+  if (!payload) return "";
+  if (typeof payload.message === "string") return payload.message;
+  if (Array.isArray(payload.message)) return payload.message.join(", ");
+  if (typeof payload.error === "string") return payload.error;
+  return "";
+};
+
+const getLoginRequestError = (response, payload) => {
+  const message = getResponseMessage(payload);
+
+  if (response.status === 400 || response.status === 401) {
+    return message || "Login yoki parol noto'g'ri";
+  }
+
+  if (response.status === 403) {
+    return message || "Sizga tizimga kirish uchun ruxsat berilmagan";
+  }
+
+  if (response.status >= 500) {
+    return "Serverda xatolik yuz berdi. Keyinroq qayta urinib ko'ring";
+  }
+
+  return message || "Kirishda xatolik yuz berdi";
 };
 
 export default function Login() {
@@ -160,61 +196,84 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (loading) return;
+
+    const normalizedEmail = email.trim();
     setTouched({ email: true, password: true });
-    const emailErr = getEmailError(email);
+    const emailErr = getEmailError(normalizedEmail);
     const passErr = getPasswordError(password);
     setErrors({ email: emailErr, password: passErr });
     if (emailErr || passErr) return;
 
     setLoading(true);
-    toast.promise(
-      fetch(`${import.meta.env.VITE_VITE_API_KEY_PROHOME}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
-        .then((res) => res.json())
-        .then(async (data) => {
-          if (data.statusCode === 400)
-            throw new Error("Login yoki parol noto'g'ri");
-          if (data.accessToken) {
-            const role = data?.user?.role;
-            if (!isSupportedRole(role)) {
-              localStorage.clear();
-              throw new Error("Sizning profilingizga bu CRM da ruxsat berilmagan");
-            }
-            localStorage.setItem("user", data.accessToken);
-            localStorage.setItem("companyId", data.user.companyId);
-            localStorage.setItem(
-              "userData",
-              JSON.stringify({
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken,
-                user: data.user,
-              }),
-            );
-            try {
-              const projectsRes = await fetch(
-                `${import.meta.env.VITE_VITE_API_KEY_PROHOME}/projects`,
-                {
-                  headers: { Authorization: `Bearer ${data.accessToken}` },
-                },
-              );
-              if (projectsRes.ok) {
-                const projects = await projectsRes.json();
-                if (Array.isArray(projects) && projects.length > 0) {
-                  localStorage.setItem("projectId", String(projects[0].id));
-                  localStorage.setItem("projectName", projects[0].name || "");
-                }
-              }
-            } catch {
-              // project tanlashni ProjectGate hal qiladi
-            }
-            navigate(getDefaultRouteByRole(role));
+    const loginRequest = async () => {
+      const apiBase = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+      if (!apiBase) {
+        throw new Error("API manzili sozlanmagan");
+      }
+
+      let response;
+      try {
+        response = await fetch(`${apiBase}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: normalizedEmail, password }),
+        });
+      } catch {
+        throw new Error(
+          "Server bilan bog'lanib bo'lmadi. Internetni tekshirib qayta urinib ko'ring",
+        );
+      }
+
+      const data = await parseJsonSafe(response);
+
+      if (!response.ok) {
+        throw new Error(getLoginRequestError(response, data));
+      }
+
+      if (!data?.accessToken || !data?.user) {
+        throw new Error("Server login javobini to'liq qaytarmadi");
+      }
+
+      const role = data.user.role;
+      if (!isSupportedRole(role)) {
+        localStorage.clear();
+        throw new Error("Sizning profilingizga bu CRM da ruxsat berilmagan");
+      }
+
+      localStorage.setItem("user", data.accessToken);
+      localStorage.setItem("companyId", data.user.companyId ?? "");
+      localStorage.setItem(
+        "userData",
+        JSON.stringify({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+        }),
+      );
+
+      try {
+        const projectsRes = await fetch(`${apiBase}/projects`, {
+          headers: { Authorization: `Bearer ${data.accessToken}` },
+        });
+
+        if (projectsRes.ok) {
+          const projects = await parseJsonSafe(projectsRes);
+          if (Array.isArray(projects) && projects.length > 0) {
+            localStorage.setItem("projectId", String(projects[0].id));
+            localStorage.setItem("projectName", projects[0].name || "");
           }
-          return data;
-        })
-        .finally(() => setLoading(false)),
+        }
+      } catch {
+        // project tanlashni ProjectGate hal qiladi
+      }
+
+      navigate(getDefaultRouteByRole(role));
+      return data;
+    };
+
+    toast.promise(
+      loginRequest().finally(() => setLoading(false)),
       {
         loading: "Yuklanmoqda...",
         success: "Xush kelibsiz!",
