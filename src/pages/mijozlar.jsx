@@ -342,6 +342,121 @@ function parseAiLeadDraft(text) {
   };
 }
 
+function buildAiDraftFromObject(payload) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const firstName = String(
+    payload.firstName || payload.name || payload.clientName || "",
+  ).trim();
+  const lastName = String(
+    payload.lastName || payload.surname || payload.familyName || "",
+  ).trim();
+  const phone = normalizeAiPhone(payload.phone || payload.phoneNumber || "");
+  const extraPhone = normalizeAiPhone(
+    payload.extraPhone || payload.additionalPhone || payload.secondPhone || "",
+  );
+  const adress = String(payload.adress || payload.address || "").trim();
+  const budjetRaw = payload.budjet ?? payload.byudjet ?? payload.budget ?? "";
+  const budjet = String(budjetRaw).replace(/[^\d]/g, "");
+  const birthDate = normalizeAiDate(
+    payload.birthDate || payload.birthday || payload.dateOfBirth || "",
+  );
+  const rawTags = Array.isArray(payload.tags)
+    ? payload.tags
+    : Array.isArray(payload.tag)
+      ? payload.tag
+      : typeof payload.tags === "string"
+        ? payload.tags.split(/[;,]/)
+        : typeof payload.tag === "string"
+          ? payload.tag.split(/[;,]/)
+          : [];
+  const tags = rawTags.map((item) => String(item || "").trim()).filter(Boolean);
+
+  return {
+    firstName,
+    lastName,
+    phone,
+    extraPhone,
+    adress,
+    budjet,
+    birthDate,
+    tags,
+  };
+}
+
+function hasAiDraftData(draft) {
+  if (!draft) return false;
+  return Object.entries(draft).some(([key, value]) => {
+    if (key === "tags") return Array.isArray(value) && value.length > 0;
+    return String(value || "").trim() !== "";
+  });
+}
+
+function resolveAiAudioPayload(payload) {
+  const candidates = [
+    payload,
+    payload?.data,
+    payload?.result,
+    payload?.payload,
+    payload?.response,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string") {
+      const draft = parseAiLeadDraft(candidate);
+      return {
+        transcript: candidate.trim(),
+        draft,
+      };
+    }
+
+    if (candidate && typeof candidate === "object") {
+      const transcriptCandidates = [
+        candidate.transcript,
+        candidate.text,
+        candidate.content,
+        candidate.description,
+        candidate.rawText,
+        candidate.message,
+      ];
+      const transcript = transcriptCandidates.find(
+        (item) => typeof item === "string" && item.trim(),
+      );
+      const objectDraft = buildAiDraftFromObject(candidate);
+
+      if (hasAiDraftData(objectDraft)) {
+        return {
+          transcript: transcript?.trim() || "",
+          draft: objectDraft,
+        };
+      }
+
+      if (transcript) {
+        return {
+          transcript: transcript.trim(),
+          draft: parseAiLeadDraft(transcript),
+        };
+      }
+    }
+  }
+
+  return {
+    transcript: "",
+    draft: parseAiLeadDraft(""),
+  };
+}
+
+function getAudioFileExtension(mimeType) {
+  const normalized = String(mimeType || "").toLowerCase();
+  if (normalized.includes("ogx") || normalized.includes("application/ogg")) {
+    return "ogx";
+  }
+  if (normalized.includes("ogg")) return "ogg";
+  if (normalized.includes("mpeg") || normalized.includes("mp3")) return "mp3";
+  if (normalized.includes("wav")) return "wav";
+  return "webm";
+}
+
 const SEARCH_DATE_KEYS = new Set([
   "birthDateFrom",
   "birthDateTo",
@@ -470,10 +585,19 @@ export default function Pipeline() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiListening, setAiListening] = useState(false);
+  const [aiProcessing, setAiProcessing] = useState(false);
   const [aiTranscript, setAiTranscript] = useState("");
   const [aiDraft, setAiDraft] = useState(parseAiLeadDraft(""));
   const speechRef = useRef(null);
   const recorderControls = useVoiceVisualizer();
+  const {
+    recordedBlob,
+    error: recorderError,
+    clearCanvas,
+    isRecordingInProgress,
+    isProcessingRecordedAudio,
+    isAvailableRecordedAudio,
+  } = recorderControls;
 
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -554,8 +678,11 @@ export default function Pipeline() {
     }
   };
 
-  const { pickImportFile, exportCSV, loading: workerLoading } =
-    useExcelWorker();
+  const {
+    pickImportFile,
+    exportCSV,
+    loading: workerLoading,
+  } = useExcelWorker();
 
   const fetchLeadsByStatus = async (statusId, page = 1, append = false) => {
     setStatusMeta((prev) => ({
@@ -1049,6 +1176,8 @@ export default function Pipeline() {
     setAiDialogOpen(false);
     setAiTranscript("");
     setAiDraft(parseAiLeadDraft(""));
+    setAiProcessing(false);
+    clearCanvas();
     stopAiListening();
   };
 
@@ -1083,6 +1212,14 @@ export default function Pipeline() {
       speechRef.current = null;
     }
     setAiListening(false);
+  };
+
+  const resetAiAudioState = () => {
+    setAiTranscript("");
+    setAiDraft(parseAiLeadDraft(""));
+    setAiProcessing(false);
+    clearCanvas();
+    stopAiListening();
   };
 
   const startAiListening = () => {
@@ -1123,15 +1260,86 @@ export default function Pipeline() {
   };
 
   const handleApplyAi = () => {
-    const parsed = parseAiLeadDraft(aiTranscript);
-    applyAiDraftToForm(parsed);
+    if (!hasAiDraftData(aiDraft)) {
+      showToast("AI javobidan forma uchun ma'lumot topilmadi", "error");
+      return;
+    }
+    applyAiDraftToForm(aiDraft);
     setAiDialogOpen(false);
     showToast("AI orqali forma to'ldirildi", "success");
+  };
+
+  const handleProcessAiAudio = async () => {
+    if (!currentProject?.id) {
+      showToast("Loyiha tanlanmagan", "error");
+      return;
+    }
+
+    if (!recordedBlob) {
+      showToast("Avval audio yozib oling", "error");
+      return;
+    }
+
+    setAiProcessing(true);
+    try {
+      const sourceMimeType = recordedBlob.type || "audio/webm";
+      const normalizedMimeType = sourceMimeType.includes("ogg")
+        ? sourceMimeType
+        : "audio/ogg";
+      const extension = getAudioFileExtension(normalizedMimeType);
+      const audioFile = new File(
+        [recordedBlob],
+        `recorded_audio.${extension}`,
+        { type: normalizedMimeType },
+      );
+      const formData = new FormData();
+      formData.append("audio", audioFile);
+
+      const res = await apiFetch(`${API}/leeds/audio/${currentProject.id}`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res) return;
+      if (!res.ok) {
+        const msg = await extractApiMessage(
+          res,
+          "AI audio tahlilida xatolik yuz berdi",
+        );
+        throw new Error(msg);
+      }
+
+      const payload = await res.json().catch(() => null);
+      const { transcript, draft } = resolveAiAudioPayload(payload);
+
+      setAiTranscript(transcript);
+      setAiDraft(draft);
+
+      if (!transcript && !hasAiDraftData(draft)) {
+        throw new Error("AI javobidan kerakli ma'lumot olinmadi");
+      }
+
+      applyAiDraftToForm(draft);
+      setAiDialogOpen(false);
+      showToast("AI audio orqali forma to'ldirildi", "success");
+      clearCanvas();
+    } catch (err) {
+      showToast(
+        err?.message || "AI audio bilan ishlashda xatolik yuz berdi",
+        "error",
+      );
+    } finally {
+      setAiProcessing(false);
+    }
   };
 
   useEffect(() => {
     setAiDraft(parseAiLeadDraft(aiTranscript));
   }, [aiTranscript]);
+
+  useEffect(() => {
+    if (!recorderError) return;
+    showToast(recorderError.message || "Audio recorder xatosi", "error");
+  }, [recorderError]);
 
   useEffect(
     () => () => {
@@ -1859,18 +2067,106 @@ export default function Pipeline() {
                 open={aiDialogOpen}
                 onOpenChange={(open) => {
                   setAiDialogOpen(open);
-                  if (!open) stopAiListening();
+                  if (!open) resetAiAudioState();
                 }}
               >
                 <DialogContent className="border-[#21435b] bg-[#0f2236] text-white sm:max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Voice recorder</DialogTitle>
+                    <DialogTitle>AI audio yordamchisi</DialogTitle>
                   </DialogHeader>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-black">
-                    <VoiceVisualizer
-                      controls={recorderControls}
-                      isDownloadAudioButtonShown
-                    />
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-cyan-200">
+                        1. Audio yozib oling
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-gray-300">
+                        2. AI tahlil qiladi va serverga yuboradi
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-gray-300">
+                        3. Forma avtomatik to'ldiriladi
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-black">
+                      <VoiceVisualizer
+                        controls={recorderControls}
+                        isDownloadAudioButtonShown={false}
+                      />
+                      {recordedBlob && (
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={handleProcessAiAudio}
+                            disabled={
+                              aiProcessing ||
+                              isRecordingInProgress ||
+                              isProcessingRecordedAudio
+                            }
+                            className="inline-flex min-w-40 items-center justify-center rounded-full bg-[#d8d0c4] px-6 py-3 text-base font-medium text-[#1f2f45] transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {aiProcessing ? "Yuborilmoqda..." : "Yuborish"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-xl border border-white/10 bg-[#0b1a29] p-4">
+                        <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                          Muhim ma'lumotlar
+                        </p>
+                        <div className="mt-3 space-y-2 text-sm text-gray-400">
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Ism</span>
+                            <span>—</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Familiya</span>
+                            <span>—</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Telefon</span>
+                            <span>—</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Manba</span>
+                            <span>—</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-[#0b1a29] p-4">
+                        <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                          Qoshimcha ma'lumotlar
+                        </p>
+                        <div className="mt-3 space-y-2 text-sm text-gray-200">
+                          <p>
+                            <span className="text-gray-400">
+                              Qo'shimcha raqam:
+                            </span>{" "}
+                            {aiDraft.lastName || "—"}
+                          </p>
+                          <p>
+                            <span className="text-gray-400">
+                              Tug'ilgan yil:
+                            </span>{" "}
+                            <span>—</span>
+                          </p>
+                          <p>
+                            <span className="text-gray-400">Budjet:</span>{" "}
+                            {aiDraft.phone || "—"}
+                          </p>
+                          <p>
+                            <span className="text-gray-400">Manzil:</span>{" "}
+                            {aiDraft.adress || "—"}
+                          </p>
+                          <p>
+                            <span className="text-gray-400">Teg:</span>{" "}
+                            {aiDraft.source || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
