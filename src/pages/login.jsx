@@ -2,26 +2,29 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const slides = [
   {
-    // Tasks / Checklist animation
     src: "/ai_agent.json",
-    title: "AI Yordamchi!",
-    desc: "AI yordamchingiz bilan ishlaringizni tezroq bajaring va samaradorlikni oshiring",
+    title: "AI yordamchi ish ritmini ushlab turadi",
+    desc: "Takroriy jarayonlarni tezlashtirib, jamoaning kundalik ishini bir markazdan boshqarishga yordam beradi.",
+    stat: "24/7 avtomatlashtirish",
   },
   {
-    // Leads / People / CRM - customers animation
     src: "/login.json",
-    title: "Leadlarni boshqaring",
-    desc: "Barcha mijozlaringizni va leadlarni bir joyda kuzatib boring",
+    title: "Leadlar yo'qolib ketmaydi",
+    desc: "Har bir mijoz, status va keyingi qadam bitta pipeline ichida aniq ko'rinadi.",
+    stat: "CRM nazorati",
   },
   {
-    // Analytics / Chart animation
     src: "/analitic.json",
-    title: "Hisobotlarni tahlil qiling",
-    desc: "Real vaqt statistikasi bilan biznesingizni o'sishini kuzating",
+    title: "Raqamlar qarorni tezlashtiradi",
+    desc: "Real vaqt analitikasi bilan savdo jarayonidagi o'sish nuqtalarini darhol ko'rasiz.",
+    stat: "Jonli hisobotlar",
   },
 ];
 
@@ -31,87 +34,122 @@ function LeftSlider() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Fade out
       setVisible(false);
-      setTimeout(() => {
-        // Change slide
+      const timeout = setTimeout(() => {
         setCurrent((prev) => (prev + 1) % slides.length);
-        // Fade in
         setVisible(true);
-      }, 500);
-    }, 3000);
+      }, 280);
+
+      return () => clearTimeout(timeout);
+    }, 4200);
+
     return () => clearInterval(interval);
   }, []);
 
   const slide = slides[current];
 
   return (
-    <div
-      className="hidden min-h-screen w-1/2 flex-col items-center justify-center gap-6 md:flex"
-      style={{ background: "#131e2e" }}
-    >
-      {/* Logo — always visible */}
-      <div className="flex items-center gap-3">
+    <aside className="relative hidden min-h-screen flex-1 overflow-hidden xl:flex">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(105,167,255,0.28),transparent_38%),radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.1),transparent_26%),linear-gradient(160deg,rgba(2,8,18,0.98),rgba(5,15,28,0.96))]" />
+      <div className="absolute inset-y-10 left-10 right-20 rounded-[36px] border border-white/10 bg-white/[0.03]" />
+
+      <div className="relative z-10 flex w-full flex-col justify-between px-10 py-10 2xl:px-14">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <img src="/ProHomeLogo.png" alt="Pro Home CRM" className="h-9 w-9" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.28em] text-slate-400 uppercase">
+              Pro Home CRM
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold text-white">
+              Savdo bo&apos;limi uchun yagona ish maydoni
+            </h2>
+          </div>
+        </div>
+
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl"
-          style={{ background: "#1e3a5f" }}
+          className="flex flex-1 flex-col justify-center transition-all duration-300"
+          style={{
+            opacity: visible ? 1 : 0.28,
+            transform: visible ? "translateY(0)" : "translateY(10px)",
+          }}
         >
-          <img src="/ProHomeLogo.png" alt="" />
-        </div>
-        <span className="text-2xl font-bold tracking-wide text-white">
-          Pro Home CRM
-        </span>
-      </div>
+          <div className="mb-8 flex max-w-xl items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-slate-300 backdrop-blur-xl">
+            <span className="inline-flex rounded-full bg-sky-400/15 px-2.5 py-1 text-[11px] font-semibold tracking-[0.24em] text-sky-300 uppercase">
+              {slide.stat}
+            </span>
+            <span>Tizimga kirganingizdan keyin barcha jarayonlar shu yerdan boshlanadi.</span>
+          </div>
 
-      {/* Animation + Text — fades together */}
-      <div
-        style={{
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.5s ease",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "24px",
-        }}
-      >
-        <DotLottieReact
-          key={current}
-          src={slide.src}
-          loop
-          autoplay
-          style={{ width: 400, height: 400 }}
-        />
-        <div className="px-12 text-center">
-          <h3 className="mb-2 text-xl font-semibold text-white">
-            {slide.title}
-          </h3>
-          <p className="text-sm leading-relaxed text-slate-400">{slide.desc}</p>
+          <div className="grid items-center gap-12 2xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="max-w-xl">
+              <h3 className="text-5xl leading-tight font-semibold text-white">
+                {slide.title}
+              </h3>
+              <p className="mt-5 max-w-lg text-lg leading-8 text-slate-300">
+                {slide.desc}
+              </p>
+
+              <div className="mt-10 grid max-w-lg gap-4 sm:grid-cols-2">
+                <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+                  <p className="text-3xl font-semibold text-white">3+</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Sotuv, lead va loyiha oqimini bitta panelda kuzatish.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+                  <p className="text-3xl font-semibold text-white">1 ta</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Jamoa uchun umumiy ish maydoni va real vaqt holati.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <div className="rounded-[32px] border border-white/12 bg-white/[0.04] p-6 shadow-[0_22px_80px_rgba(0,0,0,0.36)] backdrop-blur-2xl">
+                <DotLottieReact
+                  key={current}
+                  src={slide.src}
+                  loop
+                  autoplay
+                  style={{ width: 320, height: 320 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            {slides.map((item, index) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => {
+                  setVisible(false);
+                  setTimeout(() => {
+                    setCurrent(index);
+                    setVisible(true);
+                  }, 280);
+                }}
+                className={`h-2.5 rounded-full transition-all ${
+                  index === current
+                    ? "w-10 bg-sky-400"
+                    : "w-2.5 bg-white/20 hover:bg-white/35"
+                }`}
+                aria-label={`${index + 1}-slayd`}
+              />
+            ))}
+          </div>
+
+          <p className="max-w-xs text-right text-sm leading-6 text-slate-400">
+            CRM ichidagi barcha asosiy jarayonlar login bilan boshlanadi.
+          </p>
         </div>
       </div>
-
-      {/* Dots */}
-      <div className="flex gap-2">
-        {slides.map((_, i) => (
-          <div
-            key={i}
-            onClick={() => {
-              setVisible(false);
-              setTimeout(() => {
-                setCurrent(i);
-                setVisible(true);
-              }, 500);
-            }}
-            className="cursor-pointer rounded-full"
-            style={{
-              width: i === current ? "20px" : "8px",
-              height: "8px",
-              background: i === current ? "#2563eb" : "#1e3a5f",
-              transition: "all 0.4s ease",
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    </aside>
   );
 }
 
@@ -164,6 +202,12 @@ const getLoginRequestError = (response, payload) => {
   return message || "Kirishda xatolik yuz berdi";
 };
 
+function FieldError({ message }) {
+  if (!message) return null;
+
+  return <p className="mt-2 text-xs text-rose-300">{message}</p>;
+}
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -185,6 +229,7 @@ export default function Login() {
   const handleChange = (field, value) => {
     if (field === "email") setEmail(value);
     else setPassword(value);
+
     if (touched[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -244,6 +289,10 @@ export default function Login() {
       localStorage.setItem("user", data.accessToken);
       localStorage.setItem("companyId", data.user.companyId ?? "");
       localStorage.setItem(
+        "isFirstLogin",
+        String(Boolean(data.isFirstLogin ?? data.user.isFirstLogin)),
+      );
+      localStorage.setItem(
         "userData",
         JSON.stringify({
           accessToken: data.accessToken,
@@ -272,214 +321,154 @@ export default function Login() {
       return data;
     };
 
-    toast.promise(
-      loginRequest().finally(() => setLoading(false)),
-      {
-        loading: "Yuklanmoqda...",
-        success: "Xush kelibsiz!",
-        error: (err) => err?.message || "Kirishda xatolik",
-      },
-    );
+    toast.promise(loginRequest().finally(() => setLoading(false)), {
+      loading: "Yuklanmoqda...",
+      success: "Xush kelibsiz!",
+      error: (err) => err?.message || "Kirishda xatolik",
+    });
   };
 
+  const emailHasError = touched.email && errors.email;
+  const passwordHasError = touched.password && errors.password;
+
   return (
-    <div className="flex min-h-screen w-full" style={{ background: "#0f1724" }}>
-      {/* Left — Slideshow panel */}
-      <LeftSlider />
+    <div className="relative min-h-screen overflow-hidden bg-transparent">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(105,167,255,0.2),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_30%)]" />
 
-      {/* Right — Form panel */}
-      <div
-        className="flex min-h-screen flex-1 flex-col items-center justify-center px-8 py-10 md:px-16"
-        style={{ background: "#0f1724" }}
-      >
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-2 md:hidden">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg"
-              style={{ background: "#1e3a5f" }}
-            >
-              <svg
-                className="h-4 w-4 text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-            </div>
-            <span className="font-semibold text-white">Pro Home CRM</span>
-          </div>
+      <div className="relative z-10 grid min-h-screen xl:grid-cols-[1.15fr_0.85fr]">
+        <LeftSlider />
 
-          <h1 className="mb-1 text-2xl font-semibold text-white">Kirish</h1>
-          <p className="mb-8 text-sm" style={{ color: "#64748b" }}>
-            Hisobingizga kiring
-          </p>
+        <section className="relative flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
+          <div className="absolute inset-0 xl:bg-[linear-gradient(270deg,rgba(2,7,17,0.84),rgba(2,7,17,0.62),transparent)]" />
 
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="flex flex-col gap-5"
-          >
-            {/* Email */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                className="text-sm font-medium text-slate-300"
-                htmlFor="email"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="example@mail.com"
-                value={email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                onBlur={() => handleBlur("email")}
-                style={{
-                  background:
-                    touched.email && errors.email ? "#2a1a1a" : "#1a2535",
-                  borderColor:
-                    touched.email && errors.email ? "#f87171" : "#243044",
-                  color: "#e2e8f0",
-                }}
-                className={`w-full rounded-lg border px-4 py-2.5 text-sm placeholder-slate-600 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20`}
-              />
-              {touched.email && errors.email && (
-                <p className="text-xs text-red-400">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label
-                  className="text-sm font-medium text-slate-300"
-                  htmlFor="password"
-                >
-                  Parol
-                </label>
+          <div className="relative z-10 w-full max-w-[480px]">
+            <div className="mb-6 flex items-center gap-3 xl:hidden">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-white/8 backdrop-blur-xl">
+                <img src="/ProHomeLogo.png" alt="Pro Home CRM" className="h-8 w-8" />
               </div>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  onBlur={() => handleBlur("password")}
-                  style={{
-                    background:
-                      touched.password && errors.password
-                        ? "#2a1a1a"
-                        : "#1a2535",
-                    borderColor:
-                      touched.password && errors.password
-                        ? "#f87171"
-                        : "#243044",
-                    color: "#e2e8f0",
-                  }}
-                  className={`w-full rounded-lg border px-4 py-2.5 pr-10 text-sm placeholder-slate-600 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
-                  style={{ color: "#475569" }}
-                >
-                  {showPassword ? (
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  )}
-                </button>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.24em] text-slate-400 uppercase">
+                  Pro Home CRM
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Boshqaruv paneliga kirish
+                </p>
               </div>
-              {touched.password && errors.password && (
-                <p className="text-xs text-red-400">{errors.password}</p>
-              )}
             </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-1 w-full rounded-lg py-2.5 text-sm font-medium text-white transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed"
-              style={{
-                background: loading ? "#1e3a5f" : "#2563eb",
-                opacity: loading ? 0.7 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.background = "#1d4ed8";
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.background = "#2563eb";
-              }}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
+            <div className="crm-card crm-hairline rounded-[32px] p-5 sm:p-7 md:p-8">
+              <div className="mb-8 flex items-start justify-between gap-4">
+                <div>
+                  <p className="crm-kicker">Login</p>
+                  <h1 className="mt-3 text-3xl font-semibold text-white">
+                    Hisobingizga kiring
+                  </h1>
+                  <p className="mt-3 max-w-sm text-sm leading-6 text-slate-400">
+                    Email va parolingizni kiriting. Tizim sizni rolga mos sahifaga yo&apos;naltiradi.
+                  </p>
+                </div>
+
+                <div className="hidden rounded-2xl border border-sky-400/20 bg-sky-400/10 p-3 text-sky-300 sm:block">
+                  <House className="h-5 w-5" />
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <div>
+                  <label
+                    className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-slate-200"
+                    htmlFor="email"
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
+                    <Mail className="h-4 w-4 text-slate-400" />
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="example@mail.com"
+                    value={email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    onBlur={() => handleBlur("email")}
+                    aria-invalid={emailHasError ? "true" : "false"}
+                    className={`h-12 rounded-2xl px-4 ${
+                      emailHasError
+                        ? "border-rose-400/70 bg-rose-500/10 text-white placeholder:text-rose-200/60"
+                        : ""
+                    }`}
+                  />
+                  <FieldError message={emailHasError ? errors.email : ""} />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-slate-200"
+                    htmlFor="password"
+                  >
+                    <LockKeyhole className="h-4 w-4 text-slate-400" />
+                    Parol
+                  </label>
+
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Parolingizni kiriting"
+                      value={password}
+                      onChange={(e) => handleChange("password", e.target.value)}
+                      onBlur={() => handleBlur("password")}
+                      aria-invalid={passwordHasError ? "true" : "false"}
+                      className={`h-12 rounded-2xl px-4 pr-12 ${
+                        passwordHasError
+                          ? "border-rose-400/70 bg-rose-500/10 text-white placeholder:text-rose-200/60"
+                          : ""
+                      }`}
                     />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Yuklanmoqda...
-                </span>
-              ) : (
-                "Kirish"
-              )}
-            </button>
-          </form>
-        </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute top-1/2 right-4 flex -translate-y-1/2 items-center justify-center text-slate-400 transition-colors hover:text-white"
+                      aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <FieldError message={passwordHasError ? errors.password : ""} />
+                </div>
+
+                <div className="grid gap-3 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 text-sm text-slate-400 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase">
+                      Xavfsizlik
+                    </p>
+                    <p className="mt-2 leading-6">
+                      Sessiya rol va token asosida saqlanadi.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase">
+                      Yo&apos;naltirish
+                    </p>
+                    <p className="mt-2 leading-6">
+                      Kirgandan keyin birinchi loyiha avtomatik tanlanadi.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="h-12 w-full rounded-2xl bg-sky-500 text-sm font-semibold text-slate-950 shadow-[0_18px_40px_rgba(56,189,248,0.28)] transition hover:bg-sky-400 disabled:bg-sky-500/70"
+                >
+                  {loading ? "Yuklanmoqda..." : "Kirish"}
+                </Button>
+              </form>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

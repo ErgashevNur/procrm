@@ -612,7 +612,6 @@ export default function Pipeline() {
   const [operatorsLoading, setOperatorsLoading] = useState(false);
   const role = getCurrentRole();
   const canManageStatuses = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
-
   const showToast = (message, type = "error") =>
     type === "success" ? toast.success(message) : toast.error(message);
 
