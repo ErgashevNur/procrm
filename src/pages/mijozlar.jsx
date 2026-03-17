@@ -280,11 +280,36 @@ const DEFAULT_SEARCH_PARAMS = {
 const PAGE_LIMIT = 10;
 
 function normalizeAiPhone(raw) {
-  const cleaned = String(raw || "").replace(/[^\d+]/g, "");
-  if (!cleaned) return "";
-  if (cleaned.startsWith("+")) return cleaned;
-  if (cleaned.startsWith("998")) return `+${cleaned}`;
-  return cleaned;
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("998")) return `+${digits.slice(0, 12)}`;
+  return `+998${digits.slice(0, 9)}`;
+}
+
+function formatPhoneDisplay(raw) {
+  const normalized = normalizeAiPhone(raw);
+  if (!normalized) return "";
+
+  const digits = normalized.replace(/\D/g, "");
+  const country = digits.slice(0, 3);
+  const part1 = digits.slice(3, 5);
+  const part2 = digits.slice(5, 8);
+  const part3 = digits.slice(8, 10);
+  const part4 = digits.slice(10, 12);
+
+  return ["+" + country, part1, part2, part3, part4]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function normalizeBudgetInput(raw) {
+  return String(raw || "").replace(/\D/g, "");
+}
+
+function formatBudgetDisplay(raw) {
+  const digits = normalizeBudgetInput(raw);
+  if (!digits) return "";
+  return Number(digits).toLocaleString("ru-RU");
 }
 
 function normalizeAiDate(raw) {
@@ -1167,6 +1192,16 @@ export default function Pipeline() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "phone" || name === "extraPhone") {
+      setFormData((p) => ({ ...p, [name]: normalizeAiPhone(value) }));
+      return;
+    }
+
+    if (name === "budjet") {
+      setFormData((p) => ({ ...p, budjet: normalizeBudgetInput(value) }));
+      return;
+    }
+
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
@@ -1903,9 +1938,9 @@ export default function Pipeline() {
                       <Input
                         type="tel"
                         name="phone"
-                        value={formData.phone}
+                        value={formatPhoneDisplay(formData.phone)}
                         onChange={handleChange}
-                        placeholder="+998 __ ___ __ __"
+                        placeholder="+998 90 123 45 67"
                         required
                       />
                     </Field>
@@ -1914,9 +1949,9 @@ export default function Pipeline() {
                       <Input
                         type="tel"
                         name="extraPhone"
-                        value={formData.extraPhone}
+                        value={formatPhoneDisplay(formData.extraPhone)}
                         onChange={handleChange}
-                        placeholder="+998 __ ___ __ __"
+                        placeholder="+998 90 123 45 67"
                       />
                     </Field>
                   </div>
@@ -1960,11 +1995,12 @@ export default function Pipeline() {
                     <Field>
                       <FieldLabel>Budjet</FieldLabel>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         name="budjet"
-                        value={formData.budjet}
+                        value={formatBudgetDisplay(formData.budjet)}
                         onChange={handleChange}
-                        placeholder="so'm"
+                        placeholder="120 000 000"
                       />
                     </Field>
                     <Field>

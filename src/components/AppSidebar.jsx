@@ -199,6 +199,8 @@ export default function AppSidebar() {
         </nav>
       </div>
 
+      {/* <NotificationBell /> */}
+
       {/* BOTTOM */}
       <div className="relative z-10 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.94))] p-2">
         {canOpenSettings && (

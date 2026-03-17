@@ -58,7 +58,9 @@ function RoleHomeRedirect() {
 // 403 sahifasi
 function Forbidden() {
   const role = getCurrentRole();
-  const homePath = isSupportedRole(role) ? getDefaultRouteByRole(role) : "/login";
+  const homePath = isSupportedRole(role)
+    ? getDefaultRouteByRole(role)
+    : "/login";
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#0f2231] text-center">
@@ -137,9 +139,7 @@ const router = createBrowserRouter([
         path: "dashboard",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<Dashboard />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<Dashboard />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
@@ -149,36 +149,22 @@ const router = createBrowserRouter([
       },
       {
         path: "kanban",
-        element: (
-          <ProjectGate>
-            {withLazy(<Kanban />)}
-          </ProjectGate>
-        ),
+        element: <ProjectGate>{withLazy(<Kanban />)}</ProjectGate>,
       },
       {
         path: "tasks",
-        element: (
-          <ProjectGate>
-            {withLazy(<Tasks />)}
-          </ProjectGate>
-        ),
+        element: <ProjectGate>{withLazy(<Tasks />)}</ProjectGate>,
       },
       {
         path: "leadDetails",
-        element: (
-          <ProjectGate>
-            {withLazy(<LeadDetails />)}
-          </ProjectGate>
-        ),
+        element: <ProjectGate>{withLazy(<LeadDetails />)}</ProjectGate>,
       },
 
       {
         path: "leadlar",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<Mijozlar />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<Mijozlar />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
@@ -187,9 +173,7 @@ const router = createBrowserRouter([
         path: "addStatus",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<AddStatus />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<AddStatus />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
@@ -198,9 +182,7 @@ const router = createBrowserRouter([
         path: "leadSource",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<LeadSource />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<LeadSource />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
@@ -224,9 +206,7 @@ const router = createBrowserRouter([
         path: "rassilka",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<SmsRassilka />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<SmsRassilka />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
@@ -234,9 +214,7 @@ const router = createBrowserRouter([
         path: "analitika",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>
-              {withLazy(<Analitika />)}
-            </ProjectGate>
+            <ProjectGate>{withLazy(<Analitika />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },
