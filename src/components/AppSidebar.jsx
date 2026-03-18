@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Lock, LogOut, Settings, ShoppingBag } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
+import { emitAuthChange, useNotification } from "@/hooks/useNotification";
+import { removeDeviceToken } from "@/services/notificationService";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -54,6 +57,9 @@ function settingCls(isActive, isCollapsed) {
 export default function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const location = useLocation();
+  const { leadNotificationCount, resetLeadNotificationCount } =
+    useNotification();
 
   let user = {};
   let role = null;
@@ -75,6 +81,26 @@ export default function AppSidebar() {
   const roleLabel = ROLE_LABELS[safeRole] || safeRole;
   const canOpenSettings = SETTINGS_ROLES.includes(safeRole);
   const projectName = localStorage.getItem("projectName");
+
+  useEffect(() => {
+    if (location.pathname === "/leadlar") {
+      resetLeadNotificationCount();
+    }
+  }, [location.pathname, resetLeadNotificationCount]);
+
+  const handleLogout = async (event) => {
+    event.preventDefault();
+
+    try {
+      await removeDeviceToken();
+    } catch (error) {
+      console.error("Device tokenni o'chirishda xato:", error);
+    } finally {
+      localStorage.clear();
+      emitAuthChange();
+      window.location.href = "/login";
+    }
+  };
 
   return (
     <div
@@ -142,13 +168,30 @@ export default function AppSidebar() {
               }
             >
               <item.icon size={isCollapsed ? 22 : 18} className="shrink-0" />
-              <span
-                className={`leading-tight font-medium whitespace-nowrap ${
-                  isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
+              <div
+                className={`flex min-w-0 items-center ${
+                  isCollapsed ? "flex-col gap-1" : "flex-1 justify-between gap-3"
                 }`}
               >
-                {item.title}
-              </span>
+                <span
+                  className={`leading-tight font-medium whitespace-nowrap ${
+                    isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
+                  }`}
+                >
+                  {item.title}
+                </span>
+                {item.url === "/leadlar" && leadNotificationCount > 0 ? (
+                  <span
+                    className={`rounded-full bg-emerald-500 text-center font-semibold text-white ${
+                      isCollapsed
+                        ? "min-w-[18px] px-1 py-0.5 text-[9px]"
+                        : "min-w-[22px] px-1.5 py-0.5 text-[10px]"
+                    }`}
+                  >
+                    {leadNotificationCount > 99 ? "99+" : leadNotificationCount}
+                  </span>
+                ) : null}
+              </div>
             </NavLink>
           ))}
           {/* Beta versiya */}
@@ -199,8 +242,6 @@ export default function AppSidebar() {
         </nav>
       </div>
 
-      {/* <NotificationBell /> */}
-
       {/* BOTTOM */}
       <div className="relative z-10 bg-[linear-gradient(180deg,rgba(12,20,32,0.96),rgba(7,13,24,0.94))] p-2">
         {canOpenSettings && (
@@ -222,7 +263,7 @@ export default function AppSidebar() {
         {/* Logout */}
         <NavLink
           to="/login"
-          onClick={() => localStorage.clear()}
+          onClick={handleLogout}
           className={`flex items-center rounded-[22px] border border-transparent text-slate-400 no-underline transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/12 hover:text-red-300 ${
             isCollapsed
               ? "flex-col justify-center gap-1 px-0 py-3"

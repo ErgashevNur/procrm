@@ -10,6 +10,7 @@ import ProjectGate from "./components/ProjectGate";
 import AppSidebar from "./components/AppSidebar";
 import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { NotificationProvider } from "@/hooks/useNotification";
 import {
   getCurrentRole,
   getDefaultRouteByRole,
@@ -95,6 +96,7 @@ export function ProtectedLayout() {
       <div className="relative flex h-svh w-full overflow-hidden bg-transparent">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(106,167,255,0.14),transparent_30%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.06),transparent_22%)]" />
         <AppSidebar />
+
         <SidebarInset className="relative flex h-svh min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
           <main
             className="h-full min-h-0 flex-1 overflow-y-auto bg-transparent"
@@ -233,10 +235,10 @@ const router = createBrowserRouter([
 
 const App = () => {
   return (
-    <>
+    <NotificationProvider>
       <RouterProvider router={router} />
       <Toaster />
-    </>
+    </NotificationProvider>
   );
 };
 
