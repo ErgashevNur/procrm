@@ -6,6 +6,7 @@ import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { emitAuthChange } from "@/hooks/useNotification";
 
 const slides = [
   {
@@ -300,6 +301,7 @@ export default function Login() {
           user: data.user,
         }),
       );
+      emitAuthChange();
 
       try {
         const projectsRes = await fetch(`${apiBase}/projects`, {

@@ -1,16 +1,7 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "./ui/button";
-import { BadgeCheck, LogOut, Settings, User } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { BadgeCheck } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { ROLE_LABELS, ROLES, getCurrentRole, isSupportedRole } from "@/lib/rbac";
+import { NotificationBell } from "./NotificationBell";
 
 const TITLES = {
   "/dashboard": "Dashboard",
@@ -28,25 +19,11 @@ const TITLES = {
 };
 
 export default function Header() {
-  const navigate = useNavigate();
   const location = useLocation();
   const role = getCurrentRole();
   const safeRole = isSupportedRole(role) ? role : ROLES.SALESMANAGER;
-  const canOpenSettings = [ROLES.SUPERADMIN, ROLES.ROP].includes(safeRole);
   const title = TITLES[location.pathname] || "CRM";
   const projectName = localStorage.getItem("projectName");
-
-  const handleLogout = (e) => {
-    e.preventDefault();
-    localStorage.clear();
-    navigate("/login");
-  };
-
-  const handleNavigate = (e) => {
-    e.preventDefault();
-
-    navigate("/profile");
-  };
 
   return (
     <div className="crm-glass crm-hairline flex w-full items-center justify-between gap-3 rounded-[28px] px-4 py-3">
@@ -66,41 +43,7 @@ export default function Header() {
           )}
         </div>
       </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="crm-control flex h-10 w-10 items-center justify-center rounded-full px-2 py-2"
-          render={<Button variant="outline" />}
-        >
-          <User className="text-gray-100 hover:text-white" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-52 text-white">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Hisob</DropdownMenuLabel>
-            <DropdownMenuItem onClick={handleNavigate}>
-              <div className="flex items-center gap-2 text-sm">
-                <User size={16} />
-                Profil
-              </div>
-            </DropdownMenuItem>
-            {canOpenSettings && (
-              <DropdownMenuItem onClick={() => navigate("/setting")}>
-                <div className="flex items-center gap-2 text-sm">
-                  <Settings size={16} />
-                  Sozlamalar
-                </div>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <div className="flex items-center gap-2 text-sm text-red-300">
-                <LogOut size={16} />
-                Chiqish
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <NotificationBell />
     </div>
   );
 }
