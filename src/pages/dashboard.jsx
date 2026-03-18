@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   BarChart3,
 } from "lucide-react";
+import Header from "@/components/Header";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -348,6 +349,7 @@ export default function Dashboard() {
     return (
       <div className="crm-page">
         <div className="mx-auto max-w-5xl space-y-4">
+          <Header />
           <Shimmer className="h-28" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {Array(4)
@@ -368,7 +370,9 @@ export default function Dashboard() {
   if (!data) {
     return (
       <div className="crm-page p-6">
-        <div className="crm-card crm-hairline mx-auto max-w-5xl p-8 text-center">
+        <div className="mx-auto max-w-5xl space-y-4">
+          <Header />
+          <div className="crm-card crm-hairline p-8 text-center">
           <p className="text-lg font-semibold tracking-[-0.02em] text-white">
             Dashboard ma'lumotlari topilmadi
           </p>
@@ -379,6 +383,7 @@ export default function Dashboard() {
               API dan javob kelmagan yoki noto'g'ri formatda.
             </p>
           )}
+        </div>
         </div>
       </div>
     );
@@ -455,6 +460,7 @@ export default function Dashboard() {
       />
 
       <div className="relative mx-auto max-w-6xl space-y-5">
+        <Header />
         <div
           className="crm-card crm-hairline overflow-hidden"
           style={{ animation: "fadeUp 0.45s ease 0.02s both" }}
