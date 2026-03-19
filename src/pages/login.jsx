@@ -25,7 +25,7 @@ const slides = [
     src: "/analitic.json",
     title: "Raqamlar qarorni tezlashtiradi",
     desc: "Real vaqt analitikasi bilan savdo jarayonidagi o'sish nuqtalarini darhol ko'rasiz.",
-    stat: "Jonli hisobotlar",
+    stat: "Jonli hisobotlar!.",
   },
 ];
 
