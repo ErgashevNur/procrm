@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { messaging } from "../firebase/firebaseConfig";
+import { getFirebaseMessaging } from "../firebase/firebaseConfig";
 import { getToken, onMessage } from "firebase/messaging";
 import {
   registerDeviceToken,
@@ -19,6 +19,8 @@ import {
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 const AUTH_CHANGE_EVENT = "prohome:auth-changed";
+const SW_NOTIFICATION_MESSAGE = "prohome:notification-message";
+const BROADCAST_CHANNEL_NAME = "prohome-notifications";
 const NotificationContext = createContext(null);
 const NOTIFICATION_POLL_INTERVAL = 15000;
 
@@ -33,6 +35,18 @@ function hasLeadKeyword(value) {
     normalized.includes("mijoz") ||
     normalized.includes("klient") ||
     normalized.includes("client")
+  );
+}
+
+function hasTaskKeyword(value) {
+  const normalized = String(value || "").toLowerCase();
+  return (
+    normalized.includes("task") ||
+    normalized.includes("vazifa") ||
+    normalized.includes("todo") ||
+    normalized.includes("deadline") ||
+    normalized.includes("assignment") ||
+    normalized.includes("assign")
   );
 }
 
@@ -51,6 +65,75 @@ function isLeadNotification(notification) {
     data.resourceType,
     data.link,
   ].some(hasLeadKeyword);
+}
+
+function isTaskNotification(notification) {
+  if (!notification) return false;
+
+  const data = notification.data || {};
+  return [
+    notification.title,
+    notification.body,
+    data.type,
+    data.event,
+    data.module,
+    data.entity,
+    data.resource,
+    data.resourceType,
+    data.link,
+  ].some(hasTaskKeyword);
+}
+
+function isSoundNotification(notification) {
+  if (!notification) return false;
+
+  const data = notification.data || {};
+  return [
+    notification.title,
+    notification.body,
+    data.type,
+    data.event,
+    data.module,
+    data.entity,
+    data.resource,
+    data.resourceType,
+    data.link,
+  ].some((value) => hasLeadKeyword(value) || hasTaskKeyword(value));
+}
+
+function normalizeNotificationPayload(payload) {
+  if (!payload) return null;
+
+  const data = payload.data || {};
+  const notification = payload.notification || {};
+  const title = notification.title || data.title || "Yangi bildirishnoma";
+  const body = notification.body || data.body || data.message || "";
+  const createdAt =
+    data.createdAt || data.created_at || payload.createdAt || new Date().toISOString();
+
+  return {
+    id: data.id || payload.id || `${title}:${body}:${createdAt}`,
+    title,
+    body,
+    isRead: false,
+    data,
+    createdAt,
+  };
+}
+
+function mergeNotifications(currentList, incomingNotification) {
+  if (!incomingNotification) return currentList;
+
+  const incomingId = String(incomingNotification.id ?? "");
+  const nextList = [incomingNotification];
+
+  for (const item of currentList) {
+    const itemId = String(item?.id ?? "");
+    if (incomingId && itemId === incomingId) continue;
+    nextList.push(item);
+  }
+
+  return nextList;
 }
 
 export function emitAuthChange() {
@@ -81,6 +164,9 @@ export const requestDeviceToken = async () => {
       "/firebase-messaging-sw.js",
     );
 
+    const messaging = await getFirebaseMessaging();
+    if (!messaging) return fallbackToken || null;
+
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration,
@@ -101,11 +187,13 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [leadNotificationCount, setLeadNotificationCount] = useState(0);
+  const [taskNotificationCount, setTaskNotificationCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(hasActiveSession);
   const notificationAudioRef = useRef(null);
   const notificationsRef = useRef([]);
   const knownNotificationIdsRef = useRef(new Set());
+  const broadcastChannelRef = useRef(null);
 
   const syncAuthState = useCallback(() => {
     setIsAuthenticated(hasActiveSession());
@@ -127,11 +215,47 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
+  const showBrowserNotification = useCallback(async (notification) => {
+    if (
+      typeof window === "undefined" ||
+      !notification ||
+      !("Notification" in window) ||
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
+
+    const options = {
+      body: notification.body || "",
+      icon: "/ProHomeLogo.png",
+      badge: "/ProHomeLogo.png",
+      data: notification.data || {},
+      tag: String(notification.id ?? ""),
+    };
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(notification.title, options);
+        return;
+      }
+    } catch (error) {
+      console.error("Browser notification ko'rsatilmadi:", error);
+    }
+
+    try {
+      new Notification(notification.title, options);
+    } catch (error) {
+      console.error("Native notification ko'rsatilmadi:", error);
+    }
+  }, []);
+
   const syncNotificationState = useCallback(
     (list, options = {}) => {
       const normalizedList = Array.isArray(list) ? list : [];
       const unread = normalizedList.filter((item) => !item?.isRead);
       const unreadLeadCount = unread.filter(isLeadNotification).length;
+      const unreadTaskCount = unread.filter(isTaskNotification).length;
 
       if (options.playSoundForNew) {
         const nextIds = new Set();
@@ -145,7 +269,7 @@ export function NotificationProvider({ children }) {
           if (
             !knownNotificationIdsRef.current.has(key) &&
             !item?.isRead &&
-            isLeadNotification(item)
+            isSoundNotification(item)
           ) {
             hasNewLeadNotification = true;
           }
@@ -168,8 +292,38 @@ export function NotificationProvider({ children }) {
       notificationsRef.current = normalizedList;
       setUnreadCount(unread.length);
       setLeadNotificationCount(unreadLeadCount);
+      setTaskNotificationCount(unreadTaskCount);
     },
     [playNotificationSound],
+  );
+
+  const pushIncomingNotification = useCallback(
+    async (incomingNotification, options = {}) => {
+      if (!incomingNotification) return;
+
+      syncNotificationState(
+        mergeNotifications(notificationsRef.current, incomingNotification),
+        {
+          playSoundForNew: options.playSoundForNew ?? true,
+        },
+      );
+
+      if (options.showBrowserNotification) {
+        await showBrowserNotification(incomingNotification);
+      }
+
+      if (
+        options.broadcast !== false &&
+        broadcastChannelRef.current &&
+        typeof broadcastChannelRef.current.postMessage === "function"
+      ) {
+        broadcastChannelRef.current.postMessage({
+          type: SW_NOTIFICATION_MESSAGE,
+          notification: incomingNotification,
+        });
+      }
+    },
+    [showBrowserNotification, syncNotificationState],
   );
 
   const fetchNotifications = useCallback(async (options = {}) => {
@@ -212,6 +366,9 @@ export function NotificationProvider({ children }) {
         if (target && isLeadNotification(target) && !target.isRead) {
           setLeadNotificationCount((prevCount) => Math.max(0, prevCount - 1));
         }
+        if (target && isTaskNotification(target) && !target.isRead) {
+          setTaskNotificationCount((prevCount) => Math.max(0, prevCount - 1));
+        }
 
         return prev.map((n) => (n.id === id ? { ...n, isRead: true } : n));
       });
@@ -227,6 +384,7 @@ export function NotificationProvider({ children }) {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       setLeadNotificationCount(0);
+      setTaskNotificationCount(0);
     } catch (err) {
       console.error("Hammasi o'qildi belgilanmadi:", err);
     }
@@ -234,6 +392,10 @@ export function NotificationProvider({ children }) {
 
   const resetLeadNotificationCount = useCallback(() => {
     setLeadNotificationCount(0);
+  }, []);
+
+  const resetTaskNotificationCount = useCallback(() => {
+    setTaskNotificationCount(0);
   }, []);
 
   useEffect(() => {
@@ -251,6 +413,7 @@ export function NotificationProvider({ children }) {
       setNotifications([]);
       setUnreadCount(0);
       setLeadNotificationCount(0);
+      setTaskNotificationCount(0);
       setLoading(false);
       return;
     }
@@ -258,6 +421,31 @@ export function NotificationProvider({ children }) {
     fetchNotifications();
     fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount, isAuthenticated]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("BroadcastChannel" in window)) {
+      return;
+    }
+
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      if (event.data?.type !== SW_NOTIFICATION_MESSAGE) return;
+      pushIncomingNotification(event.data.notification, {
+        playSoundForNew: true,
+        showBrowserNotification: false,
+        broadcast: false,
+      });
+    };
+
+    return () => {
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
+      }
+      channel.close();
+    };
+  }, [pushIncomingNotification]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -312,27 +500,64 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    try {
-      const unsubscribe = onMessage(messaging, (payload) => {
-        const newNotif = {
-          id: payload?.data?.id || Date.now(),
-          title: payload.notification?.title || "Yangi bildirishnoma",
-          body: payload.notification?.body || "",
-          isRead: false,
-          data: payload.data,
-          createdAt: new Date().toISOString(),
-        };
+    let unsubscribe = null;
+    let disposed = false;
 
-        syncNotificationState([newNotif, ...notificationsRef.current], {
-          playSoundForNew: true,
+    const setupForegroundListener = async () => {
+      try {
+        const messaging = await getFirebaseMessaging();
+        if (!messaging || disposed) return;
+
+        unsubscribe = onMessage(messaging, (payload) => {
+          const newNotification = normalizeNotificationPayload(payload);
+          pushIncomingNotification(newNotification, {
+            playSoundForNew: true,
+            showBrowserNotification: true,
+          });
         });
-      });
+      } catch (error) {
+        console.error("Foreground notification listener ishga tushmadi:", error);
+      }
+    };
 
-      return () => unsubscribe();
-    } catch (error) {
-      console.error("Foreground notification listener ishga tushmadi:", error);
+    setupForegroundListener();
+
+    return () => {
+      disposed = true;
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [isAuthenticated, pushIncomingNotification]);
+
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator)
+    ) {
+      return;
     }
-  }, [isAuthenticated, syncNotificationState]);
+
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data?.type !== SW_NOTIFICATION_MESSAGE) return;
+
+      const newNotification = normalizeNotificationPayload(event.data.payload);
+      pushIncomingNotification(newNotification, {
+        playSoundForNew: true,
+        showBrowserNotification: false,
+      });
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener(
+        "message",
+        handleServiceWorkerMessage,
+      );
+    };
+  }, [isAuthenticated, pushIncomingNotification]);
 
   return createElement(
     NotificationContext.Provider,
@@ -341,11 +566,13 @@ export function NotificationProvider({ children }) {
         notifications,
         unreadCount,
         leadNotificationCount,
+        taskNotificationCount,
         loading,
         fetchNotifications,
         handleMarkAsRead,
         handleMarkAllAsRead,
         resetLeadNotificationCount,
+        resetTaskNotificationCount,
       },
     },
     children,

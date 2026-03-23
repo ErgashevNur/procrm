@@ -58,7 +58,12 @@ export default function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const location = useLocation();
-  const { leadNotificationCount, resetLeadNotificationCount } =
+  const {
+    leadNotificationCount,
+    taskNotificationCount,
+    resetLeadNotificationCount,
+    resetTaskNotificationCount,
+  } =
     useNotification();
 
   let user = {};
@@ -86,7 +91,10 @@ export default function AppSidebar() {
     if (location.pathname === "/leadlar") {
       resetLeadNotificationCount();
     }
-  }, [location.pathname, resetLeadNotificationCount]);
+    if (location.pathname === "/tasks") {
+      resetTaskNotificationCount();
+    }
+  }, [location.pathname, resetLeadNotificationCount, resetTaskNotificationCount]);
 
   const handleLogout = async (event) => {
     event.preventDefault();
@@ -167,7 +175,25 @@ export default function AppSidebar() {
                 navCls(isActive, isCollapsed, "mx-0 my-0.5")
               }
             >
-              <item.icon size={isCollapsed ? 22 : 18} className="shrink-0" />
+              <div className="relative shrink-0">
+                <item.icon size={isCollapsed ? 22 : 18} className="shrink-0" />
+                {((item.url === "/leadlar" && leadNotificationCount > 0) ||
+                  (item.url === "/tasks" && taskNotificationCount > 0)) && (
+                  <span
+                    className={`absolute -top-2 ${
+                      isCollapsed ? "right-[-10px]" : "right-[-12px]"
+                    } flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#0e1a29] bg-[#f2416b] px-1 text-[10px] font-bold text-white shadow-[0_6px_14px_rgba(242,65,107,0.35)]`}
+                  >
+                    {item.url === "/leadlar"
+                      ? leadNotificationCount > 99
+                        ? "99+"
+                        : leadNotificationCount
+                      : taskNotificationCount > 99
+                        ? "99+"
+                        : taskNotificationCount}
+                  </span>
+                )}
+              </div>
               <div
                 className={`flex min-w-0 items-center ${
                   isCollapsed ? "flex-col gap-1" : "flex-1 justify-between gap-3"
@@ -180,17 +206,6 @@ export default function AppSidebar() {
                 >
                   {item.title}
                 </span>
-                {item.url === "/leadlar" && leadNotificationCount > 0 ? (
-                  <span
-                    className={`rounded-full bg-emerald-500 text-center font-semibold text-white ${
-                      isCollapsed
-                        ? "min-w-[18px] px-1 py-0.5 text-[9px]"
-                        : "min-w-[22px] px-1.5 py-0.5 text-[10px]"
-                    }`}
-                  >
-                    {leadNotificationCount > 99 ? "99+" : leadNotificationCount}
-                  </span>
-                ) : null}
               </div>
             </NavLink>
           ))}
