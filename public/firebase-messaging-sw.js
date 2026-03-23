@@ -16,9 +16,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+function broadcastNotificationPayload(payload) {
+  clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    clientList.forEach((client) => {
+      client.postMessage({
+        type: "prohome:notification-message",
+        payload,
+      });
+    });
+  });
+}
+
 // Fon (background) da kelgan notificationlarni ushlaydi
 messaging.onBackgroundMessage((payload) => {
   console.log("Background xabar keldi:", payload);
+
+  broadcastNotificationPayload(payload);
 
   self.registration.showNotification(
     payload.notification?.title || "Yangi bildirishnoma",
@@ -26,6 +39,8 @@ messaging.onBackgroundMessage((payload) => {
       body: payload.notification?.body || "",
       icon: "/ProHomeLogo.png",
       badge: "/ProHomeLogo.png",
+      data: payload.data || {},
+      tag: payload?.data?.id || undefined,
     },
   );
 });

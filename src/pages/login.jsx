@@ -53,7 +53,7 @@ function LeftSlider() {
       <div className="pointer-events-none absolute -top-40 -left-40 h-[480px] w-[480px] rounded-full bg-sky-500/[0.07] blur-[96px]" />
 
       {/* Brand */}
-      <div className="relative z-10 flex flex-col items-center gap-3 text-center">
+      <div className="relative z-10 flex flex-col items-center gap-1 text-center">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
           <img src="/ProHomeLogo.png" alt="Pro Home CRM" className="h-5 w-5" />
         </div>
