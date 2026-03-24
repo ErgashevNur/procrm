@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export const NotificationBell = () => {
+export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => {
   const {
     notifications,
     unreadCount,
@@ -18,10 +18,35 @@ export const NotificationBell = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white">
+        <button
+          className={`relative transition-colors ${
+            inSidebar
+              ? `flex w-full items-center rounded-[22px] border border-transparent bg-transparent text-slate-400 hover:border-white/8 hover:bg-white/[0.05] hover:text-white data-[state=open]:border-white/14 data-[state=open]:bg-[linear-gradient(180deg,rgba(111,170,255,0.18),rgba(111,170,255,0.08))] data-[state=open]:text-white ${
+                  isCollapsed
+                    ? "flex-col justify-center gap-1 px-0 py-3"
+                    : "flex-row justify-start gap-2.5 px-3 py-3"
+                }`
+              : "flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+          }`}
+        >
           <Bell size={18} />
+          {inSidebar && (
+            <span
+              className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
+            >
+              Bildirishnoma
+            </span>
+          )}
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+            <span
+              className={`absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ${
+                inSidebar
+                  ? isCollapsed
+                    ? "top-1.5 right-2"
+                    : "top-2.5 right-3"
+                  : "top-1.5 right-1.5"
+              }`}
+            >
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

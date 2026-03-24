@@ -1,4 +1,3 @@
-import { BadgeCheck } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import {
   ROLE_LABELS,
@@ -6,7 +5,6 @@ import {
   getCurrentRole,
   isSupportedRole,
 } from "@/lib/rbac";
-import { NotificationBell } from "./NotificationBell";
 
 const TITLES = {
   "/dashboard": "Dashboard",
@@ -30,9 +28,5 @@ export default function Header() {
   const title = TITLES[location.pathname] || "CRM";
   const projectName = localStorage.getItem("projectName");
 
-  return (
-    <div className="crm-glass crm-hairline flex w-full items-center justify-end gap-3 rounded-[28px] px-4 py-3">
-      <NotificationBell />
-    </div>
-  );
+  return <div className="crm-glass crm-hairline w-full rounded-[28px] px-4 py-3" />;
 }
