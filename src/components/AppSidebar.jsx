@@ -63,8 +63,7 @@ export default function AppSidebar() {
     taskNotificationCount,
     resetLeadNotificationCount,
     resetTaskNotificationCount,
-  } =
-    useNotification();
+  } = useNotification();
 
   let user = {};
   let role = null;
@@ -94,7 +93,11 @@ export default function AppSidebar() {
     if (location.pathname === "/tasks") {
       resetTaskNotificationCount();
     }
-  }, [location.pathname, resetLeadNotificationCount, resetTaskNotificationCount]);
+  }, [
+    location.pathname,
+    resetLeadNotificationCount,
+    resetTaskNotificationCount,
+  ]);
 
   const handleLogout = async (event) => {
     event.preventDefault();
@@ -196,12 +199,16 @@ export default function AppSidebar() {
               </div>
               <div
                 className={`flex min-w-0 items-center ${
-                  isCollapsed ? "flex-col gap-1" : "flex-1 justify-between gap-3"
+                  isCollapsed
+                    ? "flex-col gap-1"
+                    : "flex-1 justify-between gap-3"
                 }`}
               >
                 <span
                   className={`leading-tight font-medium whitespace-nowrap ${
-                    isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
+                    isCollapsed
+                      ? "text-center text-[10px]"
+                      : "text-left text-sm"
                   }`}
                 >
                   {item.title}
@@ -210,28 +217,20 @@ export default function AppSidebar() {
             </NavLink>
           ))}
           {/* Beta versiya */}
-          <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
+          <div title="Tez kunda ochiladi...">
             <NavLink
-              key="crm-market"
               to="/crm-market"
               end
-              className={() =>
-                navCls(false, isCollapsed, "mx-0 my-0.5 ") +
-                "pointer-events-none opacity-50 select-none"
+              className={({ isActive }) =>
+                navCls(isActive, isCollapsed, "mx-0 my-0.5")
               }
-              onClick={(e) => e.preventDefault()}
-              tabIndex={-1}
-              aria-disabled="true"
             >
               <div className="relative shrink-0">
                 <ShoppingBag
                   size={isCollapsed ? 22 : 18}
                   className="shrink-0"
                 />
-                <Lock
-                  size={10}
-                  className="absolute -right-1 -bottom-1 text-amber-400"
-                />
+
                 {isCollapsed && (
                   <span className="absolute -top-1.5 -right-6 rounded border border-amber-400/30 bg-amber-400/20 px-0.5 py-px text-[7px] leading-none font-bold text-amber-400">
                     BETA
