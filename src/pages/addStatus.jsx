@@ -49,6 +49,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "../components/ui/button";
+import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -975,6 +976,7 @@ export default function AddStatus() {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
 
+  const boardScrollRef = useRef(null);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [insertAfterId, setInsertAfterId] = useState(null);
@@ -1256,7 +1258,10 @@ export default function AddStatus() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0a1929]">
       <div className="flex flex-1 overflow-hidden">
-        <div className="scrollbar-hide flex flex-1 gap-0 overflow-x-auto">
+        <div
+          ref={boardScrollRef}
+          className="scrollbar-hide flex flex-1 gap-0 overflow-x-auto"
+        >
           <div
             className="relative flex h-full shrink-0 flex-col border-r border-[#1a3a52] px-4 py-6"
             style={{ width: "280px" }}
@@ -1556,6 +1561,7 @@ export default function AddStatus() {
           </DndContext>
         </div>
       </div>
+      <HorizontalScrollDock targetRef={boardScrollRef} />
 
       {/* <div className="flex h-full w-64 shrink-0 flex-col border-r border-[#1a3a52] bg-[#0a1929] p-4">
         <button

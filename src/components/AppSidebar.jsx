@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Lock, LogOut, Settings, ShoppingBag } from "lucide-react";
+import { Lock, Settings, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
-import { emitAuthChange, useNotification } from "@/hooks/useNotification";
-import { removeDeviceToken } from "@/services/notificationService";
+import { useNotification } from "@/hooks/useNotification";
+import { NotificationBell } from "./NotificationBell";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -98,20 +98,6 @@ export default function AppSidebar() {
     resetLeadNotificationCount,
     resetTaskNotificationCount,
   ]);
-
-  const handleLogout = async (event) => {
-    event.preventDefault();
-
-    try {
-      await removeDeviceToken();
-    } catch (error) {
-      console.error("Device tokenni o'chirishda xato:", error);
-    } finally {
-      localStorage.clear();
-      emitAuthChange();
-      window.location.href = "/login";
-    }
-  };
 
   return (
     <div
@@ -274,23 +260,7 @@ export default function AppSidebar() {
 
         <div className="my-1 h-px bg-white/6" />
 
-        {/* Logout */}
-        <NavLink
-          to="/login"
-          onClick={handleLogout}
-          className={`flex items-center rounded-[22px] border border-transparent text-slate-400 no-underline transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/12 hover:text-red-300 ${
-            isCollapsed
-              ? "flex-col justify-center gap-1 px-0 py-3"
-              : "flex-row justify-start gap-2.5 px-3 py-3"
-          }`}
-        >
-          <LogOut size={isCollapsed ? 22 : 18} className="shrink-0" />
-          <span
-            className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
-          >
-            Logout
-          </span>
-        </NavLink>
+        <NotificationBell isCollapsed={isCollapsed} inSidebar />
       </div>
     </div>
   );

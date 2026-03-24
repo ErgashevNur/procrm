@@ -45,6 +45,7 @@ import { useExcelWorker } from "../hooks/Useexcelworker";
 import { ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
 import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
+import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -2419,6 +2420,7 @@ export default function Pipeline() {
           ))}
         </div>
       </DragDropContext>
+      <HorizontalScrollDock targetRef={boardRef} />
     </div>
   );
 }
