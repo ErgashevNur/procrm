@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { Copy, Check, Camera, ChevronDown, Loader2 } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Camera,
+  ChevronDown,
+  Loader2,
+  LogOut,
+} from "lucide-react";
+import { emitAuthChange } from "@/hooks/useNotification";
+import { removeDeviceToken } from "@/services/notificationService";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const LANGUAGES = ["Русский", "O'zbek", "English"];
@@ -251,6 +260,18 @@ export default function Profile() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await removeDeviceToken();
+    } catch (error) {
+      console.error("Device tokenni o'chirishda xato:", error);
+    } finally {
+      localStorage.clear();
+      emitAuthChange();
+      window.location.href = "/login";
+    }
+  };
+
   const formatDate = (iso) => {
     if (!iso) return "—";
     return new Date(iso).toLocaleString("ru-RU", {
@@ -289,14 +310,23 @@ export default function Profile() {
         <span className="text-[15px] font-medium text-[#c0d8e8]">
           Настройки профиля
         </span>
-        <button
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className={btnClass}
-        >
-          {saving && <Loader2 size={13} className="animate-spin" />}
-          {btnLabel}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 rounded border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/16 hover:text-red-200"
+          >
+            <LogOut size={14} />
+            Logout
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            className={btnClass}
+          >
+            {saving && <Loader2 size={13} className="animate-spin" />}
+            {btnLabel}
+          </button>
+        </div>
       </div>
 
       {/* Error */}

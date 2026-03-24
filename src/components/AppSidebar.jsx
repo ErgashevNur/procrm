@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Lock, LogOut, Settings, ShoppingBag } from "lucide-react";
+import { Lock, Settings, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
-import { emitAuthChange, useNotification } from "@/hooks/useNotification";
-import { removeDeviceToken } from "@/services/notificationService";
+import { useNotification } from "@/hooks/useNotification";
+import { NotificationBell } from "./NotificationBell";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -63,8 +63,7 @@ export default function AppSidebar() {
     taskNotificationCount,
     resetLeadNotificationCount,
     resetTaskNotificationCount,
-  } =
-    useNotification();
+  } = useNotification();
 
   let user = {};
   let role = null;
@@ -94,21 +93,11 @@ export default function AppSidebar() {
     if (location.pathname === "/tasks") {
       resetTaskNotificationCount();
     }
-  }, [location.pathname, resetLeadNotificationCount, resetTaskNotificationCount]);
-
-  const handleLogout = async (event) => {
-    event.preventDefault();
-
-    try {
-      await removeDeviceToken();
-    } catch (error) {
-      console.error("Device tokenni o'chirishda xato:", error);
-    } finally {
-      localStorage.clear();
-      emitAuthChange();
-      window.location.href = "/login";
-    }
-  };
+  }, [
+    location.pathname,
+    resetLeadNotificationCount,
+    resetTaskNotificationCount,
+  ]);
 
   return (
     <div
@@ -196,12 +185,16 @@ export default function AppSidebar() {
               </div>
               <div
                 className={`flex min-w-0 items-center ${
-                  isCollapsed ? "flex-col gap-1" : "flex-1 justify-between gap-3"
+                  isCollapsed
+                    ? "flex-col gap-1"
+                    : "flex-1 justify-between gap-3"
                 }`}
               >
                 <span
                   className={`leading-tight font-medium whitespace-nowrap ${
-                    isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
+                    isCollapsed
+                      ? "text-center text-[10px]"
+                      : "text-left text-sm"
                   }`}
                 >
                   {item.title}
@@ -210,28 +203,20 @@ export default function AppSidebar() {
             </NavLink>
           ))}
           {/* Beta versiya */}
-          <div className="cursor-not-allowed" title="Tez kunda ochiladi...">
+          <div title="Tez kunda ochiladi...">
             <NavLink
-              key="crm-market"
               to="/crm-market"
               end
-              className={() =>
-                navCls(false, isCollapsed, "mx-0 my-0.5 ") +
-                "pointer-events-none opacity-50 select-none"
+              className={({ isActive }) =>
+                navCls(isActive, isCollapsed, "mx-0 my-0.5")
               }
-              onClick={(e) => e.preventDefault()}
-              tabIndex={-1}
-              aria-disabled="true"
             >
               <div className="relative shrink-0">
                 <ShoppingBag
                   size={isCollapsed ? 22 : 18}
                   className="shrink-0"
                 />
-                <Lock
-                  size={10}
-                  className="absolute -right-1 -bottom-1 text-amber-400"
-                />
+
                 {isCollapsed && (
                   <span className="absolute -top-1.5 -right-6 rounded border border-amber-400/30 bg-amber-400/20 px-0.5 py-px text-[7px] leading-none font-bold text-amber-400">
                     BETA
@@ -275,23 +260,7 @@ export default function AppSidebar() {
 
         <div className="my-1 h-px bg-white/6" />
 
-        {/* Logout */}
-        <NavLink
-          to="/login"
-          onClick={handleLogout}
-          className={`flex items-center rounded-[22px] border border-transparent text-slate-400 no-underline transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/12 hover:text-red-300 ${
-            isCollapsed
-              ? "flex-col justify-center gap-1 px-0 py-3"
-              : "flex-row justify-start gap-2.5 px-3 py-3"
-          }`}
-        >
-          <LogOut size={isCollapsed ? 22 : 18} className="shrink-0" />
-          <span
-            className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
-          >
-            Logout
-          </span>
-        </NavLink>
+        <NotificationBell isCollapsed={isCollapsed} inSidebar />
       </div>
     </div>
   );
