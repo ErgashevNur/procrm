@@ -17,6 +17,7 @@ import {
   isSupportedRole,
   ROLES,
 } from "@/lib/rbac";
+import ProMarket from "./pages/proMarket";
 
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const Login = lazy(() => import("./pages/login"));
@@ -142,6 +143,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>{withLazy(<Dashboard />)}</ProjectGate>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "crm-market",
+        element: (
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            <ProjectGate>{withLazy(<ProMarket />)}</ProjectGate>
           </ProtectedRoute>
         ),
       },

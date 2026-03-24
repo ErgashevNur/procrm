@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Share2,
   Users,
+  ShoppingBag,
 } from "lucide-react";
 
 export const ROLES = {
@@ -69,6 +70,12 @@ export const NAV_ITEMS = [
     icon: FolderOpenDot,
     roles: [ROLES.SUPERADMIN, ROLES.ROP],
   },
+  // {
+  //   title: "CRM Market",
+  //   url: "/crm-market",
+  //   icon: ShoppingBag,
+  //   roles: [ROLES.SUPERADMIN, ROLES.ROP],
+  // },
 ];
 
 export function getCurrentRole() {
