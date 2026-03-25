@@ -2296,8 +2296,11 @@ export default function Pipeline() {
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
+                    className={`rounded-lg transition-colors duration-150 ${snapshot.isDraggingOver ? "bg-[#1a3552]/60" : ""}`}
+                  >
+                  <div
                     onScroll={(e) => handleColumnScroll(col.id, e)}
-                    className={`flex flex-col gap-2.5 rounded-lg p-2 transition-colors duration-150 ${snapshot.isDraggingOver ? "bg-[#1a3552]/60" : ""}`}
+                    className="flex flex-col gap-2.5 p-2"
                     style={{
                       minHeight: 80,
                       maxHeight: "calc(100vh - 245px)",
@@ -2413,6 +2416,7 @@ export default function Pipeline() {
                       </div>
                     )}
                     {provided.placeholder}
+                  </div>
                   </div>
                 )}
               </Droppable>
