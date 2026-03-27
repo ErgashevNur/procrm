@@ -20,6 +20,8 @@ import {
 import ProMarket from "./pages/proMarket";
 
 const Dashboard = lazy(() => import("./pages/dashboard"));
+const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
+const FormPage = lazy(() => import("./pages/FormPage"));
 const Login = lazy(() => import("./pages/login"));
 const Mijozlar = lazy(() => import("./pages/mijozlar"));
 const Profile = lazy(() => import("./pages/profile"));
@@ -230,10 +232,23 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "admin/forms/create",
+        element: (
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            {withLazy(<FormBuilder />)}
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "*",
         element: <RoleHomeRedirect />,
       },
     ],
+  },
+  {
+    path: "form/:id",
+    element: withLazy(<FormPage />),
+    errorElement: withLazy(<AppErrorFallback />),
   },
   {
     path: "*",
