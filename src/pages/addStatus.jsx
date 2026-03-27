@@ -38,6 +38,8 @@ import {
   Eye,
   GripVertical,
   ImagePlus,
+  Copy,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
@@ -374,6 +376,7 @@ function FormBuilderDialog({
   forms,
   onSave,
   onDelete,
+  projectId,
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -381,6 +384,9 @@ function FormBuilderDialog({
   const [activeFieldId, setActiveFieldId] = useState(null);
   const [headerImage, setHeaderImage] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedLink, setSavedLink] = useState(null);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   const fieldSensors = useSensors(
@@ -394,6 +400,9 @@ function FormBuilderDialog({
     setFields([createField("text")]);
     setHeaderImage(null);
     setImageLoading(false);
+    setSaving(false);
+    setSavedLink(null);
+    setCopied(false);
   }, [open, source]);
 
   const updateField = (fieldId, patch) => {
@@ -426,7 +435,7 @@ function FormBuilderDialog({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!source) return;
     const cleanTitle = title.trim();
     if (!cleanTitle) {
@@ -436,27 +445,79 @@ function FormBuilderDialog({
 
     const normalizedFields = fields
       .map((field, index) => ({
-        ...field,
         label: field.label.trim() || `Field ${index + 1}`,
         placeholder: field.placeholder.trim(),
+        fieldType: field.type.toUpperCase(),
+        isRequired: field.required,
+        order: index,
         options:
           field.type === "select"
-            ? field.options.map((option) => option.trim()).filter(Boolean)
-            : [],
+            ? field.options
+                .map((o) => o.trim())
+                .filter(Boolean)
+                .reduce((acc, opt, i) => ({ ...acc, [String(i)]: opt }), {})
+            : {},
       }))
-      .filter((field) => field.type !== "select" || field.options.length > 0);
+      .filter((field) => field.fieldType !== "SELECT" || Object.keys(field.options).length > 0);
 
-    onSave({
-      id: `${Date.now()}`,
-      sourceId: source.id,
-      sourceName: source.name,
-      title: cleanTitle,
-      description: description.trim(),
-      headerImage,
-      fields: normalizedFields,
-      createdAt: new Date().toISOString(),
+    const token = localStorage.getItem("user");
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/form-template`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          projectId: Number(projectId),
+          name: cleanTitle,
+          description: description.trim(),
+          isActive: true,
+          fields: normalizedFields,
+        }),
+      });
+
+      if (res.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e?.message || "Saqlashda xatolik");
+      }
+
+      const data = await res.json();
+      const link = `${window.location.origin}/form/${data.id}`;
+      setSavedLink(link);
+
+      onSave({
+        id: data.id,
+        sourceId: source.id,
+        sourceName: source.name,
+        title: cleanTitle,
+        description: description.trim(),
+        headerImage,
+        fields: normalizedFields,
+        link,
+        createdAt: new Date().toISOString(),
+      });
+
+      toast.success("Forma muvaffaqiyatli yaratildi!");
+    } catch (err) {
+      toast.error(err.message || "Xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!savedLink) return;
+    navigator.clipboard.writeText(savedLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
-    onOpenChange(false);
   };
 
   const handleHeaderImageChange = async (event) => {
@@ -493,12 +554,10 @@ function FormBuilderDialog({
             </span>
             <div>
               <p className="text-sm font-semibold text-white">
-                Tezkor oqim: nom bering, field qo'shing, preview ko'ring,
-                saqlang
+                Tezkor oqim: nom bering, field qo'shing, preview ko'ring, saqlang
               </p>
               <p className="mt-1 text-sm text-blue-100/80">
-                Bu vaqtinchalik frontend saqlash. Backend ulanganda shu formalar
-                API bilan almashtiriladi.
+                Forma saqlanganidan so'ng public link olib, foydalanuvchilarga yuborishingiz mumkin.
               </p>
             </div>
           </div>
@@ -760,7 +819,7 @@ function FormBuilderDialog({
                         </div>
                       )}
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-white">
                             {form.title}
                           </p>
@@ -777,6 +836,11 @@ function FormBuilderDialog({
                               {new Date(form.createdAt).toLocaleDateString()}
                             </span>
                           </div>
+                          {form.link && (
+                            <p className="mt-1 truncate text-[11px] text-blue-400">
+                              {form.link}
+                            </p>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -792,9 +856,48 @@ function FormBuilderDialog({
               </div>
             </div>
 
-            <Button type="button" onClick={handleSave} className="w-full">
-              Formani saqlash
-            </Button>
+            {savedLink ? (
+              <div className="space-y-2 rounded-xl border border-green-400/20 bg-green-500/10 p-3">
+                <p className="text-xs font-semibold text-green-300">
+                  ✓ Forma muvaffaqiyatli yaratildi!
+                </p>
+                <div className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2">
+                  <span className="flex-1 truncate text-[11px] text-gray-300">
+                    {savedLink}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="shrink-0 rounded p-1 transition hover:bg-white/10"
+                  >
+                    {copied ? (
+                      <Check size={13} className="text-green-400" />
+                    ) : (
+                      <Copy size={13} className="text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setSavedLink(null);
+                    onOpenChange(false);
+                  }}
+                  className="w-full"
+                >
+                  Yopish
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full"
+              >
+                {saving ? "Saqlanmoqda..." : "Formani saqlash"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -1700,6 +1803,7 @@ export default function AddStatus() {
           if (!formBuilderSource) return;
           deleteChannelForm(formBuilderSource.id, formId);
         }}
+        projectId={projectId}
       />
     </div>
   );
