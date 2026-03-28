@@ -58,7 +58,7 @@ function LeftSlider() {
           <img src="/ProHomeLogo.png" alt="Pro Home CRM" className="h-5 w-5" />
         </div>
         <span className="text-[11px] font-semibold tracking-[0.26em] text-white/40 uppercase">
-          AI CRM
+          Kotibam
         </span>
       </div>
 
@@ -317,7 +317,7 @@ export default function Login() {
                 />
               </div>
               <span className="text-[11px] font-semibold tracking-[0.26em] text-white/40 uppercase">
-                AI CRM
+                Kotibam
               </span>
             </div>
 

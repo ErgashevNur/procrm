@@ -460,6 +460,11 @@ function FormBuilderDialog({
       }))
       .filter((field) => field.fieldType !== "SELECT" || Object.keys(field.options).length > 0);
 
+    if (normalizedFields.length === 0) {
+      toast.error("Kamida bitta to'g'ri field qo'shing");
+      return;
+    }
+
     const token = localStorage.getItem("user");
     setSaving(true);
     try {
@@ -842,13 +847,30 @@ function FormBuilderDialog({
                             </p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(form.id)}
-                          className="text-xs font-semibold text-red-300 transition hover:text-red-200"
-                        >
-                          O'chirish
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {form.link && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                window.open(
+                                  form.link,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                              }
+                              className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
+                            >
+                              Ochish
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onDelete(form.id)}
+                            className="text-xs font-semibold text-red-300 transition hover:text-red-200"
+                          >
+                            O'chirish
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1420,7 +1442,13 @@ export default function AddStatus() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    setFormBuilderSource(card.template)
+                                    form.link
+                                      ? window.open(
+                                          form.link,
+                                          "_blank",
+                                          "noopener,noreferrer",
+                                        )
+                                      : setFormBuilderSource(card.template)
                                   }
                                   className="block w-full truncate text-left text-[12px] font-semibold text-blue-200 underline decoration-blue-300/60 underline-offset-3 transition hover:text-blue-100"
                                   title={form.title}
