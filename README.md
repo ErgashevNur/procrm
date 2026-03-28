@@ -1,6 +1,6 @@
-# AI CRM
+# Kotibam
 
-`AI CRM` bu savdo jarayonlari, lead boshqaruvi, task nazorati va analitikani yagona interfeysda birlashtiruvchi web platforma.
+`Kotibam` bu savdo jarayonlari, lead boshqaruvi, task nazorati va analitikani yagona interfeysda birlashtiruvchi web platforma.
 
 Production manzil: `https://ai-crm.uz`
 
@@ -91,7 +91,6 @@ Dependency o'rnatish:
 ```bash
 npm install
 ```
-
 
 ## Development rejimida ishga tushirish
 

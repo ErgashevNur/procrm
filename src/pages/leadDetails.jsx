@@ -52,6 +52,66 @@ function toastError(message) {
   toast.error(message, TOAST_STYLE);
 }
 
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function parseTaskDateValue(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value !== "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) return null;
+
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(normalized);
+  if (hasTimezone) {
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const match = normalized.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (!match) {
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const [, year, month, day, hour = "00", minute = "00", second = "00"] =
+    match;
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
+  );
+}
+
+function toLocalDateTimeInputValue(value) {
+  const date = parseTaskDateValue(value);
+  if (!date) return "";
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function toApiDateTimeValue(value) {
+  const date = parseTaskDateValue(value);
+  if (!date) return null;
+
+  const timezoneOffsetMinutes = -date.getTimezoneOffset();
+  const sign = timezoneOffsetMinutes >= 0 ? "+" : "-";
+  const absOffsetMinutes = Math.abs(timezoneOffsetMinutes);
+  const offsetHours = Math.floor(absOffsetMinutes / 60);
+  const offsetMinutes = absOffsetMinutes % 60;
+
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}${sign}${pad2(offsetHours)}:${pad2(offsetMinutes)}`;
+}
+
 function normalizeTags(value) {
   if (Array.isArray(value)) {
     return value
@@ -160,8 +220,9 @@ const formatCurrency = (amount) =>
   new Intl.NumberFormat("uz-UZ").format(amount) + " so'm";
 
 const formatDate = (dateString) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString("uz-UZ", {
+  const date = parseTaskDateValue(dateString);
+  if (!date) return "—";
+  return date.toLocaleDateString("uz-UZ", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -169,8 +230,9 @@ const formatDate = (dateString) => {
 };
 
 const formatDateTime = (dateString) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleString("uz-UZ", {
+  const date = parseTaskDateValue(dateString);
+  if (!date) return "—";
+  return date.toLocaleString("uz-UZ", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -180,8 +242,9 @@ const formatDateTime = (dateString) => {
 };
 
 const formatMonthYear = (dateString) => {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("uz-UZ", {
+  const date = parseTaskDateValue(dateString);
+  if (!date) return "";
+  return date.toLocaleDateString("uz-UZ", {
     month: "long",
     year: "numeric",
   });
@@ -239,7 +302,9 @@ function EventCard({ event, headers, onRefresh }) {
   const [editText, setEditText] = useState(
     event.text || event.description || "",
   );
-  const [editDate, setEditDate] = useState(event.taskDate || "");
+  const [editDate, setEditDate] = useState(() =>
+    toLocalDateTimeInputValue(event.taskDate),
+  );
   const [editStatus, setEditStatus] = useState(event.status || "STARTED");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -274,7 +339,7 @@ function EventCard({ event, headers, onRefresh }) {
     setSaving(true);
     try {
       const body = { description: editText.trim(), status: editStatus };
-      if (editDate) body.taskDate = editDate;
+      if (editDate) body.taskDate = toApiDateTimeValue(editDate);
       const res = await fetch(`${API}/tasks/${event.id}`, {
         method: "PATCH",
         headers,
@@ -482,7 +547,7 @@ function EventCard({ event, headers, onRefresh }) {
                 </div>
                 <input
                   type="datetime-local"
-                  value={editDate ? editDate.slice(0, 16) : ""}
+                  value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
                   className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-gray-300 outline-none focus:border-green-500/40"
                   style={{ colorScheme: "dark" }}
@@ -522,7 +587,7 @@ function EventCard({ event, headers, onRefresh }) {
 function TaskDatePicker({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const parsed = value ? new Date(value) : null;
+  const parsed = parseTaskDateValue(value);
   const today = new Date();
   const [viewYear, setViewYear] = useState(
     parsed ? parsed.getFullYear() : today.getFullYear(),
@@ -557,8 +622,6 @@ function TaskDatePicker({ value, onChange }) {
     "Dek",
   ];
   const WDAYS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
-  const pad = (n) => String(n).padStart(2, "0");
-
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDay = (() => {
     const d = new Date(viewYear, viewMonth, 1).getDay();
@@ -580,15 +643,16 @@ function TaskDatePicker({ value, onChange }) {
   const confirm = () => {
     if (!selDay) return;
     onChange(
-      `${viewYear}-${pad(viewMonth + 1)}-${pad(selDay)}T${pad(hour)}:${pad(minute)}:00`,
+      `${viewYear}-${pad2(viewMonth + 1)}-${pad2(selDay)}T${pad2(hour)}:${pad2(minute)}`,
     );
     setOpen(false);
   };
 
   const displayLabel = value
     ? (() => {
-        const d = new Date(value);
-        return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        const d = parseTaskDateValue(value);
+        if (!d) return null;
+        return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
       })()
     : null;
 
@@ -730,7 +794,7 @@ function TaskDatePicker({ value, onChange }) {
                   }}
                 />
                 <span className="w-7 shrink-0 text-xs font-bold text-white tabular-nums">
-                  {pad(val)}
+                  {pad2(val)}
                 </span>
               </div>
             ))}
@@ -760,7 +824,7 @@ function TaskDatePicker({ value, onChange }) {
                     border: `1px solid ${hour === h && minute === m ? "rgba(16,185,129,0.3)" : "transparent"}`,
                   }}
                 >
-                  {pad(h)}:{pad(m)}
+                  {pad2(h)}:{pad2(m)}
                 </button>
               ))}
             </div>
@@ -771,7 +835,7 @@ function TaskDatePicker({ value, onChange }) {
           >
             <span className="text-[11px] text-gray-600">
               {selDay
-                ? `${selDay} ${MONTHS[viewMonth]}, ${pad(hour)}:${pad(minute)}`
+                ? `${selDay} ${MONTHS[viewMonth]}, ${pad2(hour)}:${pad2(minute)}`
                 : "Kun tanlanmagan"}
             </span>
             <button
@@ -1081,7 +1145,7 @@ const LeadDetails = () => {
           projectId: Number(projectId),
           leadsId: Number(leadId),
           description: text,
-          ...(date && { date }),
+          ...(date && { date: toApiDateTimeValue(date) }),
         };
         const res = await fetch(`${API}/tasks`, {
           method: "POST",

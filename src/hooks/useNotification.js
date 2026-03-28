@@ -12,7 +12,6 @@ import { getToken, onMessage } from "firebase/messaging";
 import {
   registerDeviceToken,
   getMyNotifications,
-  getUnreadCount,
   markAsRead,
   markAllAsRead,
 } from "../services/notificationService";
@@ -52,7 +51,6 @@ function hasTaskKeyword(value) {
 
 function isLeadNotification(notification) {
   if (!notification) return false;
-
   const data = notification.data || {};
   return [
     notification.title,
@@ -69,7 +67,6 @@ function isLeadNotification(notification) {
 
 function isTaskNotification(notification) {
   if (!notification) return false;
-
   const data = notification.data || {};
   return [
     notification.title,
@@ -82,23 +79,6 @@ function isTaskNotification(notification) {
     data.resourceType,
     data.link,
   ].some(hasTaskKeyword);
-}
-
-function isSoundNotification(notification) {
-  if (!notification) return false;
-
-  const data = notification.data || {};
-  return [
-    notification.title,
-    notification.body,
-    data.type,
-    data.event,
-    data.module,
-    data.entity,
-    data.resource,
-    data.resourceType,
-    data.link,
-  ].some((value) => hasLeadKeyword(value) || hasTaskKeyword(value));
 }
 
 function normalizeNotificationPayload(payload) {
@@ -190,10 +170,14 @@ export function NotificationProvider({ children }) {
   const [taskNotificationCount, setTaskNotificationCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(hasActiveSession);
+
   const notificationAudioRef = useRef(null);
+  const pendingSoundRef = useRef(false);
   const notificationsRef = useRef([]);
   const knownNotificationIdsRef = useRef(new Set());
   const broadcastChannelRef = useRef(null);
+  // Eski (stale) fetch responselarini bekor qilish uchun
+  const fetchCounterRef = useRef(0);
 
   const syncAuthState = useCallback(() => {
     setIsAuthenticated(hasActiveSession());
@@ -209,7 +193,11 @@ export function NotificationProvider({ children }) {
       }
 
       notificationAudioRef.current.currentTime = 0;
-      notificationAudioRef.current.play().catch(() => {});
+      notificationAudioRef.current.play().catch((err) => {
+        if (err.name === "NotAllowedError") {
+          pendingSoundRef.current = true;
+        }
+      });
     } catch (error) {
       console.error("Notification ovozini ijro etishda xato:", error);
     }
@@ -239,8 +227,8 @@ export function NotificationProvider({ children }) {
         await registration.showNotification(notification.title, options);
         return;
       }
-    } catch (error) {
-      console.error("Browser notification ko'rsatilmadi:", error);
+    } catch {
+      // serviceWorker.showNotification ishlamasa native ga o'tamiz
     }
 
     try {
@@ -259,32 +247,32 @@ export function NotificationProvider({ children }) {
 
       if (options.playSoundForNew) {
         const nextIds = new Set();
-        let hasNewLeadNotification = false;
+        const newNotifications = [];
 
         for (const item of normalizedList) {
           const key = String(item?.id ?? "");
           if (!key) continue;
           nextIds.add(key);
 
-          if (
-            !knownNotificationIdsRef.current.has(key) &&
-            !item?.isRead &&
-            isSoundNotification(item)
-          ) {
-            hasNewLeadNotification = true;
+          if (!knownNotificationIdsRef.current.has(key) && !item?.isRead) {
+            newNotifications.push(item);
           }
         }
 
         knownNotificationIdsRef.current = nextIds;
 
-        if (hasNewLeadNotification) {
+        if (newNotifications.length > 0) {
           playNotificationSound();
+
+          if (options.showBrowserNotif) {
+            for (const notif of newNotifications) {
+              showBrowserNotification(notif);
+            }
+          }
         }
       } else {
         knownNotificationIdsRef.current = new Set(
-          normalizedList
-            .map((item) => String(item?.id ?? ""))
-            .filter(Boolean),
+          normalizedList.map((item) => String(item?.id ?? "")).filter(Boolean),
         );
       }
 
@@ -294,7 +282,7 @@ export function NotificationProvider({ children }) {
       setLeadNotificationCount(unreadLeadCount);
       setTaskNotificationCount(unreadTaskCount);
     },
-    [playNotificationSound],
+    [playNotificationSound, showBrowserNotification],
   );
 
   const pushIncomingNotification = useCallback(
@@ -305,6 +293,7 @@ export function NotificationProvider({ children }) {
         mergeNotifications(notificationsRef.current, incomingNotification),
         {
           playSoundForNew: options.playSoundForNew ?? true,
+          showBrowserNotif: false,
         },
       );
 
@@ -326,53 +315,60 @@ export function NotificationProvider({ children }) {
     [showBrowserNotification, syncNotificationState],
   );
 
-  const fetchNotifications = useCallback(async (options = {}) => {
-    if (!hasActiveSession()) {
-      setNotifications([]);
-      return;
-    }
+  const fetchNotifications = useCallback(
+    async (options = {}) => {
+      if (!hasActiveSession()) {
+        setNotifications([]);
+        return;
+      }
 
-    try {
-      setLoading(true);
-      const data = await getMyNotifications();
-      const list = Array.isArray(data) ? data : (data.data ?? []);
-      syncNotificationState(list, options);
-    } catch (err) {
-      console.error("Notificationlar yuklanmadi:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [syncNotificationState]);
+      // Har bir fetchga noyob ID beramiz — eski (stale) responselarni bekor qilish uchun
+      const fetchId = ++fetchCounterRef.current;
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!hasActiveSession()) {
-      setUnreadCount(0);
-      return;
-    }
+      try {
+        setLoading(true);
+        const data = await getMyNotifications();
 
-    try {
-      const data = await getUnreadCount();
-      setUnreadCount(data?.count ?? data?.unreadCount ?? 0);
-    } catch (err) {
-      console.error("Unread count yuklanmadi:", err);
-    }
-  }, []);
+        // Agar bu orada yangi fetch boshlangan bo'lsa, bu natijani e'tiborsiz qoldiramiz
+        if (fetchId !== fetchCounterRef.current) return;
 
+        const list = Array.isArray(data) ? data : (data.data ?? []);
+        syncNotificationState(list, options);
+      } catch (err) {
+        if (fetchId !== fetchCounterRef.current) return;
+        console.error("Notificationlar yuklanmadi:", err);
+      } finally {
+        if (fetchId === fetchCounterRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [syncNotificationState],
+  );
+
+  // handleMarkAsRead: setNotifications updater ichida boshqa setState chaqirish
+  // React anti-pattern. notificationsRef orqali targetni oldinroq topamiz.
   const handleMarkAsRead = useCallback(async (id) => {
     try {
       await markAsRead(id);
-      setNotifications((prev) => {
-        const target = prev.find((n) => n.id === id);
-        if (target && isLeadNotification(target) && !target.isRead) {
-          setLeadNotificationCount((prevCount) => Math.max(0, prevCount - 1));
-        }
-        if (target && isTaskNotification(target) && !target.isRead) {
-          setTaskNotificationCount((prevCount) => Math.max(0, prevCount - 1));
-        }
 
-        return prev.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-      });
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      const target = notificationsRef.current.find((n) => n.id === id);
+      if (target && !target.isRead) {
+        if (isLeadNotification(target)) {
+          setLeadNotificationCount((c) => Math.max(0, c - 1));
+        }
+        if (isTaskNotification(target)) {
+          setTaskNotificationCount((c) => Math.max(0, c - 1));
+        }
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
+
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      );
+      notificationsRef.current = notificationsRef.current.map((n) =>
+        n.id === id ? { ...n, isRead: true } : n,
+      );
     } catch (err) {
       console.error("O'qildi belgilanmadi:", err);
     }
@@ -381,7 +377,9 @@ export function NotificationProvider({ children }) {
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      const updated = notificationsRef.current.map((n) => ({ ...n, isRead: true }));
+      setNotifications(updated);
+      notificationsRef.current = updated;
       setUnreadCount(0);
       setLeadNotificationCount(0);
       setTaskNotificationCount(0);
@@ -396,6 +394,26 @@ export function NotificationProvider({ children }) {
 
   const resetTaskNotificationCount = useCallback(() => {
     setTaskNotificationCount(0);
+  }, []);
+
+  // Audio unlock — foydalanuvchi birinchi interaksiyada kutilgan ovozni chiqaradi
+  useEffect(() => {
+    const unlock = () => {
+      if (!pendingSoundRef.current || !notificationAudioRef.current) return;
+      pendingSoundRef.current = false;
+      notificationAudioRef.current.currentTime = 0;
+      notificationAudioRef.current.play().catch(() => {});
+    };
+
+    document.addEventListener("click", unlock);
+    document.addEventListener("keydown", unlock);
+    document.addEventListener("touchstart", unlock);
+
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("keydown", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
   }, []);
 
   useEffect(() => {
@@ -419,8 +437,7 @@ export function NotificationProvider({ children }) {
     }
 
     fetchNotifications();
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount, isAuthenticated]);
+  }, [fetchNotifications, isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) {
@@ -451,16 +468,14 @@ export function NotificationProvider({ children }) {
     if (!isAuthenticated) return;
 
     const runSync = () => {
-      fetchNotifications({ playSoundForNew: true });
-      fetchUnreadCount();
+      fetchNotifications({ playSoundForNew: true, showBrowserNotif: true });
     };
 
     const intervalId = window.setInterval(runSync, NOTIFICATION_POLL_INTERVAL);
+
     const handleFocus = () => runSync();
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        runSync();
-      }
+      if (document.visibilityState === "visible") runSync();
     };
 
     window.addEventListener("focus", handleFocus);
@@ -471,7 +486,7 @@ export function NotificationProvider({ children }) {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [fetchNotifications, fetchUnreadCount, isAuthenticated]);
+  }, [fetchNotifications, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

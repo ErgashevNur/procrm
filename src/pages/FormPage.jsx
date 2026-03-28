@@ -13,6 +13,157 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+const FORM_STORAGE_PREFIX = "prohome:source-forms:";
+
+function normalizeFieldType(field) {
+  return String(field?.type || field?.fieldType || "text").toLowerCase();
+}
+
+function normalizeFieldRequired(field) {
+  return Boolean(field?.required ?? field?.isRequired);
+}
+
+function normalizeFieldOptions(field) {
+  const raw = field?.options;
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (raw && typeof raw === "object") {
+    return Object.entries(raw)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([, value]) => value)
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeFieldId(field, index) {
+  return field?.id ?? field?.fieldId ?? `${field?.label || "field"}-${index}`;
+}
+
+function matchesLabel(field, regex) {
+  return regex.test(String(field?.label || field?.placeholder || "").trim());
+}
+
+function findFilledField(fields, values, predicate) {
+  return (
+    fields.find((field) => {
+      if (!predicate(field)) return false;
+      const value = values[field.id];
+      return value !== "" && value !== false && value != null;
+    }) || null
+  );
+}
+
+function inferLeadPayload(fields, values) {
+  const phoneField =
+    findFilledField(
+      fields,
+      values,
+      (field) =>
+        field.type === "phone" ||
+        matchesLabel(field, /telefon|phone|raqam/i),
+    ) || null;
+
+  const firstNameField =
+    findFilledField(
+      fields,
+      values,
+      (field) =>
+        matchesLabel(field, /^(ism|name|first ?name)$/i) ||
+        matchesLabel(field, /mijoz|klient/i),
+    ) ||
+    findFilledField(
+      fields,
+      values,
+      (field) => field.type === "text" || field.type === "textarea",
+    );
+
+  const lastNameField =
+    findFilledField(
+      fields,
+      values,
+      (field) => matchesLabel(field, /familiya|surname|last ?name/i),
+    ) || null;
+
+  return {
+    firstName: String(firstNameField ? values[firstNameField.id] : "").trim(),
+    lastName: String(lastNameField ? values[lastNameField.id] : "").trim(),
+    phone: String(phoneField ? values[phoneField.id] : "").trim(),
+  };
+}
+
+function normalizeUzPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("998")) return `+${digits.slice(0, 12)}`;
+  return `+998${digits.slice(0, 9)}`;
+}
+
+function normalizeFormPayload(payload) {
+  const rawFields = Array.isArray(payload?.fields)
+    ? payload.fields
+    : Array.isArray(payload?.formFields)
+      ? payload.formFields
+      : [];
+
+  const fields = rawFields.map((field, index) => {
+        const id = normalizeFieldId(field, index);
+        return {
+          ...field,
+          id,
+          type: normalizeFieldType(field),
+          required: normalizeFieldRequired(field),
+          options: normalizeFieldOptions(field),
+          label: field?.label || `Field ${index + 1}`,
+          placeholder: field?.placeholder || "",
+        };
+      });
+
+  return {
+    ...payload,
+    title: payload?.title || payload?.name || "Forma",
+    description: payload?.description || "",
+    fields,
+  };
+}
+
+function findSavedFormMeta(formId) {
+  if (typeof window === "undefined") return null;
+
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (!key || !key.startsWith(FORM_STORAGE_PREFIX)) continue;
+
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+      const groups = Object.values(parsed);
+      for (const group of groups) {
+        if (!Array.isArray(group)) continue;
+        const found = group.find((item) => String(item?.id) === String(formId));
+        if (found) {
+          const projectIdFromKey = Number(key.slice(FORM_STORAGE_PREFIX.length));
+          return {
+            ...found,
+            projectId: Number(found?.projectId) || projectIdFromKey || undefined,
+          };
+        }
+      }
+    } catch {
+      // Ignore malformed local cache and continue searching.
+    }
+  }
+
+  return null;
+}
+
+function mergeFormMeta(form, savedMeta) {
+  if (!savedMeta) return form;
+  return {
+    ...form,
+    description: form.description || savedMeta.description || "",
+    headerImage: form.headerImage || savedMeta.headerImage || null,
+    projectId: Number(form.projectId) || Number(savedMeta.projectId) || undefined,
+  };
+}
 
 export default function FormPage() {
   const { id } = useParams();
@@ -21,11 +172,6 @@ export default function FormPage() {
   const [error, setError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Fixed fields
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
 
   // Dynamic field values: { [fieldId]: value }
   const [fieldValues, setFieldValues] = useState({});
@@ -36,11 +182,15 @@ export default function FormPage() {
         const res = await fetch(`${API}/form-template/public/${id}`);
         if (!res.ok) throw new Error("Forma topilmadi");
         const data = await res.json();
-        setForm(data);
+        const normalized = mergeFormMeta(
+          normalizeFormPayload(data),
+          findSavedFormMeta(id),
+        );
+        setForm(normalized);
 
         // Init field values
         const init = {};
-        (data.fields || []).forEach((f) => {
+        (normalized.fields || []).forEach((f) => {
           init[f.id] = f.type === "checkbox" ? false : "";
         });
         setFieldValues(init);
@@ -60,19 +210,6 @@ export default function FormPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!firstName.trim()) {
-      toast.error("Ism kiritish majburiy");
-      return;
-    }
-    if (!lastName.trim()) {
-      toast.error("Familiya kiritish majburiy");
-      return;
-    }
-    if (!phone.trim()) {
-      toast.error("Telefon raqam kiritish majburiy");
-      return;
-    }
-
     // Check required custom fields
     const requiredMissing = (form.fields || []).find(
       (f) =>
@@ -86,7 +223,21 @@ export default function FormPage() {
       return;
     }
 
-    // Build otherDetails from custom fields
+    const leadPayload = inferLeadPayload(form.fields || [], fieldValues);
+    if (!leadPayload.firstName) {
+      toast.error("Kamida ism yoki name maydoni to'ldirilishi kerak");
+      return;
+    }
+    const normalizedPhone = normalizeUzPhone(leadPayload.phone);
+    if (!normalizedPhone) {
+      toast.error("Telefon maydoni to'ldirilishi kerak");
+      return;
+    }
+    if (!form.projectId) {
+      toast.error("Forma loyihasi aniqlanmadi");
+      return;
+    }
+
     const otherDetails = {};
     (form.fields || []).forEach((f) => {
       otherDetails[f.label || f.id] = fieldValues[f.id];
@@ -94,15 +245,14 @@ export default function FormPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/form-template/public/${id}/submit`, {
+      const res = await fetch(`${API}/leeds/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leadSourceId: 1,
           projectId: form.projectId,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          phone: phone.trim(),
+          firstName: leadPayload.firstName,
+          lastName: leadPayload.lastName,
+          phone: normalizedPhone,
           otherDetails,
         }),
       });
@@ -184,53 +334,34 @@ export default function FormPage() {
       />
 
       <div className="relative mx-auto w-full max-w-lg">
-        {/* Header */}
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-white">{form.title}</h1>
+        <div className="mb-6 overflow-hidden rounded-[28px] border border-[#1e3448] bg-[linear-gradient(180deg,rgba(15,34,49,0.94),rgba(9,22,34,0.96))] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+          {form.headerImage?.dataUrl && (
+            <div className="relative aspect-[8/3] w-full overflow-hidden border-b border-white/10 bg-[#07111d]">
+              <img
+                src={form.headerImage.dataUrl}
+                alt={form.title}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,7,17,0.04),rgba(2,7,17,0.55))]" />
+            </div>
+          )}
+          <div className="px-6 py-6 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#7e9bb1]">
+              Lead Form
+            </p>
+            <h1 className="mt-3 text-2xl font-bold text-white">{form.title}</h1>
+            {form.description && (
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#9ab8cc]">
+                {form.description}
+              </p>
+            )}
+          </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-[#1e3448] bg-[#0d1e2e] p-6"
+          className="flex flex-col gap-4 rounded-[28px] border border-[#1e3448] bg-[#0d1e2e] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.22)]"
         >
-          {/* Fixed fields */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm text-[#9ab8cc]">
-              Ism <span className="text-[#e05d5d]">*</span>
-            </Label>
-            <Input
-              className="crm-control h-10"
-              placeholder="Ismingizni kiriting"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm text-[#9ab8cc]">
-              Familiya <span className="text-[#e05d5d]">*</span>
-            </Label>
-            <Input
-              className="crm-control h-10"
-              placeholder="Familiyangizni kiriting"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm text-[#9ab8cc]">
-              Telefon <span className="text-[#e05d5d]">*</span>
-            </Label>
-            <Input
-              className="crm-control h-10"
-              placeholder="+998 90 123 45 67"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-
-          {/* Custom fields */}
           {(form.fields || []).map((field) => (
             <div key={field.id} className="flex flex-col gap-1.5">
               <Label className="text-sm text-[#9ab8cc]">
@@ -243,7 +374,17 @@ export default function FormPage() {
               {field.type === "text" && (
                 <Input
                   className="crm-control h-10"
-                  placeholder={field.label}
+                  placeholder={field.placeholder || field.label}
+                  value={fieldValues[field.id] ?? ""}
+                  onChange={(e) => setFieldValue(field.id, e.target.value)}
+                />
+              )}
+
+              {(field.type === "email" || field.type === "phone") && (
+                <Input
+                  type={field.type === "phone" ? "tel" : field.type}
+                  className="crm-control h-10"
+                  placeholder={field.placeholder || field.label}
                   value={fieldValues[field.id] ?? ""}
                   onChange={(e) => setFieldValue(field.id, e.target.value)}
                 />
@@ -253,7 +394,7 @@ export default function FormPage() {
                 <Textarea
                   className="crm-control resize-none"
                   rows={3}
-                  placeholder={field.label}
+                  placeholder={field.placeholder || field.label}
                   value={fieldValues[field.id] ?? ""}
                   onChange={(e) => setFieldValue(field.id, e.target.value)}
                 />
@@ -296,6 +437,12 @@ export default function FormPage() {
               )}
             </div>
           ))}
+
+          {(form.fields || []).length === 0 && (
+            <div className="rounded-xl border border-dashed border-[#1e3448] px-4 py-6 text-center text-sm text-[#9ab8cc]">
+              Bu formada hali maydon yo'q
+            </div>
+          )}
 
           {/* Submit */}
           <button
