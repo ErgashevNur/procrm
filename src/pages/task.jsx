@@ -48,6 +48,13 @@ const TYPES = {
   meeting: { label: "Uchrashuv", color: "#8b5cf6" },
 };
 
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function isOverdue(dateStr, status) {
   if (status === "FINISHED" || !dateStr) return false;
   return new Date(dateStr) < new Date(new Date().toDateString());
@@ -55,7 +62,7 @@ function isOverdue(dateStr, status) {
 
 function isFutureTask(dateStr, status) {
   if (status === "FINISHED" || !dateStr) return false;
-  return dateStr.slice(0, 10) > new Date().toISOString().slice(0, 10);
+  return dateStr.slice(0, 10) > getLocalDateKey();
 }
 
 function formatDate(dateStr) {
@@ -342,7 +349,7 @@ export default function Tasks() {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateKey();
 
   const stats = {
     today: tasks.filter(
