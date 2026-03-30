@@ -35,6 +35,7 @@ const SmsRassilka = lazy(() => import("./pages/smsRassilka"));
 const AddStatus = lazy(() => import("./pages/addStatus"));
 const Analitika = lazy(() => import("./pages/analitika"));
 const AppErrorFallback = lazy(() => import("./pages/error"));
+const Companies = lazy(() => import("./pages/company"));
 
 const MANAGEMENT_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 const CRM_ROLES = [ROLES.ROP, ROLES.SALESMANAGER, ROLES.SUPERADMIN];
@@ -212,6 +213,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             {withLazy(<Projects />)}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "companies",
+        element: (
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            {withLazy(<Companies />)}
           </ProtectedRoute>
         ),
       },
