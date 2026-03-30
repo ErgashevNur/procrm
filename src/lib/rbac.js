@@ -7,6 +7,7 @@ import {
   Share2,
   Users,
   ShoppingBag,
+  Building2,
 } from "lucide-react";
 
 export const ROLES = {
@@ -68,6 +69,12 @@ export const NAV_ITEMS = [
     title: "Projectlar",
     url: "/projects",
     icon: FolderOpenDot,
+    roles: [ROLES.SUPERADMIN, ROLES.ROP],
+  },
+    {
+    title: "Kompaniyalar",
+    url: "/companies",
+    icon: Building2,
     roles: [ROLES.SUPERADMIN, ROLES.ROP],
   },
   // {
