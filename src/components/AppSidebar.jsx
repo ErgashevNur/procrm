@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Lock, Settings, ShoppingBag } from "lucide-react";
+import { Lock, Settings, ShoppingBag, Building2 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
 import { useNotification } from "@/hooks/useNotification";
@@ -16,7 +16,6 @@ function getImageUrl(imgName) {
 
 const SETTINGS_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
 
-// NavLink className orqali active holat — inline style ishlatmaymiz
 function navCls(isActive, isCollapsed, extra = "") {
   return [
     "flex items-center rounded-[22px] border no-underline transition-all duration-200",
@@ -79,9 +78,14 @@ export default function AppSidebar() {
   const avatarUrl = getImageUrl(user.img);
   const avatarLetter = (user.fullName || user.email || "U")[0].toUpperCase();
   const safeRole = isSupportedRole(role) ? role : ROLES.SALESMANAGER;
-  const visibleMenus = NAV_ITEMS.filter((item) =>
-    item.roles.includes(safeRole),
-  );
+
+  // NAV_ITEMS dan rolga qarab filterlash + companies faqat SUPERADMIN uchun
+  const visibleMenus = NAV_ITEMS.filter((item) => {
+    if (!item.roles.includes(safeRole)) return false;
+    if (item.url === "/companies" && safeRole !== ROLES.SUPERADMIN) return false;
+    return true;
+  });
+
   const roleLabel = ROLE_LABELS[safeRole] || safeRole;
   const canOpenSettings = SETTINGS_ROLES.includes(safeRole);
   const projectName = localStorage.getItem("projectName");
@@ -202,6 +206,7 @@ export default function AppSidebar() {
               </div>
             </NavLink>
           ))}
+
           {/* Beta versiya */}
           <div title="Tez kunda ochiladi...">
             <NavLink
@@ -216,14 +221,12 @@ export default function AppSidebar() {
                   size={isCollapsed ? 22 : 18}
                   className="shrink-0"
                 />
-
                 {isCollapsed && (
                   <span className="absolute -top-1.5 -right-6 rounded border border-amber-400/30 bg-amber-400/20 px-0.5 py-px text-[7px] leading-none font-bold text-amber-400">
                     BETA
                   </span>
                 )}
               </div>
-
               <span
                 className={`flex items-center gap-1.5 leading-tight font-medium whitespace-nowrap ${
                   isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
@@ -238,7 +241,7 @@ export default function AppSidebar() {
               </span>
             </NavLink>
           </div>
-          {/* Beta versiya*/}
+          {/* Beta versiya */}
         </nav>
       </div>
 
@@ -254,6 +257,21 @@ export default function AppSidebar() {
               className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
             >
               Sozlamalar
+            </span>
+          </NavLink>
+        )}
+
+        {/* Kompaniyalar — faqat SUPERADMIN uchun */}
+        {safeRole === ROLES.SUPERADMIN && (
+          <NavLink
+            to="/companies"
+            className={({ isActive }) => settingCls(isActive, isCollapsed)}
+          >
+            <Building2 size={isCollapsed ? 22 : 18} className="shrink-0" />
+            <span
+              className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
+            >
+              Kompaniyalar
             </span>
           </NavLink>
         )}

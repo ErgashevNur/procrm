@@ -60,7 +60,6 @@ function RoleHomeRedirect() {
   return <Navigate to={getDefaultRouteByRole(role)} replace />;
 }
 
-// 403 sahifasi
 function Forbidden() {
   const role = getCurrentRole();
   const homePath = isSupportedRole(role)
@@ -173,7 +172,6 @@ const router = createBrowserRouter([
         path: "leadDetails",
         element: <ProjectGate>{withLazy(<LeadDetails />)}</ProjectGate>,
       },
-
       {
         path: "leadlar",
         element: (
@@ -182,7 +180,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-
       {
         path: "addStatus",
         element: (
@@ -191,7 +188,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-
       {
         path: "leadSource",
         element: (
@@ -219,7 +215,7 @@ const router = createBrowserRouter([
       {
         path: "companies",
         element: (
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPERADMIN]}>
             {withLazy(<Companies />)}
           </ProtectedRoute>
         ),
