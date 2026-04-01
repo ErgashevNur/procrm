@@ -262,7 +262,7 @@ export default function AppSidebar() {
         )}
 
         {/* Kompaniyalar — faqat SUPERADMIN uchun */}
-        {safeRole === ROLES.SUPERADMIN && (
+        {/* {safeRole === ROLES.SUPERADMIN && (
           <NavLink
             to="/companies"
             className={({ isActive }) => settingCls(isActive, isCollapsed)}
@@ -274,7 +274,7 @@ export default function AppSidebar() {
               Kompaniyalar
             </span>
           </NavLink>
-        )}
+        )} */}
 
         <div className="my-1 h-px bg-white/6" />
 
