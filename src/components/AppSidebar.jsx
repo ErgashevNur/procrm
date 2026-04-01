@@ -261,21 +261,6 @@ export default function AppSidebar() {
           </NavLink>
         )}
 
-        {/* Kompaniyalar — faqat SUPERADMIN uchun */}
-        {/* {safeRole === ROLES.SUPERADMIN && (
-          <NavLink
-            to="/companies"
-            className={({ isActive }) => settingCls(isActive, isCollapsed)}
-          >
-            <Building2 size={isCollapsed ? 22 : 18} className="shrink-0" />
-            <span
-              className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
-            >
-              Kompaniyalar
-            </span>
-          </NavLink>
-        )} */}
-
         <div className="my-1 h-px bg-white/6" />
 
         <NotificationBell isCollapsed={isCollapsed} inSidebar />
