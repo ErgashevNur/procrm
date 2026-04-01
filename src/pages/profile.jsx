@@ -4,6 +4,8 @@ import {
   Check,
   Camera,
   ChevronDown,
+  Eye,
+  EyeOff,
   Loader2,
   LogOut,
 } from "lucide-react";
@@ -53,6 +55,46 @@ async function patchProfile(formData) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+function getResponseMessage(payload) {
+  if (!payload) return "";
+  if (typeof payload.message === "string") return payload.message;
+  if (Array.isArray(payload.message)) return payload.message.join(", ");
+  if (typeof payload.error === "string") return payload.error;
+  return "";
+}
+
+async function resetPassword(payload) {
+  const token = getToken();
+  const headers = {
+    accept: "*/*",
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(getResponseMessage(data) || `HTTP ${res.status}`);
+  }
+
+  return data;
 }
 
 // ─── sub-components ─────────────────────────────────────────────────────────
@@ -150,12 +192,41 @@ function TInput({ value, onChange, placeholder, type = "text" }) {
   );
 }
 
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  show,
+  onToggleVisibility,
+}) {
+  return (
+    <div className="relative w-72">
+      <input
+        type={show ? "text" : "password"}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 pr-10 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+      />
+      <button
+        type="button"
+        onClick={onToggleVisibility}
+        className="absolute top-1/2 right-3 -translate-y-1/2 text-[#7a9ab5] transition-colors hover:text-[#c8dce8]"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+    </div>
+  );
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [accountEmail, setAccountEmail] = useState("");
 
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -178,6 +249,19 @@ export default function Profile() {
 
   // dirty tracking uchun initial qiymatlar
   const [initialForm, setInitialForm] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [showPasswords, setShowPasswords] = useState({
+    oldPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
 
   // o'zgarish bormi?
   const isDirty =
@@ -205,12 +289,17 @@ export default function Profile() {
     };
 
     setForm(loaded);
+    setAccountEmail(user.email ?? "");
     setInitialForm(loaded); // dirty tracking uchun initial saqlash
 
     if (user.img) setAvatarPreview(getImageUrl(user.img));
   }, []);
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  const setPasswordField = (k) => (v) =>
+    setPasswordForm((f) => ({ ...f, [k]: v }));
+  const togglePasswordVisibility = (k) =>
+    setShowPasswords((prev) => ({ ...prev, [k]: !prev[k] }));
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
@@ -246,6 +335,7 @@ export default function Profile() {
           setAvatarFile(null);
         }
 
+        if (typeof updated.email === "string") setAccountEmail(updated.email);
         updateUserInStorage(updated);
       }
 
@@ -257,6 +347,59 @@ export default function Profile() {
       setError("Saqlashda xato: " + err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const validatePasswordForm = () => {
+    if (!accountEmail.trim()) return "Email topilmadi, qayta login qiling";
+    if (!passwordForm.oldPassword.trim()) return "Joriy parolni kiriting";
+    if (!passwordForm.newPassword.trim()) return "Yangi parolni kiriting";
+    if (passwordForm.newPassword.length < 6)
+      return "Yangi parol kamida 6 belgidan iborat bo'lishi kerak";
+    if (passwordForm.oldPassword === passwordForm.newPassword)
+      return "Yangi parol joriy paroldan farq qilishi kerak";
+    if (!passwordForm.confirmPassword.trim())
+      return "Yangi parol tasdig'ini kiriting";
+    if (passwordForm.newPassword !== passwordForm.confirmPassword)
+      return "Yangi parol va tasdiq bir xil emas";
+    return "";
+  };
+
+  const handlePasswordReset = async () => {
+    if (passwordSaving) return;
+
+    setPasswordError(null);
+    const validationError = validatePasswordForm();
+    if (validationError) {
+      setPasswordError(validationError);
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await resetPassword({
+        email: accountEmail.trim(),
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      setPasswordForm({
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowPasswords({
+        oldPassword: false,
+        newPassword: false,
+        confirmPassword: false,
+      });
+
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 2000);
+    } catch (err) {
+      setPasswordError("Parolni yangilashda xato: " + err.message);
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -299,6 +442,13 @@ export default function Profile() {
       ? "border-blue-500 bg-blue-600 text-white hover:bg-blue-500"
       : "border-[#2a4560] bg-[#1a2e40] text-[#9ab8cc] hover:border-[#3a5570]"
   }`;
+  const passwordBtnLabel = passwordSaving
+    ? "Обновляется..."
+    : passwordSaved
+      ? "Обновлено ✓"
+      : "Обновить пароль";
+  const passwordBtnClass =
+    "flex items-center gap-2 rounded border border-amber-500/40 bg-amber-500/15 px-4 py-2 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div
@@ -422,6 +572,63 @@ export default function Profile() {
               <Row label="Language / Язык">
                 <LangSelect value={form.language} onChange={set("language")} />
               </Row>
+
+              {/* ── Divider ── */}
+              <div className="my-4 border-t border-[#162840]" />
+
+              {/* ── Password ── */}
+              <Row label="Аккаунт email">
+                <ReadonlyValue value={accountEmail} />
+              </Row>
+              <Row label="Текущий пароль">
+                <PasswordInput
+                  value={passwordForm.oldPassword}
+                  onChange={setPasswordField("oldPassword")}
+                  placeholder="Введите текущий пароль"
+                  show={showPasswords.oldPassword}
+                  onToggleVisibility={() =>
+                    togglePasswordVisibility("oldPassword")
+                  }
+                />
+              </Row>
+              <Row label="Новый пароль">
+                <PasswordInput
+                  value={passwordForm.newPassword}
+                  onChange={setPasswordField("newPassword")}
+                  placeholder="Введите новый пароль"
+                  show={showPasswords.newPassword}
+                  onToggleVisibility={() =>
+                    togglePasswordVisibility("newPassword")
+                  }
+                />
+              </Row>
+              <Row label="Подтверждение">
+                <PasswordInput
+                  value={passwordForm.confirmPassword}
+                  onChange={setPasswordField("confirmPassword")}
+                  placeholder="Повторите новый пароль"
+                  show={showPasswords.confirmPassword}
+                  onToggleVisibility={() =>
+                    togglePasswordVisibility("confirmPassword")
+                  }
+                />
+              </Row>
+              <div className="mt-2 ml-44">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={passwordSaving}
+                  className={passwordBtnClass}
+                >
+                  {passwordSaving && <Loader2 size={13} className="animate-spin" />}
+                  {passwordBtnLabel}
+                </button>
+              </div>
+              {passwordError && (
+                <div className="mt-2 ml-44 rounded border border-red-800/50 bg-red-900/20 px-3 py-2 text-sm text-red-400">
+                  {passwordError}
+                </div>
+              )}
             </div>
           </div>
         </div>
