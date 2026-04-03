@@ -24,7 +24,9 @@ import ProMarket from "./pages/proMarket";
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
 const FormPage = lazy(() => import("./pages/FormPage"));
+const LandingPage = lazy(() => import("./pages/landingPage"));
 const Login = lazy(() => import("./pages/login"));
+const Register = lazy(() => import("./pages/register"));
 const Mijozlar = lazy(() => import("./pages/mijozlar"));
 const Profile = lazy(() => import("./pages/profile"));
 const Projects = lazy(() => import("./pages/project"));
@@ -118,8 +120,18 @@ export function ProtectedLayout() {
 
 const router = createBrowserRouter([
   {
+    path: "/",
+    element: withLazy(<LandingPage />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
     path: "/login",
     element: withLazy(<Login />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
+    path: "/register",
+    element: withLazy(<Register />),
     errorElement: withLazy(<AppErrorFallback />),
   },
   {
@@ -135,10 +147,6 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      {
-        index: true,
-        element: <RoleHomeRedirect />,
-      },
       {
         path: "dashboard",
         element: (
