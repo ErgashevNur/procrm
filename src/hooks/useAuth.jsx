@@ -1,4 +1,4 @@
-import { isSupportedRole, ROLES } from "@/lib/rbac";
+import { MANAGEMENT_ROLES, ROLES, isSupportedRole } from "@/lib/rbac";
 
 export function useAuth() {
   try {
@@ -18,7 +18,7 @@ export function useAuth() {
       role,
       permission,
       isAuthenticated: !!user.email && isSupportedRole(role),
-      isManager: [ROLES.ROP, ROLES.SUPERADMIN].includes(role),
+      isManager: MANAGEMENT_ROLES.includes(role),
       isSales: role === ROLES.SALESMANAGER,
     };
   } catch {

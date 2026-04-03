@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { getCurrentRole, ROLES } from "@/lib/rbac";
+import { MANAGEMENT_ROLES, getCurrentRole } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -15,7 +15,7 @@ export default function ProjectGate({ children }) {
   const [loading, setLoading] = useState(!ready);
   const [error, setError] = useState("");
   const role = getCurrentRole();
-  const canManageProjects = [ROLES.ROP, ROLES.SUPERADMIN].includes(role);
+  const canManageProjects = MANAGEMENT_ROLES.includes(role);
 
   useEffect(() => {
     const token = localStorage.getItem("user");

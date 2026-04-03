@@ -1,8 +1,15 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Lock, Settings, ShoppingBag, Building2 } from "lucide-react";
+import { Settings, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { NAV_ITEMS, ROLE_LABELS, ROLES, isSupportedRole } from "@/lib/rbac";
+import {
+  MANAGEMENT_ROLES,
+  NAV_ITEMS,
+  ROLE_LABELS,
+  ROLES,
+  isSuperAdminLikeRole,
+  isSupportedRole,
+} from "@/lib/rbac";
 import { useNotification } from "@/hooks/useNotification";
 import { NotificationBell } from "./NotificationBell";
 
@@ -14,7 +21,7 @@ function getImageUrl(imgName) {
   return `${API_BASE}/image/${imgName}`;
 }
 
-const SETTINGS_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
+const SETTINGS_ROLES = MANAGEMENT_ROLES;
 
 function navCls(isActive, isCollapsed, extra = "") {
   return [
@@ -82,7 +89,9 @@ export default function AppSidebar() {
   // NAV_ITEMS dan rolga qarab filterlash + companies faqat SUPERADMIN uchun
   const visibleMenus = NAV_ITEMS.filter((item) => {
     if (!item.roles.includes(safeRole)) return false;
-    if (item.url === "/companies" && safeRole !== ROLES.SUPERADMIN) return false;
+    if (item.url === "/companies" && !isSuperAdminLikeRole(safeRole)) {
+      return false;
+    }
     return true;
   });
 

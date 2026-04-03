@@ -21,7 +21,11 @@ import {
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { getCurrentRole, ROLES } from "@/lib/rbac";
+import {
+  canDeleteData,
+  getCurrentRole,
+  isSuperAdminLikeRole,
+} from "@/lib/rbac";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME.replace(/\/+$/, "");
@@ -1309,6 +1313,8 @@ function buildPageNumbers(totalPages, page) {
 }
 
 function CompaniesContent() {
+  const role = getCurrentRole();
+  const canDeleteCompanies = canDeleteData(role);
   const [companies, setCompanies] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -1412,6 +1418,11 @@ function CompaniesContent() {
 
   const handleDelete = async () => {
     if (!deleteTarget || deleting) return;
+    if (!canDeleteCompanies) {
+      toast.error("Sizda kompaniyani o'chirish uchun ruxsat yo'q");
+      setDeleteTarget(null);
+      return;
+    }
 
     const deletingOwnCompany =
       superadminCompanyId &&
@@ -1555,6 +1566,7 @@ function CompaniesContent() {
                     setDrawer(item);
                   }}
                   onDelete={(item) => setDeleteTarget(item)}
+                  lockDelete={!canDeleteCompanies}
                 />
               ))}
             </div>
@@ -1660,13 +1672,13 @@ export default function CompaniesPage() {
 
   useEffect(() => {
     const role = getCurrentRole();
-    if (role !== ROLES.SUPERADMIN) {
+    if (!isSuperAdminLikeRole(role)) {
       navigate("/403", { replace: true });
     }
   }, [navigate]);
 
   const role = getCurrentRole();
-  if (role !== ROLES.SUPERADMIN) {
+  if (!isSuperAdminLikeRole(role)) {
     return null;
   }
 
