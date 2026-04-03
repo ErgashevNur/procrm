@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
+import { canDeleteData, getCurrentRole } from "@/lib/rbac";
 import {
   Dialog,
   DialogContent,
@@ -1100,6 +1101,8 @@ function InsertModal({
 export default function AddStatus() {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
+  const role = getCurrentRole();
+  const canDeleteStatuses = canDeleteData(role);
 
   const boardScrollRef = useRef(null);
   const [columns, setColumns] = useState([]);
@@ -1289,6 +1292,10 @@ export default function AddStatus() {
   };
 
   const deleteColumn = async (columnId) => {
+    if (!canDeleteStatuses) {
+      toast.error("Sizda statusni o'chirish uchun ruxsat yo'q");
+      return;
+    }
     const prev = columns;
     setColumns((c) => c.filter((col) => col.id !== columnId));
     try {
@@ -1351,6 +1358,10 @@ export default function AddStatus() {
   const googleForms = channelForms["google-form"] || [];
 
   const deleteChannelForm = (channelId, formId) => {
+    if (!canDeleteStatuses) {
+      toast.error("Sizda formani o'chirish uchun ruxsat yo'q");
+      return;
+    }
     setChannelForms((prev) => ({
       ...prev,
       [channelId]: (prev[channelId] || []).filter((form) => form.id !== formId),
@@ -1549,13 +1560,15 @@ export default function AddStatus() {
                                 </span>
                               )}
 
-                              <button
-                                onClick={() => deleteColumn(column.id)}
-                                disabled={!!column._temp}
-                                className="text-gray-500 transition-colors hover:text-red-500 disabled:opacity-30"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              {canDeleteStatuses ? (
+                                <button
+                                  onClick={() => deleteColumn(column.id)}
+                                  disabled={!!column._temp}
+                                  className="text-gray-500 transition-colors hover:text-red-500 disabled:opacity-30"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              ) : null}
 
                               <Dialog
                                 open={editId === column.id}

@@ -4,7 +4,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentRole, ROLES } from "@/lib/rbac";
+import {
+    canDeleteData,
+    getCurrentRole,
+    isSuperAdminLikeRole,
+} from "@/lib/rbac";
 import { useNavigate } from "react-router-dom";
 
 const BASE = "https://backend.prohome.uz/api/v1";
@@ -471,7 +475,7 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
     );
 }
 
-function CompanyCard({ company, onEdit, onDelete, onView, index }) {
+function CompanyCard({ company, onEdit, onDelete, onView, index, canDelete = true }) {
     const [imgErr, setImgErr] = useState(false);
     const logoUrl = company.logo ? getImgUrl(company.logo) : null;
     const showLogo = logoUrl && !imgErr;
@@ -501,10 +505,12 @@ function CompanyCard({ company, onEdit, onDelete, onView, index }) {
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-blue-400">
                         <Pencil size={12} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(company); }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400">
-                        <Trash2 size={12} />
-                    </button>
+                    {canDelete && (
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(company); }}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400">
+                            <Trash2 size={12} />
+                        </button>
+                    )}
                 </div>
                 <div className="absolute left-3 top-3">
                     <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#071828]/80 px-2 py-0.5 backdrop-blur-sm">
@@ -559,16 +565,18 @@ export default function Companies() {
 
     useEffect(() => {
         const role = getCurrentRole();
-        if (role !== ROLES.SUPERADMIN) navigate("/403", { replace: true });
+        if (!isSuperAdminLikeRole(role)) navigate("/403", { replace: true });
     }, [navigate]);
 
     const role = getCurrentRole();
-    if (role !== ROLES.SUPERADMIN) return null;
+    if (!isSuperAdminLikeRole(role)) return null;
 
     return <CompaniesContent />;
 }
 
 function CompaniesContent() {
+    const role = getCurrentRole();
+    const canDeleteCompanies = canDeleteData(role);
     const [companies, setCompanies] = useState([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -610,6 +618,11 @@ function CompaniesContent() {
 
     const handleDelete = async () => {
         if (!delTarget || deleting) return;
+        if (!canDeleteCompanies) {
+            toast.error("Sizda kompaniyani o'chirish uchun ruxsat yo'q");
+            setDelTarget(null);
+            return;
+        }
         setDeleting(true);
         try {
             const res = await apiFetch(`${BASE}/company/delete/${delTarget.id}`, { method: "DELETE" });
@@ -703,7 +716,8 @@ function CompaniesContent() {
                                 <CompanyCard key={c.id} company={c} index={i}
                                     onView={(comp) => setSelectedCompany(comp)}
                                     onEdit={(comp) => { setSelectedCompany(null); setDrawer(comp); }}
-                                    onDelete={(comp) => setDelTarget(comp)} />
+                                    onDelete={(comp) => setDelTarget(comp)}
+                                    canDelete={canDeleteCompanies} />
                             ))}
                         </div>
                         {totalPages > 1 && (

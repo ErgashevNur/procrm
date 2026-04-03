@@ -12,10 +12,12 @@ import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { NotificationProvider } from "@/hooks/useNotification";
 import {
+  CRM_ROLES,
+  MANAGEMENT_ROLES,
+  SUPERADMIN_LIKE_ROLES,
   getCurrentRole,
   getDefaultRouteByRole,
   isSupportedRole,
-  ROLES,
 } from "@/lib/rbac";
 import ProMarket from "./pages/proMarket";
 
@@ -36,9 +38,6 @@ const AddStatus = lazy(() => import("./pages/addStatus"));
 const Analitika = lazy(() => import("./pages/analitika"));
 const AppErrorFallback = lazy(() => import("./pages/error"));
 const Companies = lazy(() => import("./pages/company"));
-
-const MANAGEMENT_ROLES = [ROLES.ROP, ROLES.SUPERADMIN];
-const CRM_ROLES = [ROLES.ROP, ROLES.SALESMANAGER, ROLES.SUPERADMIN];
 
 function RouteLoader() {
   return (
@@ -215,7 +214,7 @@ const router = createBrowserRouter([
       {
         path: "companies",
         element: (
-          <ProtectedRoute allowedRoles={[ROLES.SUPERADMIN]}>
+          <ProtectedRoute allowedRoles={SUPERADMIN_LIKE_ROLES}>
             {withLazy(<Companies />)}
           </ProtectedRoute>
         ),
