@@ -20,13 +20,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   canDeleteData,
   getCurrentRole,
   isSuperAdminLikeRole,
-  ROLES,
 } from "@/lib/rbac";
-import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME.replace(/\/+$/, "");
@@ -1101,54 +1100,6 @@ function CompanyDrawer({ company, onClose, onSaved }) {
           </button>
         </div>
 
-
-function CompanyCard({ company, onEdit, onDelete, onView, index, canDelete = true }) {
-    const [imgErr, setImgErr] = useState(false);
-    const logoUrl = company.logo ? getImgUrl(company.logo) : null;
-    const showLogo = logoUrl && !imgErr;
-    return (
-        <div onClick={() => onView(company)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/6 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/12"
-            style={{ background: "linear-gradient(145deg,#0f2438 0%,#0a1929 100%)", animation: `fadeUp .4s ease ${index * 0.05}s both` }}>
-            <div className="relative h-36 w-full overflow-hidden bg-[#0a1929]">
-                {showLogo ? (
-                    <img src={logoUrl} alt={company.name} onError={() => setImgErr(true)}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                ) : (
-                    <div className="flex h-full items-center justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-bold text-blue-300"
-                            style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.2)" }}>
-                            {initials(company.name)}
-                        </div>
-                    </div>
-                )}
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,24,40,0.95) 0%, transparent 55%)" }} />
-                <div className="absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button onClick={(e) => { e.stopPropagation(); onView(company); }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-white">
-                        <Eye size={12} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); onEdit(company); }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-blue-400">
-                        <Pencil size={12} />
-                    </button>
-                    {canDelete && (
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(company); }}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400">
-                            <Trash2 size={12} />
-                        </button>
-                    )}
-                </div>
-                <div className="absolute left-3 top-3">
-                    <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#071828]/80 px-2 py-0.5 backdrop-blur-sm">
-                        <Hash size={9} className="text-blue-400" />
-                        <span className="text-[10px] font-bold text-white">{company.id}</span>
-                    </div>
-                </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                    <p className="truncate text-sm font-semibold text-white">{company.name}</p>
-                    {company.managerName && <p className="truncate text-[11px] text-gray-300">{company.managerName}</p>}
-                </div>
         <form
           onSubmit={handleSubmit}
           className="flex flex-1 flex-col overflow-hidden"
@@ -1261,7 +1212,6 @@ function CompanyCard({ company, onEdit, onDelete, onView, index, canDelete = tru
                   {errors.permissions}
                 </p>
               ) : null}
-
             </div>
 
             <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0a1929] px-3 py-2.5">
@@ -1336,15 +1286,6 @@ function extractTotal(payload, fallback) {
     payload?.data?.total,
   ];
 
-
-    useEffect(() => {
-        const role = getCurrentRole();
-        if (!isSuperAdminLikeRole(role)) navigate("/403", { replace: true });
-    }, [navigate]);
-
-    const role = getCurrentRole();
-    if (!isSuperAdminLikeRole(role)) return null;
-
   for (const value of candidates) {
     const numeric = Number(value);
     if (Number.isFinite(numeric) && numeric >= 0) {
@@ -1354,7 +1295,6 @@ function extractTotal(payload, fallback) {
 
   return fallback;
 }
-
 
 function buildPageNumbers(totalPages, page) {
   return Array.from({ length: totalPages }, (_, index) => index + 1)
@@ -1373,71 +1313,8 @@ function buildPageNumbers(totalPages, page) {
 }
 
 function CompaniesContent() {
-
-    const role = getCurrentRole();
-    const canDeleteCompanies = canDeleteData(role);
-    const [companies, setCompanies] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
-    const [drawer, setDrawer] = useState(null);
-    const [delTarget, setDelTarget] = useState(null);
-    const [deleting, setDeleting] = useState(false);
-    const [selectedCompany, setSelectedCompany] = useState(null);
-
-    // ✅ Superadmin'ning o'z kompaniyasi ID si
-    const superadminCompanyId = getSuperadminCompanyId();
-
-    const fetchCompanies = async (p = page) => {
-        setLoading(true);
-        try {
-            const res = await apiFetch(`${BASE}/company/all?limit=${PER_PAGE}&page=${p}`);
-            if (!res) return;
-            const data = await res.json();
-
-            let list = Array.isArray(data) ? data : (data.data ?? data.companies ?? data.items ?? []);
-
-            // ✅ Superadmin o'z kompaniyasini ko'rmasin
-            if (superadminCompanyId) {
-                list = list.filter((c) => String(c.id) !== String(superadminCompanyId));
-            }
-
-            setCompanies(list);
-            setTotal(list.length);
-        } catch (err) {
-            console.error(err);
-            toast.error("Kompaniyalar yuklanmadi");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => { fetchCompanies(page); }, [page]);
-
-    const handleDelete = async () => {
-        if (!delTarget || deleting) return;
-        if (!canDeleteCompanies) {
-            toast.error("Sizda kompaniyani o'chirish uchun ruxsat yo'q");
-            setDelTarget(null);
-            return;
-        }
-        setDeleting(true);
-        try {
-            const res = await apiFetch(`${BASE}/company/delete/${delTarget.id}`, { method: "DELETE" });
-            if (!res) throw new Error("No response");
-            const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.message || "Delete failed");
-            toast.success("Kompaniya o'chirildi");
-            setCompanies((prev) => prev.filter((c) => c.id !== delTarget.id));
-            setTotal((t) => t - 1);
-            if (selectedCompany?.id === delTarget.id) setSelectedCompany(null);
-        } catch (err) {
-            toast.error(err.message || "O'chirishda xatolik");
-        } finally {
-            setDeleting(false);
-            setDelTarget(null);
-
+  const role = getCurrentRole();
+  const canDeleteCompanies = canDeleteData(role);
   const [companies, setCompanies] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -1489,7 +1366,6 @@ function CompaniesContent() {
       } catch (error) {
         if (error?.name === "AbortError") {
           return;
-
         }
 
         console.error(error);
@@ -1542,6 +1418,11 @@ function CompaniesContent() {
 
   const handleDelete = async () => {
     if (!deleteTarget || deleting) return;
+    if (!canDeleteCompanies) {
+      toast.error("Sizda kompaniyani o'chirish uchun ruxsat yo'q");
+      setDeleteTarget(null);
+      return;
+    }
 
     const deletingOwnCompany =
       superadminCompanyId &&
@@ -1623,64 +1504,6 @@ function CompaniesContent() {
               />
             </div>
 
-
-            <div className="mx-auto max-w-6xl px-6 py-6">
-                {loading ? (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {Array(8).fill(0).map((_, i) => <CardSkeleton key={i} />)}
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-4 py-24 text-center" style={{ animation: "fadeUp .4s ease both" }}>
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-                            <Building2 size={28} className="text-gray-700" />
-                        </div>
-                        <p className="text-base font-semibold text-white">{search ? "Hech narsa topilmadi" : "Hech qanday kompaniya yo'q"}</p>
-                        <p className="text-sm text-gray-600">{search ? "Boshqa so'z bilan qidiring" : "Birinchi kompaniyangizni qo'shing"}</p>
-                        {!search && (
-                            <button onClick={() => setDrawer("add")}
-                                className="mt-2 flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
-                                style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)" }}>
-                                <Plus size={15} /> Kompaniya qo'shish
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {filtered.map((c, i) => (
-                                <CompanyCard key={c.id} company={c} index={i}
-                                    onView={(comp) => setSelectedCompany(comp)}
-                                    onEdit={(comp) => { setSelectedCompany(null); setDrawer(comp); }}
-                                    onDelete={(comp) => setDelTarget(comp)}
-                                    canDelete={canDeleteCompanies} />
-                            ))}
-                        </div>
-                        {totalPages > 1 && (
-                            <div className="mt-8 flex items-center justify-center gap-2" style={{ animation: "fadeUp .4s ease both" }}>
-                                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
-                                    <ChevronLeft size={16} />
-                                </button>
-                                {pageNumbers.map((n, i) =>
-                                    n === "..." ? <span key={`dots-${i}`} className="text-sm text-gray-600">…</span> : (
-                                        <button key={n} onClick={() => setPage(n)}
-                                            className="h-9 min-w-[36px] rounded-xl border px-3 text-sm font-medium transition-all"
-                                            style={n === page
-                                                ? { background: "linear-gradient(135deg,#2563eb,#1d4ed8)", borderColor: "#2563eb", color: "#fff" }
-                                                : { borderColor: "rgba(255,255,255,0.08)", color: "#9ca3af" }}>
-                                            {n}
-                                        </button>
-                                    )
-                                )}
-                                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
-                                    <ChevronRight size={16} />
-                                </button>
-                            </div>
-                        )}
-                    </>
-                )}
-
             <button
               type="button"
               onClick={() => setDrawer("add")}
@@ -1743,9 +1566,9 @@ function CompaniesContent() {
                     setDrawer(item);
                   }}
                   onDelete={(item) => setDeleteTarget(item)}
+                  lockDelete={!canDeleteCompanies}
                 />
               ))}
-
             </div>
 
             {totalPages > 1 ? (
@@ -1761,11 +1584,6 @@ function CompaniesContent() {
                 >
                   <ChevronLeft size={16} />
                 </button>
-
-
-            <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }`}</style>
-        </div>
-    );
 
                 {pageNumbers.map((item, index) =>
                   item === "..." ? (
@@ -1854,13 +1672,13 @@ export default function CompaniesPage() {
 
   useEffect(() => {
     const role = getCurrentRole();
-    if (role !== ROLES.SUPERADMIN) {
+    if (!isSuperAdminLikeRole(role)) {
       navigate("/403", { replace: true });
     }
   }, [navigate]);
 
   const role = getCurrentRole();
-  if (role !== ROLES.SUPERADMIN) {
+  if (!isSuperAdminLikeRole(role)) {
     return null;
   }
 
