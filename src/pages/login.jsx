@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import Lottie from "lottie-react";
 import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,21 @@ import { emitAuthChange } from "@/hooks/useNotification";
 
 const slides = [
   {
+    animationPath: "/ai_agent.json",
     src: "/ai_agent.json",
     title: "AI yordamchi ish ritmini ushlab turadi",
     desc: "Takroriy jarayonlarni tezlashtirib, jamoaning kundalik ishini bir markazdan boshqarishga yordam beradi.",
     stat: "24/7 avtomatlashtirish",
   },
   {
+    animationPath: "/login.json",
     src: "/login.json",
     title: "Leadlar yo'qolib ketmaydi",
     desc: "Har bir mijoz, status va keyingi qadam bitta pipeline ichida aniq ko'rinadi.",
     stat: "Leadlar nazorati",
   },
   {
+    animationPath: "/analitic.json",
     src: "/analitic.json",
     title: "Raqamlar qarorni tezlashtiradi",
     desc: "Real vaqt analitikasi bilan savdo jarayonidagi o'sish nuqtalarini darhol ko'rasiz.",
@@ -32,6 +35,7 @@ const slides = [
 function LeftSlider() {
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [animationData, setAnimationData] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,6 +50,26 @@ function LeftSlider() {
   }, []);
 
   const slide = slides[current];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch(slide.animationPath);
+        const data = await response.json();
+        if (!cancelled) setAnimationData(data);
+      } catch {
+        if (!cancelled) setAnimationData(null);
+      }
+    };
+
+    loadAnimation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slide.animationPath]);
 
   return (
     <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-white/[0.06] bg-[#080c14] px-12 py-10 xl:flex">
@@ -82,13 +106,17 @@ function LeftSlider() {
         {/* Lottie */}
         <div className="mb-10 flex w-full justify-center">
           <div className="rounded-[28px] border border-white/[0.07] bg-white/[0.03] p-5">
-            <DotLottieReact
-              key={current}
-              src={slide.src}
-              loop
-              autoplay
-              style={{ width: 260, height: 260 }}
-            />
+            {animationData ? (
+              <Lottie
+                key={current}
+                animationData={animationData}
+                loop
+                autoplay
+                style={{ width: 260, height: 260 }}
+              />
+            ) : (
+              <div style={{ width: 260, height: 260 }} />
+            )}
           </div>
         </div>
 
@@ -336,6 +364,13 @@ export default function Login() {
                     Email va parolingizni kiriting.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white"
+                >
+                  ← Orqaga
+                </button>
               </div>
 
               {/* Form */}
