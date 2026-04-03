@@ -33,7 +33,12 @@ import { Button } from "../components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { getCurrentRole, ROLES } from "@/lib/rbac";
+import {
+  MANAGEMENT_ROLES,
+  ROLES,
+  canDeleteData,
+  getCurrentRole,
+} from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TOAST_STYLE = {
@@ -293,7 +298,7 @@ const TASK_STATUS_OPTIONS = [
 ];
 
 // ─── EVENT CARD ───────────────────────────────────────────────────────────────
-function EventCard({ event, headers, onRefresh }) {
+function EventCard({ event, headers, onRefresh, canDelete = true }) {
   const cfg = getCfg(event.type);
   const Icon = cfg.icon;
   const isTask = event.type === "tasks";
@@ -377,6 +382,10 @@ function EventCard({ event, headers, onRefresh }) {
   };
 
   const handleDelete = async () => {
+    if (!canDelete) {
+      toastError("Sizda o'chirish uchun ruxsat yo'q");
+      return;
+    }
     if (!window.confirm("O'chirilsinmi?")) return;
     setDeleting(true);
     try {
@@ -461,13 +470,15 @@ function EventCard({ event, headers, onRefresh }) {
                 >
                   <Pencil size={11} />
                 </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex h-6 w-6 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-40"
-                >
-                  <Trash2 size={11} />
-                </button>
+                {canDelete ? (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex h-6 w-6 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-40"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
@@ -992,7 +1003,8 @@ const LeadDetails = () => {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
   const role = getCurrentRole();
-  const canAssignOperator = [ROLES.ROP, ROLES.SUPERADMIN].includes(role);
+  const canAssignOperator = MANAGEMENT_ROLES.includes(role);
+  const canDeleteEntries = canDeleteData(role);
   // FIX 1: userId = projectId bug tuzatildi — tasks lead ichidan keladi, alohida fetch yo'q
 
   const [dealData, setDealData] = useState(null);
@@ -1750,6 +1762,7 @@ const LeadDetails = () => {
                   event={event}
                   headers={headers}
                   onRefresh={refreshEvents}
+                  canDelete={canDeleteEntries}
                 />
               ))
             )}

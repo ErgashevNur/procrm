@@ -42,7 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useExcelWorker } from "../hooks/Useexcelworker";
-import { ROLES, getCurrentRole } from "@/lib/rbac";
+import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
 import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
@@ -637,7 +637,7 @@ export default function Pipeline() {
   const [operatorsList, setOperatorsList] = useState([]);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
   const role = getCurrentRole();
-  const canManageStatuses = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
+  const canManageStatuses = MANAGEMENT_ROLES.includes(role);
   const showToast = (message, type = "error") =>
     type === "success" ? toast.success(message) : toast.error(message);
 

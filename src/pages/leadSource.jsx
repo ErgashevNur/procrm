@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 import { Link } from "react-router-dom";
+import { canDeleteData, getCurrentRole } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -81,6 +82,8 @@ async function apiFetch(url, options = {}) {
 }
 
 export default function LeadSource() {
+  const role = getCurrentRole();
+  const canDeleteLeadSource = canDeleteData(role);
   const [appState, setAppState] = useState("loading"); // loading | no-project | ready
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null); // { id, name }
@@ -284,6 +287,9 @@ export default function LeadSource() {
   // DELETE
   // ─────────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
+    if (!canDeleteLeadSource) {
+      return;
+    }
     setDeletingId(id);
     try {
       const res = await apiFetch(`${API}/lead-source/${id}`, {
@@ -562,30 +568,32 @@ export default function LeadSource() {
                 </button>
 
                 {/* Delete */}
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  disabled={deletingId === item.id}
-                  className="text-rose-400 transition-colors hover:text-rose-300 disabled:opacity-40"
-                  title="O'chirish"
-                >
-                  {deletingId === item.id ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  )}
-                </button>
+                {canDeleteLeadSource ? (
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    disabled={deletingId === item.id}
+                    className="text-rose-400 transition-colors hover:text-rose-300 disabled:opacity-40"
+                    title="O'chirish"
+                  >
+                    {deletingId === item.id ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}

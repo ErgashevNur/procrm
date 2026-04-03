@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { canDeleteData, getCurrentRole } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -149,6 +150,7 @@ function InfoCard({ label, value, color = "#6b7280" }) {
 function RoleBadge({ role }) {
   const map = {
     SUPERADMIN: { l: "Super Admin", c: "#f59e0b", b: "rgba(245,158,11,0.12)" },
+    ADMIN: { l: "Admin", c: "#22c55e", b: "rgba(34,197,94,0.12)" },
     ROP: { l: "ROP", c: "#3b82f6", b: "rgba(59,130,246,0.12)" },
     SALESMANAGER: {
       l: "Sales Manager",
@@ -170,6 +172,8 @@ function RoleBadge({ role }) {
 
 // ─────────────────────────────────────────────────────────────────────────
 export default function settings() {
+  const role = getCurrentRole();
+  const canDeleteUsers = canDeleteData(role);
   const projectId = localStorage.getItem("projectId");
   const projectName = localStorage.getItem("projectName") || "";
   const companyId = (() => {
@@ -379,6 +383,10 @@ export default function settings() {
 
   // ── Delete user ───────────────────────────────────────────────────────
   const handleDeleteUser = async (id, role) => {
+    if (!canDeleteUsers) {
+      toast.error("Sizda foydalanuvchini o'chirish uchun ruxsat yo'q");
+      return;
+    }
     if (role !== "SALESMANAGER") {
       toast.error("ROP ni o'chirish endpointi berilmagan");
       return;
@@ -859,11 +867,14 @@ export default function settings() {
                             onClick={() => handleDeleteUser(user.id, user.role)}
                             disabled={
                               deletingId === user.id ||
-                              user.role !== "SALESMANAGER"
+                              user.role !== "SALESMANAGER" ||
+                              !canDeleteUsers
                             }
                             className="shrink-0 text-gray-700 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
                             title={
-                              user.role === "SALESMANAGER"
+                              !canDeleteUsers
+                                ? "Sizda o'chirish huquqi yo'q"
+                                : user.role === "SALESMANAGER"
                                 ? "O'chirish"
                                 : "ROP delete endpoint berilmagan"
                             }

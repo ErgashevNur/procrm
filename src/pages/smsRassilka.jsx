@@ -35,7 +35,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentRole, ROLES } from "@/lib/rbac";
+import {
+  MANAGEMENT_ROLES,
+  canDeleteData,
+  getCurrentRole,
+} from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
@@ -301,6 +305,7 @@ function TemplateCard({
   template,
   active,
   canManage,
+  canDelete,
   onUse,
   onEdit,
   onDelete,
@@ -351,10 +356,12 @@ function TemplateCard({
               <Copy />
               Nusxa
             </Button>
-            <Button size="xs" variant="ghost" onClick={() => onDelete(template)}>
-              <Trash2 />
-              O'chirish
-            </Button>
+            {canDelete ? (
+              <Button size="xs" variant="ghost" onClick={() => onDelete(template)}>
+                <Trash2 />
+                O'chirish
+              </Button>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -440,7 +447,8 @@ export default function SmsRassilka() {
   const projectId = getProjectId();
   const companyId = getCompanyId();
   const role = getCurrentRole();
-  const canManageTemplates = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
+  const canManageTemplates = MANAGEMENT_ROLES.includes(role);
+  const canDeleteTemplates = canManageTemplates && canDeleteData(role);
 
   const [leads, setLeads] = useState([]);
   const [history, setHistory] = useState([]);
@@ -697,7 +705,7 @@ export default function SmsRassilka() {
   };
 
   const removeTemplate = async (template) => {
-    if (!canManageTemplates) {
+    if (!canDeleteTemplates) {
       toast.error("Sizda template o'chirish uchun ruxsat yo'q");
       return;
     }
@@ -1058,6 +1066,7 @@ export default function SmsRassilka() {
                           template={template}
                           active={activeTemplateId === template?.id}
                           canManage={canManageTemplates}
+                          canDelete={canDeleteTemplates}
                           onUse={applyTemplate}
                           onEdit={openEditTemplate}
                           onDelete={removeTemplate}

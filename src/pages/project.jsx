@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { canDeleteData, getCurrentRole } from "@/lib/rbac";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 // const IMG_API = "https://back.prohome.uz/api/v1/image";
@@ -407,7 +408,7 @@ function ProjectDrawer({ project, onClose, onSaved }) {
 }
 
 // ── Project Card ──────────────────────────────────────────────────────────────
-function ProjectCard({ project, onEdit, onDelete, index }) {
+function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
   return (
     <div
       className="group relative overflow-hidden rounded-2xl border border-white/6 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/12"
@@ -446,12 +447,14 @@ function ProjectCard({ project, onEdit, onDelete, index }) {
           >
             <Pencil size={12} />
           </button>
-          <button
-            onClick={() => onDelete(project)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400"
-          >
-            <Trash2 size={12} />
-          </button>
+          {canDelete ? (
+            <button
+              onClick={() => onDelete(project)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400"
+            >
+              <Trash2 size={12} />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -502,6 +505,8 @@ function CardSkeleton() {
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Projects() {
+  const role = getCurrentRole();
+  const canDeleteProjects = canDeleteData(role);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState(null); // null | "add" | project obj
@@ -528,6 +533,11 @@ export default function Projects() {
 
   const handleDelete = async () => {
     if (!delTarget || deleting) return;
+    if (!canDeleteProjects) {
+      toast.error("Sizda loyihani o'chirish uchun ruxsat yo'q");
+      setDelTarget(null);
+      return;
+    }
     setDeleting(true);
     try {
       const res = await apiFetch(`${API}/projects/${delTarget.id}`, {
@@ -626,6 +636,7 @@ export default function Projects() {
                 index={i}
                 onEdit={(proj) => setDrawer(proj)}
                 onDelete={(proj) => setDelTarget(proj)}
+                canDelete={canDeleteProjects}
               />
             ))}
           </div>
