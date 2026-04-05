@@ -258,7 +258,7 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: "form/:id",
+    path: ":projectName/form/:id",
     element: withLazy(<FormPage />),
     errorElement: withLazy(<AppErrorFallback />),
   },

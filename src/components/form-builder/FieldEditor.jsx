@@ -29,6 +29,8 @@ export default function FieldEditor({ field, onChange, onRemove }) {
             </SelectTrigger>
             <SelectContent className="border-[#1e3448] bg-[#0d1e2e]">
               <SelectItem value="text">Text</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="phone">Phone</SelectItem>
               <SelectItem value="textarea">Textarea</SelectItem>
               <SelectItem value="select">Select</SelectItem>
               <SelectItem value="checkbox">Checkbox</SelectItem>
