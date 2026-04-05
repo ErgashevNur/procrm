@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
-import { canDeleteData, getCurrentRole } from "@/lib/rbac";
+import { ROLES, canDeleteData, getCurrentRole } from "@/lib/rbac";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "../components/ui/button";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
+import { getProjectSlugFromStorage, getPublicFormUrl } from "@/lib/formLinks";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -139,7 +140,6 @@ const createField = (type = "text") => ({
   options: type === "select" ? ["Variant 1", "Variant 2"] : [],
 });
 
-const getFormStorageKey = (projectId) => `prohome:source-forms:${projectId}`;
 const HEADER_IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
 const HEADER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 const HEADER_IMAGE_MAX_WIDTH = 1600;
@@ -165,7 +165,9 @@ function loadImage(src) {
 
 async function optimizeHeaderImage(file) {
   if (!file) return null;
-  if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.type)) {
+  if (
+    !["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.type)
+  ) {
     throw new Error("Faqat PNG, JPG yoki WEBP formatlari qo'llanadi");
   }
   if (file.size > HEADER_IMAGE_MAX_SIZE) {
@@ -198,6 +200,73 @@ async function optimizeHeaderImage(file) {
     height,
   };
 }
+
+function normalizeFormListResponse(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+}
+
+function normalizeFieldOptions(rawOptions) {
+  if (Array.isArray(rawOptions)) return rawOptions.filter(Boolean);
+  if (rawOptions && typeof rawOptions === "object") {
+    return Object.entries(rawOptions)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([, value]) => value)
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeTemplateFields(template) {
+  const rawFields = Array.isArray(template?.fields)
+    ? template.fields
+    : Array.isArray(template?.formFields)
+      ? template.formFields
+      : [];
+
+  return rawFields.map((field, index) => ({
+    ...field,
+    fieldId: Number(field?.fieldId || field?.id) || undefined,
+    id: `field-${field?.fieldId || field?.id || index + 1}-${Math.random().toString(36).slice(2, 7)}`,
+    label: field?.label || `Field ${index + 1}`,
+    type: String(field?.fieldType || field?.type || "text").toLowerCase(),
+    required: Boolean(field?.required ?? field?.isRequired),
+    placeholder: field?.placeholder || "",
+    options: normalizeFieldOptions(field?.options),
+  }));
+}
+
+function normalizeTemplateItem(template, projectSlug) {
+  const id = Number(template?.id || template?.formTemplateId);
+  if (!id) return null;
+
+  const headerImage = template?.headerImage
+    ? template.headerImage
+    : template?.image
+      ? {
+          dataUrl: `${API}/image/${template.image}`,
+          name: template.image,
+          _persisted: true,
+        }
+      : null;
+
+  return {
+    ...template,
+    id,
+    title: template?.name || template?.title || `Forma #${id}`,
+    description: template?.description || "",
+    telegramUrl: template?.telegramUrl || "",
+    fields: normalizeTemplateFields(template),
+    createdAt:
+      template?.createdAt || template?.created_at || new Date().toISOString(),
+    headerImage,
+    sourceId: "google-form",
+    link: getPublicFormUrl(id, { projectSlug }),
+  };
+}
+
 
 function FormPreviewField({ field }) {
   if (field.type === "textarea") {
@@ -243,13 +312,7 @@ function FormPreviewField({ field }) {
   );
 }
 
-function SortableFormField({
-  field,
-  index,
-  onUpdate,
-  onRemove,
-  totalFields,
-}) {
+function SortableFormField({ field, index, onUpdate, onRemove, totalFields }) {
   const {
     attributes,
     listeners,
@@ -326,9 +389,7 @@ function SortableFormField({
       <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
         <input
           value={field.placeholder}
-          onChange={(e) =>
-            onUpdate(field.id, { placeholder: e.target.value })
-          }
+          onChange={(e) => onUpdate(field.id, { placeholder: e.target.value })}
           placeholder="Placeholder"
           className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
         />
@@ -374,13 +435,19 @@ function FormBuilderDialog({
   open,
   onOpenChange,
   source,
+  initialTemplateId,
   forms,
-  onSave,
-  onDelete,
+  formsLoading,
+  onSaved,
+  onLoadTemplate,
+  onDeleteTemplate,
+  canDeleteTemplates,
   projectId,
+  projectSlug,
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [telegramUrl, setTelegramUrl] = useState("");
   const [fields, setFields] = useState([createField("text")]);
   const [activeFieldId, setActiveFieldId] = useState(null);
   const [headerImage, setHeaderImage] = useState(null);
@@ -388,23 +455,135 @@ function FormBuilderDialog({
   const [saving, setSaving] = useState(false);
   const [savedLink, setSavedLink] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [loadingTemplateId, setLoadingTemplateId] = useState(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState(null);
   const fileInputRef = useRef(null);
 
   const fieldSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  useEffect(() => {
-    if (!open) return;
+  const resetBuilderState = () => {
     setTitle(source ? `${source.name} lead form` : "");
     setDescription("");
+    setTelegramUrl("");
     setFields([createField("text")]);
     setHeaderImage(null);
     setImageLoading(false);
     setSaving(false);
     setSavedLink(null);
     setCopied(false);
+    setEditingTemplate(null);
+    setLoadingTemplateId(null);
+    setDeletingTemplateId(null);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    resetBuilderState();
   }, [open, source]);
+
+  useEffect(() => {
+    if (!open || !initialTemplateId || !onLoadTemplate) return;
+    if (Number(editingTemplate?.id) === Number(initialTemplateId)) return;
+    if (Number(loadingTemplateId) === Number(initialTemplateId)) return;
+
+    let cancelled = false;
+    setLoadingTemplateId(Number(initialTemplateId));
+
+    (async () => {
+      try {
+        const fullTemplate = await onLoadTemplate(initialTemplateId);
+        if (!cancelled && fullTemplate) {
+          hydrateEditorFromTemplate(fullTemplate);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(error.message || "Formani yuklab bo'lmadi");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingTemplateId(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    initialTemplateId,
+    onLoadTemplate,
+    editingTemplate?.id,
+    loadingTemplateId,
+  ]);
+
+  const hydrateEditorFromTemplate = (template) => {
+    if (!template) return;
+    const mappedFields =
+      Array.isArray(template.fields) && template.fields.length > 0
+        ? template.fields.map((field, index) => {
+            const rawType = String(
+              field?.type || field?.fieldType || "text",
+            ).toLowerCase();
+            const safeType = FORM_FIELD_TYPES.some((t) => t.value === rawType)
+              ? rawType
+              : "text";
+
+            return {
+              id: `field-${field?.fieldId || field?.id || index + 1}-${Math.random().toString(36).slice(2, 7)}`,
+              fieldId: Number(field?.fieldId || field?.id) || undefined,
+              label: String(field?.label || "").trim(),
+              type: safeType,
+              required: Boolean(field?.required ?? field?.isRequired),
+              placeholder: String(field?.placeholder || ""),
+              options: normalizeFieldOptions(field?.options),
+            };
+          })
+        : [createField("text")];
+
+    setEditingTemplate(template);
+    setTitle(template.title || template.name || "");
+    setDescription(template.description || "");
+    setTelegramUrl(template.telegramUrl || "");
+    setFields(mappedFields);
+    setHeaderImage(template.headerImage || null);
+    setSavedLink(template.link || getPublicFormUrl(template.id, { projectSlug }));
+    setCopied(false);
+  };
+
+  const handleStartEdit = async (templateSummary) => {
+    if (!templateSummary?.id || !onLoadTemplate) return;
+
+    setLoadingTemplateId(templateSummary.id);
+    try {
+      const fullTemplate = await onLoadTemplate(templateSummary.id);
+      if (fullTemplate) hydrateEditorFromTemplate(fullTemplate);
+    } catch (error) {
+      toast.error(error.message || "Formani yuklab bo'lmadi");
+    } finally {
+      setLoadingTemplateId(null);
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId) => {
+    if (!onDeleteTemplate || !templateId) return;
+    if (!window.confirm("Formani o'chirishni tasdiqlaysizmi?")) return;
+
+    setDeletingTemplateId(templateId);
+    try {
+      await onDeleteTemplate(templateId);
+      if (Number(editingTemplate?.id) === Number(templateId)) {
+        resetBuilderState();
+      }
+    } catch (error) {
+      toast.error(error.message || "Formani o'chirib bo'lmadi");
+    } finally {
+      setDeletingTemplateId(null);
+    }
+  };
 
   const updateField = (fieldId, patch) => {
     setFields((prev) =>
@@ -444,44 +623,93 @@ function FormBuilderDialog({
       return;
     }
 
+    if (loadingTemplateId) {
+      toast.error("Forma ma'lumotlari yuklanmoqda, biroz kuting");
+      return;
+    }
+
+    const isEditMode = Boolean(editingTemplate?.id);
+    if (initialTemplateId && !isEditMode) {
+      toast.error("Tahrirlash uchun forma yuklanmadi. Qayta ochib ko'ring");
+      return;
+    }
+
     const normalizedFields = fields
-      .map((field, index) => ({
-        label: field.label.trim() || `Field ${index + 1}`,
-        placeholder: field.placeholder.trim(),
-        fieldType: field.type.toUpperCase(),
-        isRequired: field.required,
-        order: index,
-        options:
-          field.type === "select"
-            ? field.options
-                .map((o) => o.trim())
-                .filter(Boolean)
-                .reduce((acc, opt, i) => ({ ...acc, [String(i)]: opt }), {})
-            : {},
-      }))
-      .filter((field) => field.fieldType !== "SELECT" || Object.keys(field.options).length > 0);
+      .map((field, index) => {
+        const payloadField = {
+          label: field.label.trim() || `Field ${index + 1}`,
+          placeholder: field.placeholder.trim(),
+          fieldType: field.type.toUpperCase(),
+          isRequired: field.required,
+          order: index,
+          options:
+            field.type === "select"
+              ? field.options
+                  .map((o) => o.trim())
+                  .filter(Boolean)
+                  .reduce((acc, opt, i) => ({ ...acc, [String(i)]: opt }), {})
+              : {},
+        };
+
+        const persistedFieldId = Number(field.fieldId);
+        if (persistedFieldId > 0) {
+          payloadField.id = persistedFieldId;
+        }
+
+        return payloadField;
+      })
+      .filter(
+        (field) =>
+          field.fieldType !== "SELECT" || Object.keys(field.options).length > 0,
+      );
 
     if (normalizedFields.length === 0) {
       toast.error("Kamida bitta to'g'ri field qo'shing");
       return;
     }
 
+    const currentFieldIds = normalizedFields
+      .map((field) => Number(field.id))
+      .filter((id) => id > 0);
+    const existingFieldIds = (editingTemplate?.fields || [])
+      .map((field) => Number(field?.fieldId || field?.id))
+      .filter((id) => id > 0);
+    const deletedFieldIds = Array.from(
+      new Set(existingFieldIds.filter((id) => !currentFieldIds.includes(id))),
+    );
+
     const token = localStorage.getItem("user");
     setSaving(true);
+
     try {
-      const res = await fetch(`${API}/form-template`, {
-        method: "POST",
+      const endpoint = isEditMode
+        ? `${API}/form-template/${editingTemplate.id}`
+        : `${API}/form-template`;
+
+      const imageValue = headerImage
+        ? headerImage._persisted
+          ? headerImage.name
+          : headerImage.dataUrl
+        : null;
+
+      const body = {
+        projectId: Number(projectId),
+        name: cleanTitle,
+        description: description.trim(),
+        telegramUrl: telegramUrl.trim(),
+        image: imageValue,
+        isActive: true,
+        fields: normalizedFields,
+        ...(isEditMode && deletedFieldIds.length > 0 ? { deletedFieldIds } : {}),
+      };
+
+      const res = await fetch(endpoint, {
+        method: isEditMode ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          projectId: Number(projectId),
-          name: cleanTitle,
-          description: description.trim(),
-          isActive: true,
-          fields: normalizedFields,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.status === 401) {
@@ -491,26 +719,26 @@ function FormBuilderDialog({
       }
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || "Saqlashda xatolik");
+        const msg = Array.isArray(e?.message) ? e.message.join(", ") : e?.message;
+        throw new Error(msg || "Saqlashda xatolik");
       }
 
-      const data = await res.json();
-      const link = `${window.location.origin}/form/${data.id}`;
+      const data = await res.json().catch(() => ({}));
+      const savedTemplateId = Number(data?.id || editingTemplate?.id || 0);
+      const link = getPublicFormUrl(savedTemplateId, { projectSlug });
       setSavedLink(link);
+      if (onSaved) await onSaved();
 
-      onSave({
-        id: data.id,
-        sourceId: source.id,
-        sourceName: source.name,
-        title: cleanTitle,
-        description: description.trim(),
-        headerImage,
-        fields: normalizedFields,
-        link,
-        createdAt: new Date().toISOString(),
-      });
-
-      toast.success("Forma muvaffaqiyatli yaratildi!");
+      if (isEditMode) {
+        const refreshed =
+          onLoadTemplate && savedTemplateId
+            ? await onLoadTemplate(savedTemplateId)
+            : null;
+        if (refreshed) hydrateEditorFromTemplate(refreshed);
+        toast.success("Forma muvaffaqiyatli yangilandi!");
+      } else {
+        toast.success("Forma muvaffaqiyatli yaratildi!");
+      }
     } catch (err) {
       toast.error(err.message || "Xatolik yuz berdi");
     } finally {
@@ -553,6 +781,20 @@ function FormBuilderDialog({
               : "Google Form creator"}
           </DialogTitle>
         </DialogHeader>
+        {editingTemplate && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
+            <span>
+              Tahrirlash rejimi: #{editingTemplate.id} {editingTemplate.title}
+            </span>
+            <button
+              type="button"
+              onClick={resetBuilderState}
+              className="rounded border border-amber-300/40 px-2 py-1 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-400/20"
+            >
+              Yangi forma
+            </button>
+          </div>
+        )}
         <div className="rounded-2xl border border-blue-400/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(15,34,49,0.7))] p-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-blue-200">
@@ -560,10 +802,12 @@ function FormBuilderDialog({
             </span>
             <div>
               <p className="text-sm font-semibold text-white">
-                Tezkor oqim: nom bering, field qo'shing, preview ko'ring, saqlang
+                Tezkor oqim: nom bering, field qo'shing, preview ko'ring,
+                saqlang
               </p>
               <p className="mt-1 text-sm text-blue-100/80">
-                Forma saqlanganidan so'ng public link olib, foydalanuvchilarga yuborishingiz mumkin.
+                Forma saqlanganidan so'ng public link olib, foydalanuvchilarga
+                yuborishingiz mumkin.
               </p>
             </div>
           </div>
@@ -602,6 +846,34 @@ function FormBuilderDialog({
                 placeholder="Forma nimaga ishlatiladi?"
                 className="min-h-24 w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
+              <label className="mt-4 mb-2 block text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                Telegram kanal URL
+              </label>
+              <div className="relative">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#229ED9]"
+                >
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.12 14.367l-2.95-.924c-.64-.204-.654-.64.136-.953l11.527-4.444c.533-.194 1.001.13.73.201z" />
+                </svg>
+                <input
+                  value={telegramUrl}
+                  onChange={(e) => setTelegramUrl(e.target.value)}
+                  placeholder="https://t.me/channelname"
+                  className="w-full rounded-xl border border-white/10 bg-[#091827] py-2 pr-3 pl-8 text-sm text-white outline-none"
+                />
+              </div>
+              {telegramUrl && !/^https?:\/\//.test(telegramUrl) && (
+                <p className="mt-1 text-[11px] text-amber-400">
+                  URL to'g'ri formatda bo'lishi kerak (https://...)
+                </p>
+              )}
+              <p className="mt-1 text-[11px] text-gray-500">
+                Submit qilingandan so'ng foydalanuvchi shu kanalga yo'naltiriladi
+              </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#091827] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -609,7 +881,8 @@ function FormBuilderDialog({
                       Header rasmi
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Mobilga mos banner. Tavsiya: 1600x600, PNG/JPG/WEBP, 5 MB gacha.
+                      Mobilga mos banner. Tavsiya: 1600x600, PNG/JPG/WEBP, 5 MB
+                      gacha.
                     </p>
                   </div>
                   <input
@@ -651,7 +924,8 @@ function FormBuilderDialog({
                     </div>
                   ) : (
                     <div className="flex aspect-[8/3] w-full items-center justify-center px-4 text-center text-xs text-gray-500">
-                      Header rasm yuklansa, form tepasida preview shu yerda ko'rinadi
+                      Header rasm yuklansa, form tepasida preview shu yerda
+                      ko'rinadi
                     </div>
                   )}
                 </div>
@@ -800,10 +1074,16 @@ function FormBuilderDialog({
                     Shu loyiha uchun yaratilgan Google Form variantlari
                   </p>
                 </div>
-                <span className="text-xs text-gray-500">{forms.length} ta</span>
+                <span className="text-xs text-gray-500">
+                  {formsLoading ? "..." : `${forms.length} ta`}
+                </span>
               </div>
               <div className="mt-3 space-y-2">
-                {forms.length === 0 ? (
+                {formsLoading ? (
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                    Formalar yuklanmoqda...
+                  </div>
+                ) : forms.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
                     Hali forma yaratilmagan
                   </div>
@@ -830,7 +1110,12 @@ function FormBuilderDialog({
                             {form.title}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                            <span>{form.fields.length} ta field</span>
+                            <span>
+                              {(Array.isArray(form.fields)
+                                ? form.fields.length
+                                : 0)}{" "}
+                              ta field
+                            </span>
                             {form.headerImage?.dataUrl && (
                               <>
                                 <span className="h-1 w-1 rounded-full bg-gray-500" />
@@ -866,11 +1151,26 @@ function FormBuilderDialog({
                           )}
                           <button
                             type="button"
-                            onClick={() => onDelete(form.id)}
-                            className="text-xs font-semibold text-red-300 transition hover:text-red-200"
+                            disabled={saving || loadingTemplateId === form.id}
+                            onClick={() => handleStartEdit(form)}
+                            className="text-xs font-semibold text-amber-300 transition hover:text-amber-200 disabled:opacity-50"
                           >
-                            O'chirish
+                            {loadingTemplateId === form.id
+                              ? "Yuklanmoqda..."
+                              : "Tahrirlash"}
                           </button>
+                          {canDeleteTemplates && (
+                            <button
+                              type="button"
+                              disabled={deletingTemplateId === form.id}
+                              onClick={() => handleDeleteTemplate(form.id)}
+                              className="text-xs font-semibold text-red-300 transition hover:text-red-200 disabled:opacity-50"
+                            >
+                              {deletingTemplateId === form.id
+                                ? "O'chirilmoqda..."
+                                : "O'chirish"}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -915,10 +1215,16 @@ function FormBuilderDialog({
               <Button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || Boolean(loadingTemplateId)}
                 className="w-full"
               >
-                {saving ? "Saqlanmoqda..." : "Formani saqlash"}
+                {loadingTemplateId
+                  ? "Yuklanmoqda..."
+                  : saving
+                  ? "Saqlanmoqda..."
+                  : editingTemplate
+                    ? "Formani yangilash"
+                    : "Formani saqlash"}
               </Button>
             )}
           </div>
@@ -1101,8 +1407,10 @@ function InsertModal({
 export default function AddStatus() {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
+  const projectSlug = getProjectSlugFromStorage();
   const role = getCurrentRole();
   const canDeleteStatuses = canDeleteData(role);
+  const canDeleteTemplates = [ROLES.SUPERADMIN, ROLES.ROP, ROLES.ADMIN].includes(role);
 
   const boardScrollRef = useRef(null);
   const [columns, setColumns] = useState([]);
@@ -1117,7 +1425,11 @@ export default function AddStatus() {
   const [templateModal, setTemplateModal] = useState(null);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [formBuilderSource, setFormBuilderSource] = useState(null);
-  const [channelForms, setChannelForms] = useState({});
+  const [formBuilderTemplateId, setFormBuilderTemplateId] = useState(null);
+  const [formTemplates, setFormTemplates] = useState([]);
+  const [formsLoading, setFormsLoading] = useState(false);
+  const formClickTimerRef = useRef(null);
+  const [contextMenu, setContextMenu] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -1133,6 +1445,45 @@ export default function AddStatus() {
 
   const closeTemplateModal = () => setTemplateModal(null);
 
+  const clearFormClickTimer = () => {
+    if (formClickTimerRef.current) {
+      clearTimeout(formClickTimerRef.current);
+      formClickTimerRef.current = null;
+    }
+  };
+
+  const openFormBuilder = (template, templateId = null) => {
+    if (!template) return;
+    setSourceModalOpen(false);
+    setFormBuilderTemplateId(templateId ? Number(templateId) : null);
+    setFormBuilderSource(template);
+  };
+
+  const handleFormCardClick = (template, formId) => {
+    clearFormClickTimer();
+    formClickTimerRef.current = setTimeout(() => {
+      openFormBuilder(template, formId);
+      formClickTimerRef.current = null;
+    }, 220);
+  };
+
+  const handleFormCardDoubleClick = (link) => {
+    clearFormClickTimer();
+    if (!link) return;
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
+
+  const handleFormContextMenu = (e, form) => {
+    e.preventDefault();
+    e.stopPropagation();
+    clearFormClickTimer();
+    setContextMenu({ x: e.clientX, y: e.clientY, form });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  useEffect(() => () => clearFormClickTimer(), []);
+
   useEffect(() => {
     if (!token) {
       window.location.href = "/login";
@@ -1143,25 +1494,8 @@ export default function AddStatus() {
       return;
     }
     fetchColumns();
+    fetchFormTemplates();
   }, []);
-
-  useEffect(() => {
-    if (!projectId) return;
-    try {
-      const raw = localStorage.getItem(getFormStorageKey(projectId));
-      setChannelForms(raw ? JSON.parse(raw) : {});
-    } catch {
-      setChannelForms({});
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    localStorage.setItem(
-      getFormStorageKey(projectId),
-      JSON.stringify(channelForms),
-    );
-  }, [channelForms, projectId]);
 
   const fetchColumns = async () => {
     try {
@@ -1184,6 +1518,91 @@ export default function AddStatus() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFormTemplates = async () => {
+    if (!projectId) {
+      setFormTemplates([]);
+      return;
+    }
+
+    setFormsLoading(true);
+    try {
+      const res = await fetch(`${API}/form-template/by/${projectId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      const normalized = normalizeFormListResponse(data)
+        .map((template) => normalizeTemplateItem(template, projectSlug))
+        .filter(Boolean);
+
+      setFormTemplates(normalized);
+    } catch {
+      setFormTemplates([]);
+      toast.error("Formalarni yuklab bo'lmadi");
+    } finally {
+      setFormsLoading(false);
+    }
+  };
+
+  const fetchFormTemplateById = async (templateId) => {
+    const res = await fetch(`${API}/form-template/${templateId}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login";
+      return null;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || "Formani yuklab bo'lmadi");
+    }
+
+    const data = await res.json();
+    return normalizeTemplateItem(data, projectSlug);
+  };
+
+  const deleteFormTemplate = async (templateId) => {
+    if (!canDeleteTemplates) {
+      toast.error("Sizda formani o'chirish uchun ruxsat yo'q");
+      return;
+    }
+
+    const res = await fetch(`${API}/form-template/${templateId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login";
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || "Formani o'chirib bo'lmadi");
+    }
+
+    await fetchFormTemplates();
+    toast.success("Forma o'chirildi");
   };
 
   const handleDragEnd = async ({ active, over }) => {
@@ -1221,12 +1640,6 @@ export default function AddStatus() {
     setColumns(reordered);
 
     const afterId = movedIndex === 0 ? 0 : reordered[movedIndex - 1].id;
-
-    console.log(
-      `[Drag] "${columns.find((c) => c.id === active.id)?.name}" (id: ${active.id}) → after id: ${afterId}`,
-      afterId === 0 ? "(birinchi o'ringa)" : `(id ${afterId} dan keyin)`,
-    );
-
     try {
       const res = await fetch(`${API}/status/update/order`, {
         method: "PATCH",
@@ -1342,31 +1755,7 @@ export default function AddStatus() {
     }
   };
 
-  const saveChannelForm = (form) => {
-    setChannelForms((prev) => {
-      const current = Array.isArray(prev[form.sourceId])
-        ? prev[form.sourceId]
-        : [];
-      return {
-        ...prev,
-        [form.sourceId]: [form, ...current],
-      };
-    });
-    toast.success("Google Form saqlandi");
-  };
-
-  const googleForms = channelForms["google-form"] || [];
-
-  const deleteChannelForm = (channelId, formId) => {
-    if (!canDeleteStatuses) {
-      toast.error("Sizda formani o'chirish uchun ruxsat yo'q");
-      return;
-    }
-    setChannelForms((prev) => ({
-      ...prev,
-      [channelId]: (prev[channelId] || []).filter((form) => form.id !== formId),
-    }));
-  };
+  const googleForms = formTemplates;
 
   if (loading) {
     return (
@@ -1407,7 +1796,7 @@ export default function AddStatus() {
                 Google Form va boshqa kanallar
               </p>
               <p className="mt-5 text-xs text-gray-500">
-                Yangi mijozlar ushbu kanallardan kelishi mumkin
+                Sizning yasagan formalaringiz royhati.
               </p>
             </div>
             <div className="mt-4 flex flex-col gap-3">
@@ -1446,6 +1835,7 @@ export default function AddStatus() {
                             googleForms.slice(0, 3).map((form) => (
                               <div
                                 key={form.id}
+                                onContextMenu={(e) => handleFormContextMenu(e, form)}
                                 className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
                               >
                                 <FileText />
@@ -1453,13 +1843,10 @@ export default function AddStatus() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    form.link
-                                      ? window.open(
-                                          form.link,
-                                          "_blank",
-                                          "noopener,noreferrer",
-                                        )
-                                      : setFormBuilderSource(card.template)
+                                    handleFormCardClick(card.template, form.id)
+                                  }
+                                  onDoubleClick={() =>
+                                    handleFormCardDoubleClick(form.link)
                                   }
                                   className="block w-full truncate text-left text-[12px] font-semibold text-blue-200 underline decoration-blue-300/60 underline-offset-3 transition hover:text-blue-100"
                                   title={form.title}
@@ -1796,10 +2183,10 @@ export default function AddStatus() {
               title="Lead yig'ish uchun Google Form uslubida savollar tuzing"
               type="button"
               onClick={() => {
-                setSourceModalOpen(false);
-                setFormBuilderSource(
+                openFormBuilder(
                   SOURCE_CARDS.find((card) => card.variant === "template")
                     ?.template || null,
+                  null,
                 );
               }}
               className="group relative flex items-center justify-between overflow-hidden rounded-xl border border-blue-400/30 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(14,27,42,0.9))] p-4 text-left transition hover:border-blue-300/50 hover:bg-[linear-gradient(135deg,rgba(59,130,246,0.22),rgba(14,27,42,0.95))] sm:col-span-2"
@@ -1833,19 +2220,76 @@ export default function AddStatus() {
       <FormBuilderDialog
         open={!!formBuilderSource}
         onOpenChange={(open) => {
-          if (!open) setFormBuilderSource(null);
+          if (!open) {
+            setFormBuilderSource(null);
+            setFormBuilderTemplateId(null);
+          }
         }}
         source={formBuilderSource}
-        forms={
-          formBuilderSource ? channelForms[formBuilderSource.id] || [] : []
-        }
-        onSave={saveChannelForm}
-        onDelete={(formId) => {
-          if (!formBuilderSource) return;
-          deleteChannelForm(formBuilderSource.id, formId);
-        }}
+        initialTemplateId={formBuilderTemplateId}
+        forms={formBuilderSource ? googleForms : []}
+        formsLoading={formsLoading}
+        onSaved={fetchFormTemplates}
+        onLoadTemplate={fetchFormTemplateById}
+        onDeleteTemplate={deleteFormTemplate}
+        canDeleteTemplates={canDeleteTemplates}
         projectId={projectId}
+        projectSlug={projectSlug}
       />
+
+      {/* Form card right-click context menu */}
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={closeContextMenu}
+            onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+          />
+          <div
+            className="fixed z-50 min-w-[160px] overflow-hidden rounded-xl border border-[#1a3a52] bg-[#0f2942] shadow-2xl"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                closeContextMenu();
+                if (contextMenu.form?.link) {
+                  window.open(contextMenu.form.link, "_blank", "noopener,noreferrer");
+                }
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
+            >
+              <Eye size={14} className="shrink-0 text-blue-400" />
+              Ko'rish
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeContextMenu();
+                const SOURCE_TEMPLATE = SOURCE_CARDS[0]?.template;
+                if (SOURCE_TEMPLATE) openFormBuilder(SOURCE_TEMPLATE, contextMenu.form?.id);
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
+            >
+              <Pen size={14} className="shrink-0 text-amber-400" />
+              Tahrirlash
+            </button>
+            {canDeleteTemplates && (
+              <button
+                type="button"
+                onClick={() => {
+                  closeContextMenu();
+                  deleteFormTemplate(contextMenu.form?.id);
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#e05d5d1a] hover:text-red-300"
+              >
+                <Trash2 size={14} className="shrink-0 text-red-400" />
+                O'chirish
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
