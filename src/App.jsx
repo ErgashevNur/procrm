@@ -24,6 +24,7 @@ import ProMarket from "./pages/proMarket";
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
 const FormPage = lazy(() => import("./pages/FormPage"));
+const GoogleAuthCallback = lazy(() => import("./pages/googleAuthCallback"));
 const LandingPage = lazy(() => import("./pages/landingPage"));
 const Login = lazy(() => import("./pages/login"));
 const Register = lazy(() => import("./pages/register"));
@@ -127,6 +128,11 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: withLazy(<Login />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
+    path: "/auth/google/callback",
+    element: withLazy(<GoogleAuthCallback />),
     errorElement: withLazy(<AppErrorFallback />),
   },
   {

@@ -54,12 +54,12 @@ const features = [
       </svg>
     ),
     title: "Xavfsiz va tez",
-    desc: "256-bit shifrlash, rol asosida ruxsat va tezkor serverlar bilan ma'lumotlaringiz doim himoyada.",
+    desc: "Rol asosida ruxsat va tezkor serverlar bilan ma'lumotlaringiz doim himoyada.",
   },
 ];
 
 const steps = [
-  { num: "01", title: "Ro'yxatdan o'ting", desc: "30 soniyada bepul hisob oching. Karta kerak emas." },
+  { num: "01", title: "Ro'yxatdan o'ting", desc: "30 soniyada bepul hisob oching." },
   { num: "02", title: "Jamoangizni qo'shing", desc: "Xodimlarni taklif qiling, rol va ruxsatlarni belgilang." },
   { num: "03", title: "Leadlarni kiriting", desc: "Mijozlarni qo'shing yoki mavjud CRM dan import qiling." },
   { num: "04", title: "O'sishni kuzating", desc: "AI tahlili va dashboard orqali natijani real vaqtda ko'ring." },
@@ -67,21 +67,21 @@ const steps = [
 
 const testimonials = [
   {
-    name: "Jasur Mirzayev",
+    name: "Wenny Estate",
     role: "CEO, TechUz",
     initials: "JM",
     color: "#0ea5e9",
     text: "Kotibam bizning savdomizni 3 oyda ikki barobarga oshirdi. Pipeline va AI eslatmalar — eng zo'r xususiyat.",
   },
   {
-    name: "Nilufar Karimova",
+    name: "Kafsan Group",
     role: "Sales Director, BrandHub",
     initials: "NK",
     color: "#8b5cf6",
     text: "Ilgari Excel bilan boshim og'rirdi. Endi hamma narsa bir joyda, jamoa ham xursand, men ham.",
   },
   {
-    name: "Akbar Toshmatov",
+    name: "Hengtai Group",
     role: "Founder, DigitalFlow",
     initials: "AT",
     color: "#10b981",
@@ -317,6 +317,9 @@ function Modal({ onClose }) {
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === "undefined" ? 1280 : window.innerWidth,
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -324,6 +327,16 @@ export default function LandingPage() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1100;
+  const pagePadding = isMobile ? "1rem" : isTablet ? "4.5%" : "6%";
 
   const scrollTo = (id) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -363,7 +376,9 @@ export default function LandingPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "1rem 6%",
+          flexWrap: "nowrap",
+          gap: isMobile ? 10 : 16,
+          padding: isMobile ? "0.9rem 1rem" : `1rem ${pagePadding}`,
           position: "sticky",
           top: 0,
           zIndex: 99,
@@ -373,31 +388,49 @@ export default function LandingPage() {
           transition: "all .3s",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 10, minWidth: 0, flexShrink: 1 }}>
           <div
             style={{
-              width: 34,
-              height: 34,
+              width: isMobile ? 32 : 34,
+              height: isMobile ? 32 : 34,
               borderRadius: 9,
-              background: "rgba(14,165,233,.15)",
-              border: "1px solid rgba(14,165,233,.25)",
+              background:
+                "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+              border: "1px solid rgba(255,255,255,.82)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
+              flexShrink: 0,
+              boxShadow:
+                "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="8" height="8" rx="2" fill="rgba(56,189,248,.8)" />
-              <rect x="13" y="3" width="8" height="8" rx="2" fill="rgba(56,189,248,.4)" />
-              <rect x="3" y="13" width="8" height="8" rx="2" fill="rgba(56,189,248,.4)" />
-              <rect x="13" y="13" width="8" height="8" rx="2" fill="rgba(56,189,248,.8)" />
-            </svg>
+            <img
+              src="/logo.png"
+              alt="Kotibam"
+              style={{
+                width: isMobile ? 18 : 19,
+                height: isMobile ? 18 : 19,
+                objectFit: "contain",
+              }}
+            />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>Kotibam</span>
+          <span
+            style={{
+              fontSize: isMobile ? 14 : 15,
+              fontWeight: 700,
+              color: "#fff",
+              letterSpacing: "-0.01em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Kotibam
+          </span>
         </div>
 
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: isMobile ? 8 : 10, width: "auto", flexShrink: 0 }}>
           <button
             className="btn-g"
             onClick={() => navigate("/login")}
@@ -405,12 +438,13 @@ export default function LandingPage() {
               background: "transparent",
               border: "1px solid rgba(255,255,255,.12)",
               color: "rgba(255,255,255,.65)",
-              padding: "7px 18px",
+              padding: isMobile ? "7px 12px" : "7px 18px",
               borderRadius: 8,
               fontFamily: "Inter, sans-serif",
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               fontWeight: 500,
               cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
             Kirish
@@ -422,12 +456,13 @@ export default function LandingPage() {
               background: "#0ea5e9",
               border: "none",
               color: "#fff",
-              padding: "7px 18px",
+              padding: isMobile ? "7px 12px" : "7px 18px",
               borderRadius: 8,
               fontFamily: "Inter, sans-serif",
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               fontWeight: 600,
               cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
             Ro'yxatdan o'tish
@@ -435,10 +470,10 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section style={{ padding: "7rem 6% 5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -120, left: "50%", transform: "translateX(-50%)", width: 700, height: 700, borderRadius: "50%", background: "rgba(14,165,233,.08)", filter: "blur(80px)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: 180, left: "5%", width: 300, height: 300, borderRadius: "50%", background: "rgba(99,102,241,.06)", filter: "blur(60px)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: 150, right: "5%", width: 260, height: 260, borderRadius: "50%", background: "rgba(16,185,129,.05)", filter: "blur(55px)", pointerEvents: "none" }} />
+      <section style={{ padding: isMobile ? "4.5rem 1rem 3.5rem" : `7rem ${pagePadding} 5rem`, textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -120, left: "50%", transform: "translateX(-50%)", width: isMobile ? 380 : 700, height: isMobile ? 380 : 700, borderRadius: "50%", background: "rgba(14,165,233,.08)", filter: "blur(80px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 180, left: "5%", width: isMobile ? 180 : 300, height: isMobile ? 180 : 300, borderRadius: "50%", background: "rgba(99,102,241,.06)", filter: "blur(60px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 150, right: "5%", width: isMobile ? 160 : 260, height: isMobile ? 160 : 260, borderRadius: "50%", background: "rgba(16,185,129,.05)", filter: "blur(55px)", pointerEvents: "none" }} />
 
         <div className="fu d1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(14,165,233,.1)", border: "1px solid rgba(14,165,233,.2)", borderRadius: 100, padding: "5px 16px", marginBottom: "1.8rem" }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#38bdf8" }} />
@@ -453,8 +488,8 @@ export default function LandingPage() {
           <span style={{ color: "#0ea5e9" }}>aqlli kotibi</span>
         </h1>
 
-        <p className="fu d3" style={{ maxWidth: 580, margin: "0 auto 2.8rem", fontSize: "1.05rem", lineHeight: 1.78, color: "rgba(255,255,255,.44)", fontWeight: 300 }}>
-          Kotibam — savdo jamoalari uchun yaratilgan AI CRM platforma.
+        <p className="fu d3" style={{ maxWidth: 580, margin: "0 auto 2.8rem", fontSize: isMobile ? "0.96rem" : "1.05rem", lineHeight: isMobile ? 1.7 : 1.78, color: "rgba(255,255,255,.44)", fontWeight: 300 }}>
+          Kotibam — savdo jamoalari uchun yaratilgan  CRM platforma.
           <br />
           Leadlar, vazifalar, tahlil va AI kotib — hammasi bitta tizimda.
         </p>
@@ -472,9 +507,10 @@ export default function LandingPage() {
         <div
           className="fu d5"
           style={{
-            display: "flex",
-            justifyContent: "center",
+            display: "grid",
+            gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
             marginTop: "4.5rem",
+            width: "100%",
             maxWidth: 680,
             margin: "4.5rem auto 0",
             border: "1px solid rgba(255,255,255,.07)",
@@ -486,7 +522,20 @@ export default function LandingPage() {
             ([num, label]) => (
               <div
                 key={label}
-                style={{ flex: 1, minWidth: 120, padding: "1.5rem 1rem", textAlign: "center", background: "#0d1220", borderRight: "1px solid rgba(255,255,255,.07)" }}
+                style={{
+                  minWidth: 120,
+                  padding: isMobile ? "1.2rem 0.8rem" : "1.5rem 1rem",
+                  textAlign: "center",
+                  background: "#0d1220",
+                  borderRight:
+                    !isMobile && label !== "AI ishlaydi"
+                      ? "1px solid rgba(255,255,255,.07)"
+                      : "none",
+                  borderBottom:
+                    isMobile && (label === "Faol kompaniya" || label === "Mijoz mamnuniyati")
+                      ? "1px solid rgba(255,255,255,.07)"
+                      : "none",
+                }}
               >
                 <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "#0ea5e9", letterSpacing: "-0.02em" }}>{num}</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,.32)", marginTop: 4 }}>{label}</div>
@@ -496,7 +545,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="features" style={{ padding: "5rem 6%", background: "#080d17" }}>
+      <section id="features" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}`, background: "#080d17" }}>
         <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Imkoniyatlar</div>
           <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff", marginBottom: 12 }}>
@@ -510,7 +559,11 @@ export default function LandingPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : isTablet
+                ? "repeat(2, minmax(0, 1fr))"
+                : "repeat(3, minmax(0, 1fr))",
             gap: "1px",
             background: "rgba(255,255,255,.06)",
             border: "1px solid rgba(255,255,255,.06)",
@@ -522,7 +575,7 @@ export default function LandingPage() {
             <div
               key={f.title}
               className="feat-card"
-              style={{ background: "#0b1018", padding: "2.2rem", border: "1px solid transparent" }}
+              style={{ background: "#0b1018", padding: isMobile ? "1.4rem" : "2.2rem", border: "1px solid transparent" }}
             >
               <div
                 style={{
@@ -547,7 +600,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how" style={{ padding: "5rem 6%" }}>
+      <section id="how" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}` }}>
         <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Qanday ishlaydi</div>
           <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>4 qadamda tayyor</h2>
@@ -556,7 +609,11 @@ export default function LandingPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : isTablet
+                ? "repeat(2, minmax(0, 1fr))"
+                : "repeat(4, minmax(0, 1fr))",
             gap: "1.5rem",
             maxWidth: 900,
             margin: "0 auto",
@@ -575,7 +632,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="testimonials" style={{ padding: "5rem 6%", background: "#080d17" }}>
+      <section id="testimonials" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}`, background: "#080d17" }}>
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Mijozlar fikri</div>
           <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>Ular allaqachon o'sdi</h2>
@@ -622,13 +679,13 @@ export default function LandingPage() {
 
       
 
-      <section style={{ padding: "0 6% 5rem" }}>
+      <section style={{ padding: isMobile ? "0 1rem 3.5rem" : `0 ${pagePadding} 5rem` }}>
         <div
           style={{
             background: "linear-gradient(135deg,#0c1a30 0%,#0a1220 55%,#0d1a20 100%)",
             border: "1px solid rgba(14,165,233,.14)",
             borderRadius: 24,
-            padding: "4rem 3rem",
+            padding: isMobile ? "2.2rem 1.2rem" : "4rem 3rem",
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
@@ -651,22 +708,37 @@ export default function LandingPage() {
       <footer
         style={{
           borderTop: "1px solid rgba(255,255,255,.06)",
-          padding: "2rem 6%",
+          padding: isMobile ? "1.2rem 1rem 2rem" : `2rem ${pagePadding}`,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: isMobile ? "center" : "space-between",
           flexWrap: "wrap",
           gap: "1rem",
+          textAlign: isMobile ? "center" : "left",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(14,165,233,.15)", border: "1px solid rgba(14,165,233,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="8" height="8" rx="2" fill="rgba(56,189,248,.8)" />
-              <rect x="13" y="3" width="8" height="8" rx="2" fill="rgba(56,189,248,.4)" />
-              <rect x="3" y="13" width="8" height="8" rx="2" fill="rgba(56,189,248,.4)" />
-              <rect x="13" y="13" width="8" height="8" rx="2" fill="rgba(56,189,248,.8)" />
-            </svg>
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              background:
+                "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+              border: "1px solid rgba(255,255,255,.82)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              boxShadow:
+                "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
+            }}
+          >
+            <img
+              src="/logo.png"
+              alt="Kotibam"
+              style={{ width: 16, height: 16, objectFit: "contain" }}
+            />
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Kotibam</span>
         </div>

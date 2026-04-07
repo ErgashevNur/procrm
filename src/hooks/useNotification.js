@@ -23,6 +23,18 @@ const BROADCAST_CHANNEL_NAME = "prohome-notifications";
 const NotificationContext = createContext(null);
 const NOTIFICATION_POLL_INTERVAL = 15000;
 
+function isPushSetupEnabled() {
+  if (typeof window === "undefined") return false;
+  if (!VAPID_KEY) return false;
+
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return false;
+  }
+
+  return true;
+}
+
 function hasActiveSession() {
   return Boolean(localStorage.getItem("user"));
 }
@@ -128,7 +140,8 @@ export const requestDeviceToken = async () => {
     typeof window === "undefined" ||
     !("Notification" in window) ||
     !("serviceWorker" in navigator) ||
-    !window.isSecureContext
+    !window.isSecureContext ||
+    !isPushSetupEnabled()
   ) {
     return null;
   }
@@ -161,7 +174,7 @@ export const requestDeviceToken = async () => {
     }
     return fallbackToken || null;
   } catch (error) {
-    console.error("Device token olishda xato:", error);
+    console.warn("Device token olinmadi, push notification o'chirib o'tildi:", error);
     return localStorage.getItem("deviceToken");
   }
 };
@@ -496,6 +509,7 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    if (!isPushSetupEnabled()) return;
 
     let cancelled = false;
 
@@ -507,7 +521,7 @@ export function NotificationProvider({ children }) {
           await registerDeviceToken(accessToken, token);
         }
       } catch (error) {
-        console.error("Device tokenni ro'yxatdan o'tkazishda xato:", error);
+        console.warn("Device token ro'yxatdan o'tmadi, push notification o'chirib o'tildi:", error);
       }
     };
 
@@ -520,6 +534,7 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    if (!isPushSetupEnabled()) return;
 
     let unsubscribe = null;
     let disposed = false;
@@ -537,8 +552,8 @@ export function NotificationProvider({ children }) {
           });
         });
       } catch (error) {
-        console.error(
-          "Foreground notification listener ishga tushmadi:",
+        console.warn(
+          "Foreground notification listener ishga tushmadi, push notification o'chirib o'tildi:",
           error,
         );
       }
