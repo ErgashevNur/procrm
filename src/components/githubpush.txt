@@ -1,8 +1,5 @@
-GitHubga push qilish uchun code
-# git add . && git commit -m && git pull
+git switch test -> o'zgarishlarni olib kelamiz,
 
-GitHub ozgarishlarni qabul qilish
-# git pull
+git switch -c [your_branch_name] -> branch ochib olamiz,
 
-GitHubga push qiladi
-# git push
+git hubga pull qilamiz va commit qilamiz, faqat test branchiga pull qilinadi !!!
