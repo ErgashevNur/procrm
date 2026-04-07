@@ -89,7 +89,10 @@ function normalizeNotificationPayload(payload) {
   const title = notification.title || data.title || "Yangi bildirishnoma";
   const body = notification.body || data.body || data.message || "";
   const createdAt =
-    data.createdAt || data.created_at || payload.createdAt || new Date().toISOString();
+    data.createdAt ||
+    data.created_at ||
+    payload.createdAt ||
+    new Date().toISOString();
 
   return {
     id: data.id || payload.id || `${title}:${body}:${createdAt}`,
@@ -215,8 +218,8 @@ export function NotificationProvider({ children }) {
 
     const options = {
       body: notification.body || "",
-      icon: "/ProHomeLogo.png",
-      badge: "/ProHomeLogo.png",
+      icon: "/logo.jpg",
+      badge: "/logo.jpg",
       data: notification.data || {},
       tag: String(notification.id ?? ""),
     };
@@ -377,7 +380,10 @@ export function NotificationProvider({ children }) {
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsRead();
-      const updated = notificationsRef.current.map((n) => ({ ...n, isRead: true }));
+      const updated = notificationsRef.current.map((n) => ({
+        ...n,
+        isRead: true,
+      }));
       setNotifications(updated);
       notificationsRef.current = updated;
       setUnreadCount(0);
@@ -531,7 +537,10 @@ export function NotificationProvider({ children }) {
           });
         });
       } catch (error) {
-        console.error("Foreground notification listener ishga tushmadi:", error);
+        console.error(
+          "Foreground notification listener ishga tushmadi:",
+          error,
+        );
       }
     };
 
@@ -564,7 +573,10 @@ export function NotificationProvider({ children }) {
       });
     };
 
-    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
+    navigator.serviceWorker.addEventListener(
+      "message",
+      handleServiceWorkerMessage,
+    );
 
     return () => {
       navigator.serviceWorker.removeEventListener(
