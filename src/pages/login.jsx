@@ -79,7 +79,7 @@ function LeftSlider() {
       {/* Brand */}
       <div className="relative z-10 flex flex-col items-center gap-1 text-center">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-          <img src="/ProHomeLogo.png" alt="Pro Home CRM" className="h-5 w-5" />
+          <img src="/logo.jpg" alt="Kotibam" className="h-5 w-5" />
         </div>
         <span className="text-[11px] font-semibold tracking-[0.26em] text-white/40 uppercase">
           Kotibam
@@ -338,11 +338,7 @@ export default function Login() {
             {/* Mobile brand */}
             <div className="mb-8 flex items-center gap-3 xl:hidden">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-                <img
-                  src="/ProHomeLogo.png"
-                  alt="Pro Home CRM"
-                  className="h-5 w-5"
-                />
+                <img src="/logo.jpg" alt="Kotibam" className="h-5 w-5" />
               </div>
               <span className="text-[11px] font-semibold tracking-[0.26em] text-white/40 uppercase">
                 Kotibam
