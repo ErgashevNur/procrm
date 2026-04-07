@@ -1,5 +1,7 @@
 # Kotibam
 
+code written by CodeNur
+
 `Kotibam` bu savdo jarayonlari, lead boshqaruvi, task nazorati va analitikani yagona interfeysda birlashtiruvchi web platforma.
 
 Production manzil: `https://ai-crm.uz`
