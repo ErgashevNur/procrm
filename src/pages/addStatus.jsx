@@ -784,9 +784,11 @@ function FormBuilderDialog({
     }
   };
 
+  const isEditView = Boolean(editingTemplate?.id || initialTemplateId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-4xl">
+      <DialogContent className="max-h-[84vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-[68rem]">
         <DialogHeader>
           <DialogTitle>
             {editingTemplate || initialTemplateId
@@ -1039,7 +1041,13 @@ function FormBuilderDialog({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div
+            className={`space-y-4 ${
+              isEditView
+                ? "lg:sticky lg:top-2 lg:self-start"
+                : ""
+            }`}
+          >
             <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
@@ -1071,7 +1079,13 @@ function FormBuilderDialog({
                 <p className="mt-1 text-sm text-gray-400">
                   {description || "Forma tavsifi shu yerda ko'rinadi"}
                 </p>
-                <div className="mt-4 space-y-3">
+                <div
+                  className={`mt-4 space-y-3 ${
+                    isEditView
+                      ? "max-h-[30vh] overflow-y-auto pr-1 lg:max-h-[34vh]"
+                      : ""
+                  }`}
+                >
                   {fields.map((field) => (
                     <div key={`preview-${field.id}`}>
                       <div className="mb-1 flex items-center gap-2">
@@ -1091,120 +1105,122 @@ function FormBuilderDialog({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    Saqlangan formalar
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Shu loyiha uchun yaratilgan Google Form variantlari
-                  </p>
+            {!isEditView ? (
+              <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Saqlangan formalar
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Shu loyiha uchun yaratilgan Google Form variantlari
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {formsLoading ? "..." : `${forms.length} ta`}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  {formsLoading ? "..." : `${forms.length} ta`}
-                </span>
-              </div>
-              <div className="mt-3 space-y-2">
-                {formsLoading ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
-                    Formalar yuklanmoqda...
-                  </div>
-                ) : forms.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
-                    Hali forma yaratilmagan
-                  </div>
-                ) : (
-                  forms.map((form) => (
-                    <div
-                      key={form.id}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3"
-                    >
-                      {form.headerImage?.dataUrl && (
-                        <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
-                          <div className="aspect-[8/3] w-full bg-[#07111d]">
-                            <img
-                              src={form.headerImage.dataUrl}
-                              alt={form.title}
-                              className="h-full w-full object-cover"
-                            />
+                <div className="mt-3 space-y-2">
+                  {formsLoading ? (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                      Formalar yuklanmoqda...
+                    </div>
+                  ) : forms.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                      Hali forma yaratilmagan
+                    </div>
+                  ) : (
+                    forms.map((form) => (
+                      <div
+                        key={form.id}
+                        className="rounded-xl border border-white/10 bg-white/5 p-3"
+                      >
+                        {form.headerImage?.dataUrl && (
+                          <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
+                            <div className="aspect-[8/3] w-full bg-[#07111d]">
+                              <img
+                                src={form.headerImage.dataUrl}
+                                alt={form.title}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white">
-                            {form.title}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                            <span>
-                              {(Array.isArray(form.fields)
-                                ? form.fields.length
-                                : 0)}{" "}
-                              ta field
-                            </span>
-                            {form.headerImage?.dataUrl && (
-                              <>
-                                <span className="h-1 w-1 rounded-full bg-gray-500" />
-                                <span>Header rasm bor</span>
-                              </>
-                            )}
-                            <span className="h-1 w-1 rounded-full bg-gray-500" />
-                            <span>
-                              {new Date(form.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {form.link && (
-                            <p className="mt-1 truncate text-[11px] text-blue-400">
-                              {form.link}
+                        )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-white">
+                              {form.title}
                             </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {form.link && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                              <span>
+                                {(Array.isArray(form.fields)
+                                  ? form.fields.length
+                                  : 0)}{" "}
+                                ta field
+                              </span>
+                              {form.headerImage?.dataUrl && (
+                                <>
+                                  <span className="h-1 w-1 rounded-full bg-gray-500" />
+                                  <span>Header rasm bor</span>
+                                </>
+                              )}
+                              <span className="h-1 w-1 rounded-full bg-gray-500" />
+                              <span>
+                                {new Date(form.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {form.link && (
+                              <p className="mt-1 truncate text-[11px] text-blue-400">
+                                {form.link}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {form.link && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    form.link,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                                }
+                                className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
+                              >
+                                Ochish
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() =>
-                                window.open(
-                                  form.link,
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                )
-                              }
-                              className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
+                              disabled={saving || loadingTemplateId === form.id}
+                              onClick={() => handleStartEdit(form)}
+                              className="text-xs font-semibold text-amber-300 transition hover:text-amber-200 disabled:opacity-50"
                             >
-                              Ochish
+                              {loadingTemplateId === form.id
+                                ? "Yuklanmoqda..."
+                                : "Tahrirlash"}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={saving || loadingTemplateId === form.id}
-                            onClick={() => handleStartEdit(form)}
-                            className="text-xs font-semibold text-amber-300 transition hover:text-amber-200 disabled:opacity-50"
-                          >
-                            {loadingTemplateId === form.id
-                              ? "Yuklanmoqda..."
-                              : "Tahrirlash"}
-                          </button>
-                          {canDeleteTemplates && (
-                            <button
-                              type="button"
-                              disabled={deletingTemplateId === form.id}
-                              onClick={() => handleDeleteTemplate(form.id)}
-                              className="text-xs font-semibold text-red-300 transition hover:text-red-200 disabled:opacity-50"
-                            >
-                              {deletingTemplateId === form.id
-                                ? "O'chirilmoqda..."
-                                : "O'chirish"}
-                            </button>
-                          )}
+                            {canDeleteTemplates && (
+                              <button
+                                type="button"
+                                disabled={deletingTemplateId === form.id}
+                                onClick={() => handleDeleteTemplate(form.id)}
+                                className="text-xs font-semibold text-red-300 transition hover:text-red-200 disabled:opacity-50"
+                              >
+                                {deletingTemplateId === form.id
+                                  ? "O'chirilmoqda..."
+                                  : "O'chirish"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {savedLink && !hasChanges ? (
               <div className="space-y-2 rounded-xl border border-green-400/20 bg-green-500/10 p-3">
@@ -1229,17 +1245,29 @@ function FormBuilderDialog({
                     )}
                   </button>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setSavedLink(null);
-                    setHasChanges(false);
-                    onOpenChange(false);
-                  }}
-                  className="w-full"
-                >
-                  Yopish
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      window.open(savedLink, "_blank", "noopener,noreferrer")
+                    }
+                    className="w-full"
+                  >
+                    Ochish
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setSavedLink(null);
+                      setHasChanges(false);
+                      onOpenChange(false);
+                    }}
+                    className="w-full"
+                  >
+                    Yopish
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button
@@ -1510,23 +1538,20 @@ export default function AddStatus() {
     setEditBuilderOpen(true);
   };
 
-  const handleFormCardClick = (event, form) => {
+  const handleFormCardClick = (form) => {
     clearFormClickTimer();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 180;
-    const x = Math.min(rect.left, window.innerWidth - menuWidth - 12);
-    const y = Math.min(rect.bottom + 8, window.innerHeight - 170);
     formClickTimerRef.current = setTimeout(() => {
-      setContextMenu({ x, y, form });
+      closeContextMenu();
+      if (!form?.link) return;
+      window.open(form.link, "_blank", "noopener,noreferrer");
       formClickTimerRef.current = null;
     }, 220);
   };
 
-  const handleFormCardDoubleClick = (link) => {
+  const handleFormCardDoubleClick = (form) => {
     clearFormClickTimer();
     closeContextMenu();
-    if (!link) return;
-    window.open(link, "_blank", "noopener,noreferrer");
+    openEditBuilder(form);
   };
 
   const handleFormContextMenu = (e, form) => {
@@ -1891,22 +1916,19 @@ export default function AddStatus() {
                             googleForms.slice(0, 3).map((form) => (
                               <div
                                 key={form.id}
+                                onClick={() => handleFormCardClick(form)}
+                                onDoubleClick={() => handleFormCardDoubleClick(form)}
                                 onContextMenu={(e) => handleFormContextMenu(e, form)}
-                                className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+                                className="flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
                               >
                                 <FileText />
 
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleFormCardClick(e, form)}
-                                  onDoubleClick={() =>
-                                    handleFormCardDoubleClick(form.link)
-                                  }
+                                <span
                                   className="block w-full truncate text-left text-[12px] font-semibold text-blue-200 underline decoration-blue-300/60 underline-offset-3 transition hover:text-blue-100"
                                   title={form.title}
                                 >
                                   {form.title}
-                                </button>
+                                </span>
                               </div>
                             ))
                           )}
