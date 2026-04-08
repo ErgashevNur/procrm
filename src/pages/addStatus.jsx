@@ -454,6 +454,7 @@ function FormBuilderDialog({
   const [imageLoading, setImageLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedLink, setSavedLink] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [loadingTemplateId, setLoadingTemplateId] = useState(null);
@@ -473,6 +474,7 @@ function FormBuilderDialog({
     setImageLoading(false);
     setSaving(false);
     setSavedLink(null);
+    setHasChanges(false);
     setCopied(false);
     setEditingTemplate(null);
     setLoadingTemplateId(null);
@@ -487,10 +489,10 @@ function FormBuilderDialog({
   useEffect(() => {
     if (!open || !initialTemplateId || !onLoadTemplate) return;
     if (Number(editingTemplate?.id) === Number(initialTemplateId)) return;
-    if (Number(loadingTemplateId) === Number(initialTemplateId)) return;
 
     let cancelled = false;
-    setLoadingTemplateId(Number(initialTemplateId));
+    const targetTemplateId = Number(initialTemplateId);
+    setLoadingTemplateId(targetTemplateId);
 
     (async () => {
       try {
@@ -504,7 +506,9 @@ function FormBuilderDialog({
         }
       } finally {
         if (!cancelled) {
-          setLoadingTemplateId(null);
+          setLoadingTemplateId((current) =>
+            Number(current) === targetTemplateId ? null : current,
+          );
         }
       }
     })();
@@ -512,13 +516,7 @@ function FormBuilderDialog({
     return () => {
       cancelled = true;
     };
-  }, [
-    open,
-    initialTemplateId,
-    onLoadTemplate,
-    editingTemplate?.id,
-    loadingTemplateId,
-  ]);
+  }, [open, initialTemplateId, onLoadTemplate, editingTemplate?.id]);
 
   const hydrateEditorFromTemplate = (template) => {
     if (!template) return;
@@ -551,6 +549,7 @@ function FormBuilderDialog({
     setFields(mappedFields);
     setHeaderImage(template.headerImage || null);
     setSavedLink(template.link || getPublicFormUrl(template.id, { projectSlug }));
+    setHasChanges(false);
     setCopied(false);
   };
 
@@ -585,7 +584,13 @@ function FormBuilderDialog({
     }
   };
 
+  const markAsChanged = () => {
+    setHasChanges(true);
+    setCopied(false);
+  };
+
   const updateField = (fieldId, patch) => {
+    markAsChanged();
     setFields((prev) =>
       prev.map((field) =>
         field.id === fieldId ? { ...field, ...patch } : field,
@@ -594,10 +599,12 @@ function FormBuilderDialog({
   };
 
   const addField = (type) => {
+    markAsChanged();
     setFields((prev) => [...prev, createField(type)]);
   };
 
   const removeField = (fieldId) => {
+    markAsChanged();
     setFields((prev) =>
       prev.length === 1 ? prev : prev.filter((field) => field.id !== fieldId),
     );
@@ -607,6 +614,7 @@ function FormBuilderDialog({
     setActiveFieldId(null);
     if (!over || active.id === over.id) return;
 
+    markAsChanged();
     setFields((prev) => {
       const oldIndex = prev.findIndex((field) => field.id === active.id);
       const newIndex = prev.findIndex((field) => field.id === over.id);
@@ -727,6 +735,7 @@ function FormBuilderDialog({
       const savedTemplateId = Number(data?.id || editingTemplate?.id || 0);
       const link = getPublicFormUrl(savedTemplateId, { projectSlug });
       setSavedLink(link);
+      setHasChanges(false);
       if (onSaved) await onSaved();
 
       if (isEditMode) {
@@ -734,7 +743,10 @@ function FormBuilderDialog({
           onLoadTemplate && savedTemplateId
             ? await onLoadTemplate(savedTemplateId)
             : null;
-        if (refreshed) hydrateEditorFromTemplate(refreshed);
+        if (refreshed) {
+          hydrateEditorFromTemplate(refreshed);
+          setSavedLink(link);
+        }
         toast.success("Forma muvaffaqiyatli yangilandi!");
       } else {
         toast.success("Forma muvaffaqiyatli yaratildi!");
@@ -761,6 +773,7 @@ function FormBuilderDialog({
     setImageLoading(true);
     try {
       const optimizedImage = await optimizeHeaderImage(file);
+      markAsChanged();
       setHeaderImage(optimizedImage);
       toast.success("Header rasmi qo'shildi");
     } catch (error) {
@@ -776,9 +789,11 @@ function FormBuilderDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>
-            {source
-              ? `${source.name} uchun Google Form creator`
-              : "Google Form creator"}
+            {editingTemplate || initialTemplateId
+              ? `Edit ${source?.name || "Google Form"}`
+              : source
+                ? `${source.name} uchun Google Form creator`
+                : "Google Form creator"}
           </DialogTitle>
         </DialogHeader>
         {editingTemplate && (
@@ -833,7 +848,10 @@ function FormBuilderDialog({
               </label>
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  markAsChanged();
+                  setTitle(e.target.value);
+                }}
                 placeholder="Masalan, Google Form lead form"
                 className="w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
@@ -842,7 +860,10 @@ function FormBuilderDialog({
               </label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  markAsChanged();
+                  setDescription(e.target.value);
+                }}
                 placeholder="Forma nimaga ishlatiladi?"
                 className="min-h-24 w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
@@ -861,7 +882,10 @@ function FormBuilderDialog({
                 </svg>
                 <input
                   value={telegramUrl}
-                  onChange={(e) => setTelegramUrl(e.target.value)}
+                  onChange={(e) => {
+                    markAsChanged();
+                    setTelegramUrl(e.target.value);
+                  }}
                   placeholder="https://t.me/channelname"
                   className="w-full rounded-xl border border-white/10 bg-[#091827] py-2 pr-3 pl-8 text-sm text-white outline-none"
                 />
@@ -905,7 +929,10 @@ function FormBuilderDialog({
                     {headerImage && (
                       <button
                         type="button"
-                        onClick={() => setHeaderImage(null)}
+                        onClick={() => {
+                          markAsChanged();
+                          setHeaderImage(null);
+                        }}
                         className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition hover:border-red-400/40 hover:bg-red-500/15"
                       >
                         Olib tashlash
@@ -1179,10 +1206,12 @@ function FormBuilderDialog({
               </div>
             </div>
 
-            {savedLink ? (
+            {savedLink && !hasChanges ? (
               <div className="space-y-2 rounded-xl border border-green-400/20 bg-green-500/10 p-3">
                 <p className="text-xs font-semibold text-green-300">
-                  ✓ Forma muvaffaqiyatli yaratildi!
+                  {editingTemplate
+                    ? "✓ Forma muvaffaqiyatli yangilandi!"
+                    : "✓ Forma muvaffaqiyatli yaratildi!"}
                 </p>
                 <div className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2">
                   <span className="flex-1 truncate text-[11px] text-gray-300">
@@ -1204,6 +1233,7 @@ function FormBuilderDialog({
                   type="button"
                   onClick={() => {
                     setSavedLink(null);
+                    setHasChanges(false);
                     onOpenChange(false);
                   }}
                   className="w-full"
@@ -1426,6 +1456,8 @@ export default function AddStatus() {
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [formBuilderSource, setFormBuilderSource] = useState(null);
   const [formBuilderTemplateId, setFormBuilderTemplateId] = useState(null);
+  const [editBuilderOpen, setEditBuilderOpen] = useState(false);
+  const [editBuilderTemplateId, setEditBuilderTemplateId] = useState(null);
   const [formTemplates, setFormTemplates] = useState([]);
   const [formsLoading, setFormsLoading] = useState(false);
   const formClickTimerRef = useRef(null);
@@ -1454,21 +1486,45 @@ export default function AddStatus() {
 
   const openFormBuilder = (template, templateId = null) => {
     if (!template) return;
+    setEditBuilderOpen(false);
+    setEditBuilderTemplateId(null);
     setSourceModalOpen(false);
     setFormBuilderTemplateId(templateId ? Number(templateId) : null);
     setFormBuilderSource(template);
   };
 
-  const handleFormCardClick = (template, formId) => {
+  const openEditBuilder = (form) => {
+    const sourceTemplate = SOURCE_CARDS.find(
+      (card) => card.variant === "template",
+    )?.template;
+    const formId = Number(form?.id || 0);
+    if (!sourceTemplate || !formId) {
+      toast.error("Tahrirlanadigan forma topilmadi");
+      return;
+    }
+
+    setFormBuilderSource(null);
+    setFormBuilderTemplateId(null);
+    setSourceModalOpen(false);
+    setEditBuilderTemplateId(formId);
+    setEditBuilderOpen(true);
+  };
+
+  const handleFormCardClick = (event, form) => {
     clearFormClickTimer();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 180;
+    const x = Math.min(rect.left, window.innerWidth - menuWidth - 12);
+    const y = Math.min(rect.bottom + 8, window.innerHeight - 170);
     formClickTimerRef.current = setTimeout(() => {
-      openFormBuilder(template, formId);
+      setContextMenu({ x, y, form });
       formClickTimerRef.current = null;
     }, 220);
   };
 
   const handleFormCardDoubleClick = (link) => {
     clearFormClickTimer();
+    closeContextMenu();
     if (!link) return;
     window.open(link, "_blank", "noopener,noreferrer");
   };
@@ -1842,9 +1898,7 @@ export default function AddStatus() {
 
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleFormCardClick(card.template, form.id)
-                                  }
+                                  onClick={(e) => handleFormCardClick(e, form)}
                                   onDoubleClick={() =>
                                     handleFormCardDoubleClick(form.link)
                                   }
@@ -2237,6 +2291,29 @@ export default function AddStatus() {
         projectSlug={projectSlug}
       />
 
+      <FormBuilderDialog
+        open={editBuilderOpen}
+        onOpenChange={(open) => {
+          setEditBuilderOpen(open);
+          if (!open) {
+            setEditBuilderTemplateId(null);
+          }
+        }}
+        source={
+          SOURCE_CARDS.find((card) => card.variant === "template")?.template ||
+          null
+        }
+        initialTemplateId={editBuilderTemplateId}
+        forms={googleForms}
+        formsLoading={formsLoading}
+        onSaved={fetchFormTemplates}
+        onLoadTemplate={fetchFormTemplateById}
+        onDeleteTemplate={deleteFormTemplate}
+        canDeleteTemplates={canDeleteTemplates}
+        projectId={projectId}
+        projectSlug={projectSlug}
+      />
+
       {/* Form card right-click context menu */}
       {contextMenu && (
         <>
@@ -2265,9 +2342,9 @@ export default function AddStatus() {
             <button
               type="button"
               onClick={() => {
+                const selectedForm = contextMenu.form;
                 closeContextMenu();
-                const SOURCE_TEMPLATE = SOURCE_CARDS[0]?.template;
-                if (SOURCE_TEMPLATE) openFormBuilder(SOURCE_TEMPLATE, contextMenu.form?.id);
+                openEditBuilder(selectedForm);
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
             >
