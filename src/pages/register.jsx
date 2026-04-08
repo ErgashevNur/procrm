@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 import { getGoogleAuthUrl } from "@/lib/auth";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
@@ -40,6 +41,7 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === "undefined" ? 1280 : window.innerWidth,
   );
@@ -397,13 +399,39 @@ export default function Register() {
                 <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
                   Parol *
                 </label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setField("password", e.target.value)}
-                  placeholder="Parol kiriting"
-                  style={inputStyle("password")}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setField("password", e.target.value)}
+                    placeholder="Parol kiriting"
+                    style={{ ...inputStyle("password"), paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      border: "none",
+                      background: "transparent",
+                      color: "rgba(255,255,255,.65)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      padding: 4,
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.password}</p>
+                )}
               </div>
 
               <div
