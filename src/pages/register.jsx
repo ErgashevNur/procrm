@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye as EyeIcon, EyeOff as EyeOffIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getGoogleAuthUrl } from "@/lib/auth";
@@ -329,9 +329,9 @@ export default function Register() {
                       className="absolute top-1/2 right-3 -translate-y-1/2 text-black transition-colors hover:text-black/70"
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOffIcon className="h-4 w-4" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <EyeIcon className="h-4 w-4" />
                       )}
                     </button>
                   </div>

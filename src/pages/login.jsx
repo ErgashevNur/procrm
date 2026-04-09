@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Lottie from "lottie-react";
-import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
+import {
+  Eye as EyeIcon,
+  EyeOff as EyeOffIcon,
+  House,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -474,9 +480,9 @@ export default function Login() {
                       }
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOffIcon className="h-4 w-4" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <EyeIcon className="h-4 w-4" />
                       )}
                     </button>
                   </div>
