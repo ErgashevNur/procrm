@@ -19,7 +19,6 @@ import {
   getDefaultRouteByRole,
   isSupportedRole,
 } from "@/lib/rbac";
-import ProMarket from "./pages/proMarket";
 
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
@@ -41,6 +40,7 @@ const AddStatus = lazy(() => import("./pages/addStatus"));
 const Analitika = lazy(() => import("./pages/analitika"));
 const AppErrorFallback = lazy(() => import("./pages/error"));
 const Companies = lazy(() => import("./pages/company"));
+const ProMarket = lazy(() => import("./pages/proMarket"));
 
 function RouteLoader() {
   return (

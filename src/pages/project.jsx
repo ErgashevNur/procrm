@@ -16,48 +16,102 @@ import {
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
+import { API, IMAGE_API } from "@/lib/api";
 
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-// const IMG_API = "https://back.prohome.uz/api/v1/image";
-
-// "image/filename.jpg" → "https://back.prohome.uz/api/v1/image/filename.jpg"
 const getImgUrl = (raw) => {
   if (!raw) return null;
-  const clean = raw.replace(/^image\//, "");
 
-  console.log(clean);
+  const value = String(raw).trim();
+  if (!value) return null;
 
-  return `${API}/image/${clean}`;
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  const clean = value.replace(/^image\//, "").replace(/^\/+/, "");
+  return `${IMAGE_API}/${clean}`;
 };
 
-// ── API helper ────────────────────────────────────────────────────────────────
+function getProjectImageCandidates(project) {
+  // `img` eski field bo'lib, ba'zi yozuvlarda 404 beradigan stale fayl nomini saqlaydi.
+  // Project card uchun faqat amaldagi 3D image fieldlarini ishlatamiz.
+  return [project?.image3dUrl, project?.image3d].filter(Boolean);
+}
+
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
+
+  if (!API) {
+    throw new Error("API manzili sozlanmagan");
+  }
+
+  let res;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+
+    const networkError = new Error(
+      "Backend bilan ulanishda xatolik. Internet, API yoki CORS sozlamasini tekshiring."
+    );
+    networkError.cause = error;
+    throw networkError;
+  }
+
   if (res.status === 401) {
     localStorage.clear();
     window.location.href = "/login";
     return null;
   }
+
   return res;
 }
 
-// ── Empty form ────────────────────────────────────────────────────────────────
-const EMPTY = {
-  name: "",
-  address: "",
-  companyId: "",
-  otherId: "",
-  image3d: null, // File object
-};
+function getProjectImage(project) {
+  return getProjectImageCandidates(project)[0] || null;
+}
 
-// ── Confirm dialog ────────────────────────────────────────────────────────────
+function ProjectImage({ project, alt, className }) {
+  const [index, setIndex] = useState(0);
+  const candidates = getProjectImageCandidates(project);
+  const src = getImgUrl(candidates[index]);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [project?.id, project?.img, project?.image3d, project?.image3dUrl]);
+
+  if (!src) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <ImageIcon size={32} className="text-gray-700" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => {
+        setIndex((current) =>
+          current < candidates.length - 1 ? current + 1 : current
+        );
+      }}
+    />
+  );
+}
+
 function ConfirmDialog({ project, onConfirm, onCancel }) {
   return (
     <div
@@ -104,7 +158,6 @@ function ConfirmDialog({ project, onConfirm, onCancel }) {
   );
 }
 
-// ── Image Drop Zone ───────────────────────────────────────────────────────────
 function ImageDropZone({ file, preview, onChange }) {
   const inputRef = useRef();
   const [drag, setDrag] = useState(false);
@@ -136,13 +189,13 @@ function ImageDropZone({ file, preview, onChange }) {
           borderColor: drag
             ? "#3b82f6"
             : preview
-              ? "#3b82f640"
-              : "rgba(255,255,255,0.08)",
+            ? "#3b82f640"
+            : "rgba(255,255,255,0.08)",
           background: drag
             ? "rgba(59,130,246,0.06)"
             : preview
-              ? "rgba(59,130,246,0.03)"
-              : "rgba(255,255,255,0.02)",
+            ? "rgba(59,130,246,0.03)"
+            : "rgba(255,255,255,0.02)",
         }}
       >
         {preview ? (
@@ -184,7 +237,6 @@ function ImageDropZone({ file, preview, onChange }) {
   );
 }
 
-// ── Field component ───────────────────────────────────────────────────────────
 function FormField({ label, required, icon: Icon, error, children }) {
   return (
     <div>
@@ -214,11 +266,9 @@ function TInput({ value, onChange, placeholder, type = "text", ...rest }) {
   );
 }
 
-// ── Drawer (add/edit) ─────────────────────────────────────────────────────────
 function ProjectDrawer({ project, onClose, onSaved }) {
   const isEdit = !!project;
 
-  // companyId — localStorage dan avtomatik
   const companyId = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -232,10 +282,11 @@ function ProjectDrawer({ project, onClose, onSaved }) {
     address: project?.address ?? "",
     companyId: project?.companyId ?? companyId,
     otherId: project?.otherId ?? "",
-    img: null,
+    image3d: null,
   });
+
   const [preview, setPreview] = useState(
-    project?.img ? getImgUrl(project.img) : null,
+    getProjectImage(project) ? getImgUrl(getProjectImage(project)) : null
   );
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -259,27 +310,36 @@ function ProjectDrawer({ project, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    setSubmitting(true);
 
+    setSubmitting(true);
     try {
       const fd = new FormData();
       fd.append("name", form.name.trim());
       fd.append("address", form.address.trim());
-      fd.append("companyId", Number(form.companyId));
-      if (form.otherId) fd.append("otherId", Number(form.otherId));
+
+      if (form.companyId) fd.append("companyId", String(form.companyId));
+      if (form.otherId) fd.append("otherId", String(form.otherId));
       if (form.image3d) fd.append("image3d", form.image3d);
 
       const url = isEdit ? `${API}/projects/${project.id}` : `${API}/projects`;
       const method = isEdit ? "PATCH" : "POST";
 
       const res = await apiFetch(url, { method, body: fd });
-      if (!res || !res.ok) throw new Error();
+
+      if (!res || !res.ok) {
+        let msg = "Xatolik yuz berdi ❌";
+        try {
+          const errData = await res.json();
+          msg = errData?.message || msg;
+        } catch {}
+        throw new Error(msg);
+      }
 
       toast.success(isEdit ? "Loyiha yangilandi ✅" : "Loyiha qo'shildi ✅");
       onSaved();
       onClose();
-    } catch {
-      toast.error("Xatolik yuz berdi ❌");
+    } catch (err) {
+      toast.error(err.message || "Xatolik yuz berdi ❌");
     } finally {
       setSubmitting(false);
     }
@@ -290,15 +350,12 @@ function ProjectDrawer({ project, onClose, onSaved }) {
       className="fixed inset-0 z-40 flex justify-end"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Drawer */}
       <div
         className="relative flex h-full w-full max-w-md flex-col border-l border-white/6 shadow-2xl"
         style={{ background: "#071828", animation: "slideIn .25s ease" }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-white">
@@ -316,18 +373,9 @@ function ProjectDrawer({ project, onClose, onSaved }) {
           </button>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col overflow-hidden"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <FormField
-              label="Nom"
-              required
-              icon={FolderOpen}
-              error={errors.name}
-            >
+            <FormField label="Nom" required icon={FolderOpen} error={errors.name}>
               <TInput
                 value={form.name}
                 onChange={set("name")}
@@ -335,12 +383,7 @@ function ProjectDrawer({ project, onClose, onSaved }) {
               />
             </FormField>
 
-            <FormField
-              label="Manzil"
-              required
-              icon={Building2}
-              error={errors.address}
-            >
+            <FormField label="Manzil" required icon={Building2} error={errors.address}>
               <TInput
                 value={form.address}
                 onChange={set("address")}
@@ -357,11 +400,7 @@ function ProjectDrawer({ project, onClose, onSaved }) {
               />
             </FormField>
 
-            <FormField
-              label="3D Rasm"
-              required={!isEdit}
-              error={errors.image3d}
-            >
+            <FormField label="3D Rasm" required={!isEdit} error={errors.image3d}>
               <ImageDropZone
                 file={form.image3d}
                 preview={preview}
@@ -370,7 +409,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
             </FormField>
           </div>
 
-          {/* Footer */}
           <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
             <button
               type="button"
@@ -400,14 +438,13 @@ function ProjectDrawer({ project, onClose, onSaved }) {
       <style>{`
         @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
+          to   { transform: translateX(0); opacity: 1; }
         }
       `}</style>
     </div>
   );
 }
 
-// ── Project Card ──────────────────────────────────────────────────────────────
 function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
   return (
     <div
@@ -417,11 +454,10 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
         animation: `fadeUp .4s ease ${index * 0.05}s both`,
       }}
     >
-      {/* 3D Image */}
       <div className="relative h-44 w-full overflow-hidden bg-[#0a1929]">
-        {project.img ? (
-          <img
-            src={getImgUrl(project.img)}
+        {getProjectImage(project) ? (
+          <ProjectImage
+            project={project}
             alt={project.name}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -430,7 +466,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
             <ImageIcon size={32} className="text-gray-700" />
           </div>
         )}
-        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
@@ -439,7 +474,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
           }}
         />
 
-        {/* Action buttons */}
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={() => onEdit(project)}
@@ -458,7 +492,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
         </div>
       </div>
 
-      {/* Info */}
       <div className="p-4">
         <h3 className="mb-1 truncate text-sm font-semibold text-white">
           {project.name}
@@ -489,7 +522,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
@@ -503,22 +535,29 @@ function CardSkeleton() {
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Projects() {
   const role = getCurrentRole();
   const canDeleteProjects = canDeleteData(role);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [drawer, setDrawer] = useState(null); // null | "add" | project obj
-  const [delTarget, setDelTarget] = useState(null); // project to delete
+  const [drawer, setDrawer] = useState(null);
+  const [delTarget, setDelTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchProjects = async () => {
     try {
       const res = await apiFetch(`${API}/projects`);
       if (!res) return;
+
       const data = await res.json();
-      setProjects(Array.isArray(data) ? data : []);
+
+      setProjects(
+        (Array.isArray(data) ? data : []).map((item) => ({
+          ...item,
+          // UI eski `img` qiymatiga urilib 404 olmasligi uchun image source ni tozalab olamiz.
+          img: item?.image3dUrl || item?.image3d || null,
+        }))
+      );
     } catch (err) {
       console.error(err);
       toast.error("Loyihalar yuklanmadi");
@@ -533,17 +572,21 @@ export default function Projects() {
 
   const handleDelete = async () => {
     if (!delTarget || deleting) return;
+
     if (!canDeleteProjects) {
       toast.error("Sizda loyihani o'chirish uchun ruxsat yo'q");
       setDelTarget(null);
       return;
     }
+
     setDeleting(true);
     try {
       const res = await apiFetch(`${API}/projects/${delTarget.id}`, {
         method: "DELETE",
       });
+
       if (!res || !res.ok) throw new Error();
+
       toast.success("Loyiha o'chirildi");
       setProjects((p) => p.filter((x) => x.id !== delTarget.id));
     } catch {
@@ -559,7 +602,6 @@ export default function Projects() {
       className="min-h-screen bg-[#071828]"
       style={{ fontFamily: "'Segoe UI', sans-serif" }}
     >
-      {/* Grid bg */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.015]"
         style={{
@@ -569,7 +611,6 @@ export default function Projects() {
         }}
       />
 
-      {/* Header */}
       <div
         className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur"
         style={{ animation: "fadeUp .3s ease both" }}
@@ -595,7 +636,6 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mx-auto max-w-6xl px-6 py-6">
         {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -643,7 +683,6 @@ export default function Projects() {
         )}
       </div>
 
-      {/* Drawer */}
       {drawer && (
         <ProjectDrawer
           project={drawer === "add" ? null : drawer}
@@ -652,7 +691,6 @@ export default function Projects() {
         />
       )}
 
-      {/* Delete confirm */}
       {delTarget && (
         <ConfirmDialog
           project={delTarget}

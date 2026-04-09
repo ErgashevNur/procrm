@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { MANAGEMENT_ROLES, getCurrentRole } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 function saveProject(project) {
   localStorage.setItem("projectId", String(project.id));
@@ -11,8 +9,8 @@ function saveProject(project) {
 }
 
 export default function ProjectGate({ children }) {
-  const [ready, setReady] = useState(!!localStorage.getItem("projectId"));
-  const [loading, setLoading] = useState(!ready);
+  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const role = getCurrentRole();
   const canManageProjects = MANAGEMENT_ROLES.includes(role);
@@ -24,9 +22,15 @@ export default function ProjectGate({ children }) {
       setError("Token topilmadi, qaytadan tizimga kiring.");
       return;
     }
+    if (!API) {
+      setLoading(false);
+      setError("API manzili sozlanmagan.");
+      return;
+    }
 
     const loadProjects = async () => {
       try {
+        setError("");
         const res = await fetch(`${API}/projects`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -48,6 +52,9 @@ export default function ProjectGate({ children }) {
           setReady(true);
           return;
         }
+
+        localStorage.removeItem("projectId");
+        localStorage.removeItem("projectName");
       } catch {
         setError("Loyihalarni yuklashda xatolik yuz berdi.");
       } finally {
@@ -59,28 +66,16 @@ export default function ProjectGate({ children }) {
   }, []);
 
   if (ready) return children;
+  if (loading) return null;
 
   return (
     <div className="crm-page flex items-center justify-center">
       <div className="crm-card crm-hairline w-full max-w-2xl p-6 md:p-8">
         <div className="mb-6">
-          <p className="crm-kicker">
-            Workspace Setup
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
-            CRM ishga tushmoqda
-          </h2>
-          <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
-            Loyiha avtomatik aniqlanmoqda. Iltimos kuting.
-          </p>
+          <p className="crm-kicker">Workspace Setup</p>
         </div>
 
-        {loading ? (
-          <div className="crm-glass-subtle flex items-center gap-3 rounded-[24px] p-5 text-slate-200">
-            <Loader2 size={18} className="animate-spin" />
-            Loyihalar yuklanmoqda...
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="rounded-2xl border border-red-500/20 bg-red-500/8 p-4 text-sm text-red-300">
             {error}
           </div>

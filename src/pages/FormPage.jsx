@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 function normalizeFieldType(field) {
   return String(field?.type || field?.fieldType || "text").toLowerCase();

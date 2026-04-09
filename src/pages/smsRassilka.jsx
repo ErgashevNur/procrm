@@ -40,9 +40,8 @@ import {
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
+import { API, IMAGE_API } from "@/lib/api";
 
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
 const TEMPLATE_TOKENS = ["{{fullname}}", "{{firstName}}", "{{lastName}}"];
 
 function getToken() {
@@ -87,6 +86,21 @@ async function apiFetch(url, options = {}) {
   }
 
   return response;
+}
+
+async function fetchSmsLeads(projectId) {
+  const primary = await apiFetch(
+    `${API}/leeds/all/search?projectId=${projectId}`,
+    { headers: hdr(false) },
+  );
+
+  if (primary?.ok || primary?.status !== 404) {
+    return primary;
+  }
+
+  return apiFetch(`${API}/leeds?projectId=${projectId}`, {
+    headers: hdr(false),
+  });
 }
 
 function pickList(payload) {
@@ -151,7 +165,7 @@ async function extractApiMessage(response, fallback) {
 function imgUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${IMAGE_API}/${String(src).replace(/^image\//, "")}`;
 }
 
 function formatDate(value) {
@@ -185,18 +199,20 @@ function personalizeMessage(text, lead) {
 function StatCard({ icon: Icon, label, value, color }) {
   return (
     <div
-      className="rounded-2xl border border-white/10 bg-[#111827] p-4"
+      className="min-w-0 rounded-2xl border border-white/10 bg-[#111827] p-3 sm:p-4"
       style={{ borderColor: "rgba(255,255,255,0.1)" }}
     >
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#0b1220]">
-          <Icon size={17} style={{ color }} />
+      <div className="mb-2 flex items-start justify-between gap-2 sm:mb-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#0b1220] sm:h-9 sm:w-9">
+          <Icon size={15} style={{ color }} />
         </div>
-        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
+        <span className="min-w-0 text-right text-[10px] leading-tight font-medium tracking-[0.14em] text-white/40 uppercase break-words sm:text-[11px] sm:tracking-[0.18em]">
           {label}
         </span>
       </div>
-      <div className="text-2xl font-semibold tracking-tight text-white">{value ?? 0}</div>
+      <div className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">
+        {value ?? 0}
+      </div>
     </div>
   );
 }
@@ -207,7 +223,7 @@ function LeadRow({ lead, checked, onToggle }) {
 
   return (
     <label
-      className={`group flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-all ${
+      className={`group flex cursor-pointer items-start gap-2.5 rounded-xl border px-2.5 py-2.5 transition-all ${
         checked
           ? "border-white/20 bg-[#111827]"
           : "border-white/10 bg-[#0b1220] hover:border-white/20"
@@ -217,10 +233,10 @@ function LeadRow({ lead, checked, onToggle }) {
         type="checkbox"
         checked={checked}
         onChange={() => onToggle(lead.id)}
-        className="mt-1 h-4 w-4 rounded accent-cyan-400"
+        className="mt-0.5 h-4 w-4 rounded accent-cyan-400"
       />
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
         style={{
           background: `hsl(${((name.charCodeAt(0) || 65) * 9) % 360}, 48%, 33%)`,
         }}
@@ -228,33 +244,39 @@ function LeadRow({ lead, checked, onToggle }) {
         {(name[0] || "?").toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-white">{name}</p>
-          {lead?.status?.name ? (
-            <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-              style={{
-                color: lead.status.color || "#94a3b8",
-                background: `${lead.status.color || "#94a3b8"}24`,
-              }}
-            >
-              {lead.status.name}
-            </span>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <p className="line-clamp-1 break-words text-[13px] font-semibold text-white sm:truncate">{name}</p>
+              {lead?.status?.name ? (
+                <span
+                  className="inline-flex w-fit rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                  style={{
+                    color: lead.status.color || "#94a3b8",
+                    background: `${lead.status.color || "#94a3b8"}24`,
+                  }}
+                >
+                  {lead.status.name}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-0.5 flex flex-col gap-0.5 text-[10px] leading-4 text-white/45 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+              <span className="break-all sm:break-normal">{lead?.phone || "Telefon yo'q"}</span>
+              {lead?.leadSource?.name ? (
+                <span className="line-clamp-1 break-words sm:break-normal">• {lead.leadSource.name}</span>
+              ) : null}
+            </div>
+          </div>
+          {src ? (
+            <img
+              src={src}
+              className="h-7 w-7 shrink-0 rounded-full border border-white/10 object-cover"
+              alt=""
+              onError={(e) => e.currentTarget.remove()}
+            />
           ) : null}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-white/45">
-          <span>{lead?.phone || "Telefon yo'q"}</span>
-          {lead?.leadSource?.name ? <span>• {lead.leadSource.name}</span> : null}
-        </div>
       </div>
-      {src ? (
-        <img
-          src={src}
-          className="mt-0.5 h-5 w-5 rounded-full object-cover"
-          alt=""
-          onError={(e) => e.currentTarget.remove()}
-        />
-      ) : null}
     </label>
   );
 }
@@ -481,31 +503,20 @@ export default function SmsRassilka() {
     else setLoading(true);
 
     try {
-      const [leadRes, historyRes, templateRes] = await Promise.all([
-        apiFetch(`${API}/leeds?projectId=${projectId}`, { headers: hdr(false) }),
-        apiFetch(`${API}/sms/history?projectId=${projectId}`, { headers: hdr(false) }),
+      const [leadRes, templateRes] = await Promise.all([
+        fetchSmsLeads(projectId),
         apiFetch(`${API}/sms-template`, { headers: hdr(false) }),
       ]);
 
       if (leadRes?.ok) {
         const data = await leadRes.json();
         setLeads(pickLeads(data));
+      } else {
+        setLeads([]);
       }
 
-      if (historyRes?.ok) {
-        const data = await historyRes.json();
-        const list = pickList(data);
-        setHistory(list);
-        setStats({
-          total: list.length,
-          sent: list.filter((item) => ["SENT", "SUCCESS"].includes(item?.status)).length,
-          pending: list.filter((item) => item?.status === "PENDING").length,
-          failed: list.filter((item) => item?.status === "FAILED").length,
-        });
-      } else {
-        setHistory([]);
-        setStats({ total: 0, sent: 0, pending: 0, failed: 0 });
-      }
+      setHistory([]);
+      setStats({ total: 0, sent: 0, pending: 0, failed: 0 });
 
       if (templateRes?.ok) {
         const data = await templateRes.json();
@@ -811,24 +822,30 @@ export default function SmsRassilka() {
       />
 
       <div className="relative z-10 p-4 md:p-6">
-        <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a1b2d] px-5 py-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/8 bg-[#0a1b2d] px-4 py-4 sm:px-5 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2563eb] shadow-[0_8px_24px_rgba(37,99,235,0.35)]">
               <MessageSquare size={18} />
             </div>
-            <div>
-              <h1 className="text-lg font-bold">SMS Rassilka</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold">SMS Rassilka</h1>
               <p className="text-xs text-white/40">{leads.length} ta mijoz mavjud</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:items-center">
             {canManageTemplates ? (
-              <Button size="sm" variant="outline" onClick={openCreateTemplate}>
+              <Button size="sm" variant="outline" onClick={openCreateTemplate} className="w-full lg:w-auto">
                 <Plus />
                 Template
               </Button>
             ) : null}
-            <Button size="sm" variant="outline" onClick={() => fetchAll(true)} disabled={refreshing}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fetchAll(true)}
+              disabled={refreshing}
+              className="w-full lg:w-auto"
+            >
               {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Yangilash
             </Button>
@@ -845,7 +862,7 @@ export default function SmsRassilka() {
                 <button
                   key={key}
                   onClick={() => setTab(key)}
-                  className="flex flex-1 items-center justify-center gap-2 border-b-2 py-3 text-sm font-semibold transition-colors"
+                  className="flex flex-1 items-center justify-center gap-2 border-b-2 px-2 py-3 text-sm font-semibold transition-colors"
                   style={{
                     borderBottomColor: tab === key ? "#2563eb" : "transparent",
                     color: tab === key ? "#60a5fa" : "rgba(255,255,255,0.35)",
@@ -860,7 +877,7 @@ export default function SmsRassilka() {
             {tab === "compose" ? (
               <div className="flex h-[calc(100vh-180px)] flex-col">
                 <div className="border-b border-white/6 p-4">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
                       Xabar matni
                     </p>
@@ -903,7 +920,7 @@ export default function SmsRassilka() {
                 </div>
 
                 <div className="border-b border-white/6 px-4 py-3">
-                  <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <label className="flex items-center gap-2 text-xs text-white/55">
                       <input
                         type="checkbox"
@@ -913,14 +930,14 @@ export default function SmsRassilka() {
                       />
                       Barchasi
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <span className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">
                         {selectionCount} ta
                       </span>
                       <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/55 outline-none"
+                        className="w-full rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/55 outline-none sm:w-auto"
                       >
                         <option value="all">Barcha status</option>
                         {uniqueStatuses.map((status) => (
@@ -1008,7 +1025,7 @@ export default function SmsRassilka() {
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
                 Statistika
               </p>
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-4">
                 <StatCard icon={Send} label="Jami" value={stats?.total ?? 0} color="#3b82f6" />
                 <StatCard icon={CheckCheck} label="Yuborildi" value={stats?.sent ?? 0} color="#10b981" />
                 <StatCard icon={Clock} label="Kutilmoqda" value={stats?.pending ?? 0} color="#f59e0b" />
@@ -1088,7 +1105,7 @@ export default function SmsRassilka() {
                   SMS ko'rinishi
                 </p>
 
-                <div className="mx-auto w-[250px] rounded-[34px] border-4 border-white/10 bg-[#081726] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+                <div className="mx-auto w-full max-w-[280px] rounded-[34px] border-4 border-white/10 bg-[#081726] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.4)] sm:max-w-[290px]">
                   <div className="mb-4 flex justify-center">
                     <div className="h-1.5 w-20 rounded-full bg-white/10" />
                   </div>
@@ -1127,22 +1144,22 @@ export default function SmsRassilka() {
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-xl border border-white/8 bg-white/[0.03] p-4 text-sm text-white/65">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span>Qabulchilar</span>
-                    <span className="font-semibold text-white">{selectionCount} ta</span>
+                <div className="mx-auto mt-5 w-full max-w-[360px] rounded-xl border border-white/8 bg-white/[0.03] p-4 text-sm text-white/65">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <span className="text-xs sm:text-sm">Qabulchilar</span>
+                    <span className="shrink-0 text-right text-sm font-semibold text-white sm:text-base">{selectionCount} ta</span>
                   </div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span>Bir qabulchiga</span>
-                    <span className="font-semibold text-white">{smsCount} SMS</span>
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <span className="text-xs sm:text-sm">Bir qabulchiga</span>
+                    <span className="shrink-0 text-right text-sm font-semibold text-white sm:text-base">{smsCount} SMS</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>Jami taxmin</span>
-                    <span className="font-semibold text-white">{estimatedMessages} SMS</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-xs sm:text-sm">Jami taxmin</span>
+                    <span className="shrink-0 text-right text-sm font-semibold text-white sm:text-base">{estimatedMessages} SMS</span>
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-xl border border-white/8 bg-white/[0.03] p-4 text-sm text-white/55">
+                <div className="mx-auto mt-4 w-full max-w-[360px] rounded-xl border border-white/8 bg-white/[0.03] p-4 text-sm text-white/55">
                   <div className="flex items-start gap-2">
                     <AlertCircle size={16} className="mt-0.5 shrink-0" />
                     <p>

@@ -27,8 +27,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 const STATUS_COLORS = [
   "#69a7ff",

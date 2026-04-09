@@ -31,8 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
@@ -63,11 +62,11 @@ const SECTIONS = [
 // ── Small UI components ───────────────────────────────────────────────────
 function Section({ title, description, children }) {
   return (
-    <div className="mb-8">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
+    <div className="mb-6 sm:mb-8">
+      <div className="mb-4 px-1 sm:mb-5 sm:px-0">
+        <h2 className="text-base font-semibold text-white sm:text-lg">{title}</h2>
         {description && (
-          <p className="mt-1 text-sm text-gray-500">{description}</p>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-500 sm:text-sm sm:leading-6">{description}</p>
         )}
       </div>
       <div className="space-y-0 divide-y divide-[#1a3045] overflow-hidden rounded-xl border border-[#1a3045]">
@@ -79,9 +78,9 @@ function Section({ title, description, children }) {
 
 function FieldRow({ label, children }) {
   return (
-    <div className="flex items-center gap-4 bg-[#0f2030] px-6 py-4">
-      <span className="w-52 shrink-0 text-sm text-gray-400">{label}</span>
-      <div className="flex-1">{children}</div>
+    <div className="flex flex-col gap-2 bg-[#0f2030] px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
+      <span className="text-[12px] font-medium tracking-[0.02em] text-gray-400 sm:w-52 sm:shrink-0 sm:text-sm sm:font-normal">{label}</span>
+      <div className="w-full flex-1">{children}</div>
     </div>
   );
 }
@@ -93,7 +92,7 @@ function StyledInput({ value, onChange, placeholder, type = "text" }) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50"
+      className="w-full rounded-xl border border-[#1e3a52] bg-[#071828] px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50 sm:max-w-xs sm:rounded-lg sm:py-2"
     />
   );
 }
@@ -103,7 +102,7 @@ function StyledSelect({ value, onChange, options }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="scheme:dark w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white transition-colors outline-none focus:border-blue-500/50"
+      className="scheme:dark w-full rounded-xl border border-[#1e3a52] bg-[#071828] px-3 py-2.5 text-sm text-white transition-colors outline-none focus:border-blue-500/50 sm:max-w-xs sm:rounded-lg sm:py-2"
     >
       {options.map(([v, l]) => (
         <option key={v} value={v}>
@@ -116,7 +115,7 @@ function StyledSelect({ value, onChange, options }) {
 
 function ToggleRow({ label, hint, value, onChange }) {
   return (
-    <div className="flex items-center gap-4 bg-[#0f2030] px-6 py-4">
+    <div className="flex flex-col gap-3 bg-[#0f2030] px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
       <div className="flex-1">
         <p className="text-sm text-white">{label}</p>
         {hint && <p className="mt-0.5 text-xs text-gray-600">{hint}</p>}
@@ -138,7 +137,7 @@ function ToggleRow({ label, hint, value, onChange }) {
 
 function InfoCard({ label, value, color = "#6b7280" }) {
   return (
-    <div className="rounded-xl border border-[#1a3045] bg-[#0f2030] p-4">
+    <div className="rounded-2xl border border-[#1a3045] bg-[#0f2030] p-4 sm:rounded-xl">
       <p className="text-xs text-gray-600">{label}</p>
       <p className="mt-1 text-sm font-semibold" style={{ color }}>
         {value}
@@ -495,16 +494,16 @@ export default function settings() {
 
   // ─────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#071828]">
+    <div className="flex min-h-screen flex-col bg-[#071828]">
       {/* ═══ STICKY HEADER ═══ */}
-      <div className="flex shrink-0 items-center justify-between border-b border-[#1a3045] bg-[#071828] px-6 py-4">
-        <h1 className="text-sm font-bold tracking-widest text-gray-300 uppercase">
+      <div className="sticky top-0 z-20 flex shrink-0 flex-col gap-3 border-b border-[#1a3045] bg-[#071828]/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+        <h1 className="text-xs font-bold tracking-[0.24em] text-gray-300 uppercase sm:text-sm sm:tracking-widest">
           Настройки
         </h1>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
         >
           {saving ? (
             <Loader2 size={14} className="animate-spin" />
@@ -515,38 +514,36 @@ export default function settings() {
         </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-visible md:flex-row md:overflow-hidden">
         {/* ═══ LEFT SIDEBAR ═══ */}
-        <div className="flex w-56 shrink-0 flex-col border-r border-[#1a3045] bg-[#071828] py-3">
+        <div className="scrollbar-hide flex shrink-0 gap-2 overflow-x-auto border-b border-[#1a3045] bg-[#071828] px-3 py-3 md:w-56 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:px-0 md:py-3">
           {SECTIONS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActive(key)}
-              className="flex w-full items-center gap-3 px-5 py-3 text-sm transition-colors"
+              className={`flex shrink-0 snap-start items-center gap-3 rounded-xl border border-transparent px-4 py-3 text-sm transition-colors md:w-full md:rounded-none md:border-x-0 md:border-y-0 md:border-l-2 md:px-5 ${
+                active === key ? "border-blue-500" : ""
+              }`}
               style={{
                 color: active === key ? "#60a5fa" : "#9ca3af",
                 background:
                   active === key ? "rgba(59,130,246,0.08)" : "transparent",
-                borderLeft:
-                  active === key
-                    ? "2px solid #3b82f6"
-                    : "2px solid transparent",
               }}
             >
               <Icon size={16} className="shrink-0" />
-              <span>{label}</span>
+              <span className="whitespace-nowrap">{label}</span>
             </button>
           ))}
         </div>
 
         {/* ═══ MAIN CONTENT ═══ */}
-        <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#08192a] p-8">
+        <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#08192a] p-3 sm:p-6 md:p-8">
           <div className="mx-auto max-w-3xl">
             {/* ════ HISOB VA TO'LOV ════ */}
             {active === "billing" && (
               <>
                 <Section title="Тарифные планы">
-                  <div className="grid grid-cols-3 gap-4 bg-[#0f2030] p-6">
+                  <div className="grid grid-cols-1 gap-3 bg-[#0f2030] p-3 sm:gap-4 sm:p-6 lg:grid-cols-3">
                     {[
                       {
                         name: "Starter",
@@ -570,7 +567,7 @@ export default function settings() {
                     ].map((plan) => (
                       <div
                         key={plan.name}
-                        className="relative rounded-xl border p-4 text-center"
+                        className="relative rounded-2xl border p-4 text-center sm:rounded-xl"
                         style={{
                           borderColor: plan.current
                             ? `${plan.color}50`
@@ -615,8 +612,8 @@ export default function settings() {
                   title="Текущий тариф"
                   description="Информация о вашей подписке"
                 >
-                  <div className="bg-[#0f2030] p-6">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="bg-[#0f2030] p-3 sm:p-6">
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
                       <InfoCard label="Тариф" value="Pro" color="#3b82f6" />
                       <InfoCard
                         label="Статус"
@@ -671,9 +668,9 @@ export default function settings() {
                   ].map((row) => (
                     <div
                       key={row.invoice}
-                      className="flex items-center gap-4 bg-[#0f2030] px-6 py-4"
+                      className="flex flex-col items-start gap-2 bg-[#0f2030] px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-6"
                     >
-                      <span className="w-32 text-sm text-gray-400">
+                      <span className="text-sm text-gray-400 sm:w-32">
                         {row.date}
                       </span>
                       <span className="flex-1 text-sm text-white">
@@ -732,7 +729,7 @@ export default function settings() {
                         ]}
                       />
                     </FieldRow>
-                    <div className="flex justify-end bg-[#0f2030] px-6 py-4">
+                    <div className="flex bg-[#0f2030] px-4 py-4 sm:justify-end sm:px-6">
                       <button
                         type="submit"
                         disabled={
@@ -741,7 +738,7 @@ export default function settings() {
                           !inviteEmail.trim() ||
                           !invitePassword.trim()
                         }
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
                       >
                         {inviting ? (
                           <Loader2 size={13} className="animate-spin" />
@@ -773,7 +770,7 @@ export default function settings() {
                     users.map((user) => (
                       <div
                         key={user.id}
-                        className="flex items-center gap-4 bg-[#0f2030] px-6 py-4 transition-colors hover:bg-[#112636]"
+                        className="flex flex-col items-start gap-3 bg-[#0f2030] px-4 py-4 transition-colors hover:bg-[#112636] sm:flex-row sm:items-center sm:gap-4 sm:px-6"
                       >
                         <div
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
@@ -826,15 +823,17 @@ export default function settings() {
                             </>
                           )}
                         </div>
-                        <RoleBadge role={user.role} />
-                        <span className="text-xs text-gray-600">
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString(
-                                "ru-RU",
-                              )
-                            : "—"}
-                        </span>
-                        <div className="ml-1 flex items-center gap-1">
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                          <RoleBadge role={user.role} />
+                          <span className="text-xs text-gray-600">
+                            {user.createdAt
+                              ? new Date(user.createdAt).toLocaleDateString(
+                                  "ru-RU",
+                                )
+                              : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 self-end sm:ml-1 sm:self-auto">
                           {editUserId === user.id ? (
                             <>
                               <button
@@ -927,7 +926,7 @@ export default function settings() {
                       description={hint}
                     >
                       {it.connected ? (
-                        <div className="flex items-center justify-between bg-[#0f2030] px-6 py-5">
+                        <div className="flex flex-col gap-3 bg-[#0f2030] px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                           <div
                             className="flex items-center gap-2"
                             style={{ color: "#10b981" }}
@@ -963,11 +962,11 @@ export default function settings() {
                               placeholder={`${label} token...`}
                             />
                           </FieldRow>
-                          <div className="flex justify-end bg-[#0f2030] px-6 py-4">
+                          <div className="flex bg-[#0f2030] px-4 py-4 sm:justify-end sm:px-6">
                             <button
                               onClick={() => connectInteg(key)}
                               disabled={saving || !it.token.trim()}
-                              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40"
+                              className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40 sm:w-auto"
                               style={{ background: color }}
                             >
                               {saving ? (
@@ -992,7 +991,7 @@ export default function settings() {
                   title="Поддержка AI-CRM"
                   description="Savollar, texnik muammo yoki onboarding bo'yicha yordam olish uchun tezkor kanallar."
                 >
-                  <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-2">
+                  <div className="grid gap-4 bg-[#0f2030] p-4 sm:p-6 md:grid-cols-2">
                     {[
                       {
                         title: "Telegram support",
@@ -1077,7 +1076,7 @@ export default function settings() {
                   title="Tezkor yordam"
                   description="Ko'p uchraydigan support scenariylari uchun tayyor yo'nalishlar."
                 >
-                  <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-3">
+                  <div className="grid gap-4 bg-[#0f2030] p-4 sm:p-6 md:grid-cols-3">
                     {[
                       {
                         title: "Texnik muammo",
@@ -1137,7 +1136,7 @@ export default function settings() {
                   ].map((item) => (
                     <div
                       key={item}
-                      className="flex items-center gap-3 bg-[#0f2030] px-6 py-4"
+                      className="flex items-start gap-3 bg-[#0f2030] px-4 py-4 sm:px-6"
                     >
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">
                         •
@@ -1172,7 +1171,7 @@ export default function settings() {
                         e.preventDefault();
                         toast.info("Knowledge base linki keyin ulanadi");
                       }}
-                      className="flex items-center justify-between bg-[#0f2030] px-6 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white"
+                      className="flex items-center justify-between gap-4 bg-[#0f2030] px-4 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white sm:px-6"
                     >
                       <span>{link.label}</span>
                       <ExternalLink size={14} className="text-gray-500" />
@@ -1186,7 +1185,7 @@ export default function settings() {
       </div>
 
       <Dialog open={supportModalOpen} onOpenChange={setSupportModalOpen}>
-        <DialogContent className="border-[#1a3045] bg-[#0b1b2a] text-white sm:max-w-2xl">
+        <DialogContent className="border-[#1a3045] bg-[#0b1b2a] px-4 text-white sm:max-w-2xl sm:px-6">
           <DialogHeader>
             <DialogTitle>AI-CRM Support</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -1275,14 +1274,14 @@ export default function settings() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3">
+            <div className="flex flex-col gap-3 rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
                 Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu joy ulanadi.
               </p>
               <button
                 type="submit"
                 disabled={supportSubmitting}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
               >
                 {supportSubmitting ? (
                   <Loader2 size={14} className="animate-spin" />

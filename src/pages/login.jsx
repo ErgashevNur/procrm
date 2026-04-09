@@ -7,6 +7,7 @@ import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { emitAuthChange } from "@/hooks/useNotification";
+import { API } from "@/lib/api";
 
 const slides = [
   {
@@ -38,15 +39,18 @@ function LeftSlider() {
   const [animationData, setAnimationData] = useState(null);
 
   useEffect(() => {
+    let timeoutId;
     const interval = setInterval(() => {
       setVisible(false);
-      const timeout = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setCurrent((prev) => (prev + 1) % slides.length);
         setVisible(true);
       }, 280);
-      return () => clearTimeout(timeout);
     }, 4200);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const slide = slides[current];
@@ -255,7 +259,7 @@ export default function Login() {
 
     setLoading(true);
     const loginRequest = async () => {
-      const apiBase = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+      const apiBase = API;
       if (!apiBase) throw new Error("API manzili sozlanmagan");
 
       let response;
@@ -288,6 +292,8 @@ export default function Login() {
         "isFirstLogin",
         String(Boolean(data.isFirstLogin ?? data.user.isFirstLogin)),
       );
+      localStorage.removeItem("projectId");
+      localStorage.removeItem("projectName");
       localStorage.setItem(
         "userData",
         JSON.stringify({
@@ -307,6 +313,9 @@ export default function Login() {
           if (Array.isArray(projects) && projects.length > 0) {
             localStorage.setItem("projectId", String(projects[0].id));
             localStorage.setItem("projectName", projects[0].name || "");
+          } else {
+            localStorage.removeItem("projectId");
+            localStorage.removeItem("projectName");
           }
         }
       } catch {
@@ -457,7 +466,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute top-1/2 right-3.5 -translate-y-1/2 text-white/25 transition-colors hover:text-white/60"
+                      className="absolute top-1/2 right-3.5 -translate-y-1/2 text-black transition-colors hover:text-black/70"
                       aria-label={
                         showPassword
                           ? "Parolni yashirish"

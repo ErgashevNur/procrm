@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Plus, FolderOpen, ChevronDown, Check, Layers } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "../components/ui/skeleton";
+import { API, IMAGE_API } from "@/lib/api";
 
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMG_API = "https://back.prohome.uz/api/v1/image";
 const getImgUrl = (raw) =>
-  raw ? `${IMG_API}/${raw.replace(/^image\//, "")}` : null;
+  raw ? `${IMAGE_API}/${raw.replace(/^image\//, "")}` : null;
 
 async function apiFetch(url, token) {
   const res = await fetch(url, {

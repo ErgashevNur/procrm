@@ -39,8 +39,7 @@ import {
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 const TOAST_STYLE = {
   style: {
     background: "#0f2231",

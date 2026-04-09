@@ -26,14 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
+import { API, IMAGE_API } from "@/lib/api";
 
 function getImageUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${IMAGE_API}/${src}`;
 }
 
 const API_STATUSES = {
@@ -430,13 +428,13 @@ export default function Tasks() {
       />
 
       {/* ── Header ── */}
-      <div className="relative z-10 shrink-0 border-b border-white/5 bg-[#071828]/90 px-6 py-4 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      <div className="relative z-10 shrink-0 border-b border-white/5 bg-[#071828]/90 px-4 py-3 backdrop-blur-sm sm:px-6 sm:py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <h1 className="text-lg font-bold text-white">Vazifalar</h1>
             <p className="text-xs text-gray-600">{stats.all} ta vazifa</p>
           </div>
-          <div className="flex max-w-sm flex-1 items-center gap-2 rounded-xl border border-white/5 bg-white/3 px-3 py-2">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-white/5 bg-white/3 px-3 py-2 sm:max-w-sm sm:flex-1">
             <Search size={14} className="shrink-0 text-gray-600" />
             <input
               type="text"
@@ -449,7 +447,8 @@ export default function Tasks() {
         </div>
 
         {/* Tabs + Filters */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-col gap-2.5">
+          <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[
             { key: "all", label: "Barchasi", count: stats.all, alert: false },
             {
@@ -474,7 +473,7 @@ export default function Tasks() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all sm:px-3 sm:text-xs ${
                 activeTab === tab.key
                   ? "bg-white/10 text-white"
                   : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
@@ -492,61 +491,76 @@ export default function Tasks() {
               </span>
             </button>
           ))}
-
-          <div className="mx-1 h-4 w-px bg-white/5" />
-
-          {/* Status select */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-white/5 bg-white/3 px-2 py-1.5 text-xs text-gray-400 outline-none"
-          >
-            <option value="all">Barcha holat</option>
-            {Object.entries(API_STATUSES).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Date range */}
-          <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/3 px-3 py-1.5">
-            <Filter size={12} className="text-gray-600" />
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
-            />
-            <span className="text-gray-600">—</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
-            />
+          </div>
+          <div className="flex items-center gap-2 px-1 text-[10px] text-gray-600 sm:hidden">
+            <div className="h-px flex-1 bg-white/5" />
+            <span className="shrink-0 tracking-[0.12em] uppercase">
+              Yoniga suring
+            </span>
+            <div className="flex items-center gap-1 text-gray-500">
+              <span>‹</span>
+              <span>›</span>
+            </div>
           </div>
 
-          {hasFilters && (
-            <button
-              onClick={() => {
-                setFilterStatus("all");
-                setDateFrom("");
-                setDateTo("");
-                setSearch("");
-                setActiveTab("all");
-              }}
-              className="text-xs text-gray-600 transition-colors hover:text-red-400"
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="h-9 rounded-lg border border-[#23415d] px-2.5 text-[11px] text-sky-200 outline-none sm:text-xs"
+              style={{ backgroundColor: "#0f2236", color: "#bae6fd" }}
             >
-              Tozalash ✕
-            </button>
-          )}
+              <option value="all" style={{ backgroundColor: "#0f2236", color: "#bae6fd" }}>
+                Barcha holat
+              </option>
+              {Object.entries(API_STATUSES).map(([k, v]) => (
+                <option
+                  key={k}
+                  value={k}
+                  style={{ backgroundColor: "#0f2236", color: "#bae6fd" }}
+                >
+                  {v.label}
+                </option>
+              ))}
+            </select>
 
-          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/3 px-2.5 py-1.5">
+              <Filter size={12} className="shrink-0 text-gray-600" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="min-w-0 bg-transparent text-[11px] text-gray-400 [color-scheme:dark] outline-none sm:text-xs"
+              />
+              <span className="text-gray-600">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="min-w-0 bg-transparent text-[11px] text-gray-400 [color-scheme:dark] outline-none sm:text-xs"
+              />
+            </div>
+
+            {hasFilters && (
+              <button
+                onClick={() => {
+                  setFilterStatus("all");
+                  setDateFrom("");
+                  setDateTo("");
+                  setSearch("");
+                  setActiveTab("all");
+                }}
+                className="self-start text-[11px] text-gray-600 transition-colors hover:text-red-400 sm:text-xs"
+              >
+                Tozalash ✕
+              </button>
+            )}
+
+            <div className="flex items-center justify-between gap-2 sm:ml-auto">
             <div className="flex items-center rounded-lg border border-white/5 bg-white/3 p-0.5">
               <button
                 onClick={() => setViewMode("table")}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors sm:text-[11px] ${
                   viewMode === "table"
                     ? "bg-white/10 text-white"
                     : "text-gray-500 hover:text-gray-300"
@@ -557,7 +571,7 @@ export default function Tasks() {
               </button>
               <button
                 onClick={() => setViewMode("column")}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors sm:text-[11px] ${
                   viewMode === "column"
                     ? "bg-white/10 text-white"
                     : "text-gray-500 hover:text-gray-300"
@@ -567,15 +581,16 @@ export default function Tasks() {
                 Column
               </button>
             </div>
-            <span className="text-xs text-gray-600">
+            <span className="text-[11px] text-gray-600 sm:text-xs">
               {filtered.length} ta natija
             </span>
+          </div>
           </div>
         </div>
       </div>
 
       {/* ── Content ── */}
-      <div className="relative z-10 flex-1 overflow-auto px-6 py-4">
+      <div className="relative z-10 flex-1 overflow-auto px-4 py-4 sm:px-6">
         {viewMode === "column" ? (
           <div className="grid min-w-[980px] grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {[

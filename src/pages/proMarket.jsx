@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFacebook,
@@ -36,8 +36,22 @@ const C = {
   red: "#E74C3C",
 };
 
-const brandLogo = (domain) =>
-  `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+const brandLogo = () => null;
+
+function getBrandInitials(name = "") {
+  const tokens = String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!tokens.length) return "PK";
+
+  return tokens
+    .slice(0, 2)
+    .map((token) => token[0] || "")
+    .join("")
+    .toUpperCase();
+}
 
 const INTEGRATIONS = {
   chats: [
@@ -365,6 +379,8 @@ const INTEGRATIONS = {
 const ALL_ITEMS = Object.values(INTEGRATIONS).flat();
 
 function BrandIcon({ item, size = 24 }) {
+  const initials = useMemo(() => getBrandInitials(item?.name), [item?.name]);
+
   if (item.faIcon) {
     return (
       <FontAwesomeIcon
@@ -379,17 +395,25 @@ function BrandIcon({ item, size = 24 }) {
   }
 
   return (
-    <img
-      src={item.logo}
-      alt={`${item.name} logo`}
+    <div
+      aria-label={`${item.name} logo`}
       style={{
         width: size,
         height: size,
-        objectFit: "contain",
-        display: "block",
+        display: "grid",
+        placeItems: "center",
         borderRadius: Math.max(4, Math.floor(size / 4)),
+        background:
+          "linear-gradient(135deg, rgba(77,142,245,0.24), rgba(39,174,96,0.22))",
+        color: "#D9E8FF",
+        fontSize: Math.max(10, Math.floor(size * 0.38)),
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
-    />
+    >
+      {initials}
+    </div>
   );
 }
 
@@ -475,7 +499,7 @@ function Badge({ type }) {
 }
 
 /* ── IntCard ── */
-function IntCard({ item, onToggle }) {
+function IntCard({ item, onToggle, compact = false }) {
   const [hov, setHov] = useState(false);
   return (
     <div
@@ -485,7 +509,7 @@ function IntCard({ item, onToggle }) {
         background: hov ? "#243650" : C.cardBg,
         border: `1px solid ${hov ? "#2E4A6A" : C.cardBorder}`,
         borderRadius: 10,
-        padding: 16,
+        padding: compact ? 14 : 16,
         cursor: "pointer",
         transition: "all 0.2s",
         display: "flex",
@@ -516,8 +540,8 @@ function IntCard({ item, onToggle }) {
       >
         <div
           style={{
-            width: 46,
-            height: 46,
+          width: compact ? 42 : 46,
+          height: compact ? 42 : 46,
             borderRadius: 10,
             background: item.bg,
             display: "flex",
@@ -525,7 +549,7 @@ function IntCard({ item, onToggle }) {
             justifyContent: "center",
           }}
         >
-          <BrandIcon item={item} size={24} />
+          <BrandIcon item={item} size={compact ? 22 : 24} />
         </div>
         <Badge type={item.badge} />
       </div>
@@ -533,14 +557,14 @@ function IntCard({ item, onToggle }) {
         <div
           style={{
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: compact ? 12 : 13,
             color: C.text,
             marginBottom: 4,
           }}
         >
           {item.name}
         </div>
-        <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+        <div style={{ fontSize: compact ? 10.5 : 11, color: C.textMuted, lineHeight: 1.5 }}>
           {item.desc}
         </div>
       </div>
@@ -552,8 +576,8 @@ function IntCard({ item, onToggle }) {
         style={{
           width: "100%",
           borderRadius: 7,
-          padding: "7px 0",
-          fontSize: 11,
+          padding: compact ? "8px 0" : "7px 0",
+          fontSize: compact ? 10.5 : 11,
           fontWeight: 700,
           cursor: "pointer",
           marginTop: "auto",
@@ -578,7 +602,7 @@ function IntCard({ item, onToggle }) {
 }
 
 /* ── Slider ── */
-function Slider() {
+function Slider({ isMobile = false }) {
   const [cur, setCur] = useState(1);
   const prev = () => setCur((c) => (c - 1 + SLIDES.length) % SLIDES.length);
   const next = () => setCur((c) => (c + 1) % SLIDES.length);
@@ -594,53 +618,55 @@ function Slider() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "28px 0 36px",
+        padding: isMobile ? "18px 0 30px" : "28px 0 36px",
         background: C.pageBg,
         overflow: "hidden",
       }}
     >
       {/* Left ghost */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          width: "20%",
-          height: 260,
-          background: left.bg,
-          borderRadius: "0 14px 14px 0",
-          opacity: 0.5,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          padding: "20px 18px",
-        }}
-      >
+      {!isMobile && (
         <div
           style={{
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 13,
-            fontWeight: 700,
-            lineHeight: 1.4,
+            position: "absolute",
+            left: 0,
+            width: "20%",
+            height: 260,
+            background: left.bg,
+            borderRadius: "0 14px 14px 0",
+            opacity: 0.5,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            padding: "20px 18px",
           }}
         >
-          {(left.title || left.label || "").split("\n")[0]}
+          <div
+            style={{
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 1.4,
+            }}
+          >
+            {(left.title || left.label || "").split("\n")[0]}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Left arrow */}
       <button
         onClick={prev}
         style={{
           position: "absolute",
-          left: "20%",
+          left: isMobile ? 10 : "20%",
           zIndex: 10,
-          width: 34,
-          height: 34,
+          width: isMobile ? 30 : 34,
+          height: isMobile ? 30 : 34,
           borderRadius: "50%",
           background: "rgba(15,25,40,0.9)",
           border: `1px solid ${C.border}`,
           color: "#fff",
-          fontSize: 18,
+          fontSize: isMobile ? 16 : 18,
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
@@ -654,9 +680,9 @@ function Slider() {
       {/* Center */}
       <div
         style={{
-          width: "56%",
+          width: isMobile ? "calc(100% - 76px)" : "56%",
           maxWidth: 800,
-          minHeight: 260,
+          minHeight: isMobile ? 300 : 260,
           background: center.bg,
           borderRadius: 14,
           position: "relative",
@@ -666,9 +692,9 @@ function Slider() {
         }}
       >
         {center.maobot ? (
-          <MaoBotSlide slide={center} />
+          <MaoBotSlide slide={center} isMobile={isMobile} />
         ) : (
-          <GenericSlide slide={center} />
+          <GenericSlide slide={center} isMobile={isMobile} />
         )}
       </div>
 
@@ -677,15 +703,15 @@ function Slider() {
         onClick={next}
         style={{
           position: "absolute",
-          right: "20%",
+          right: isMobile ? 10 : "20%",
           zIndex: 10,
-          width: 34,
-          height: 34,
+          width: isMobile ? 30 : 34,
+          height: isMobile ? 30 : 34,
           borderRadius: "50%",
           background: "rgba(15,25,40,0.9)",
           border: `1px solid ${C.border}`,
           color: "#fff",
-          fontSize: 18,
+          fontSize: isMobile ? 16 : 18,
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
@@ -697,32 +723,34 @@ function Slider() {
       </button>
 
       {/* Right ghost */}
-      <div
-        style={{
-          position: "absolute",
-          right: 0,
-          width: "20%",
-          height: 260,
-          background: right.bg,
-          borderRadius: "14px 0 0 14px",
-          opacity: 0.5,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          padding: "20px 18px",
-        }}
-      >
+      {!isMobile && (
         <div
           style={{
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 13,
-            fontWeight: 700,
-            lineHeight: 1.4,
+            position: "absolute",
+            right: 0,
+            width: "20%",
+            height: 260,
+            background: right.bg,
+            borderRadius: "14px 0 0 14px",
+            opacity: 0.5,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            padding: "20px 18px",
           }}
         >
-          {(right.title || right.label || "").split("\n")[0]}
+          <div
+            style={{
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 1.4,
+            }}
+          >
+            {(right.title || right.label || "").split("\n")[0]}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Dots */}
       <div
@@ -754,15 +782,17 @@ function Slider() {
   );
 }
 
-function MaoBotSlide({ slide }) {
+function MaoBotSlide({ slide, isMobile = false }) {
   return (
     <div
       style={{
-        padding: "28px 32px 60px",
+        padding: isMobile ? "22px 18px 60px" : "28px 32px 60px",
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
-        minHeight: 260,
+        gap: isMobile ? 18 : 0,
+        minHeight: isMobile ? 300 : 260,
       }}
     >
       <div style={{ flex: 1 }}>
@@ -800,7 +830,7 @@ function MaoBotSlide({ slide }) {
         <div
           style={{
             fontWeight: 900,
-            fontSize: 24,
+            fontSize: isMobile ? 20 : 24,
             color: "#fff",
             lineHeight: 1.3,
             marginBottom: 16,
@@ -863,7 +893,7 @@ function MaoBotSlide({ slide }) {
           </div>
         ))}
       </div>
-      <div style={{ marginLeft: 24, flexShrink: 0 }}>
+      <div style={{ marginLeft: isMobile ? 0 : 24, flexShrink: 0, alignSelf: isMobile ? "flex-start" : "auto" }}>
         <div
           style={{
             background: "rgba(255,255,255,0.12)",
@@ -892,12 +922,12 @@ function MaoBotSlide({ slide }) {
           right: 0,
           background: "rgba(41,121,255,0.88)",
           borderRadius: "0 0 14px 14px",
-          padding: "13px",
+          padding: isMobile ? "12px 14px" : "13px",
           textAlign: "center",
           cursor: "pointer",
           color: "#fff",
           fontWeight: 700,
-          fontSize: 14,
+          fontSize: isMobile ? 13 : 14,
         }}
       >
         Подключить тестовый период на 3 дня
@@ -906,15 +936,15 @@ function MaoBotSlide({ slide }) {
   );
 }
 
-function GenericSlide({ slide }) {
+function GenericSlide({ slide, isMobile = false }) {
   return (
     <div
       style={{
-        padding: "28px 32px",
+        padding: isMobile ? "22px 18px" : "28px 32px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        minHeight: 260,
+        minHeight: isMobile ? 300 : 260,
       }}
     >
       <div>
@@ -952,7 +982,7 @@ function GenericSlide({ slide }) {
         <div
           style={{
             fontWeight: 900,
-            fontSize: 20,
+            fontSize: isMobile ? 18 : 20,
             color: "rgba(255,255,255,0.7)",
             lineHeight: 1.3,
             marginBottom: 10,
@@ -964,10 +994,10 @@ function GenericSlide({ slide }) {
         </div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: isMobile ? 11 : 12,
             color: "rgba(255,255,255,0.5)",
             lineHeight: 1.6,
-            maxWidth: 400,
+            maxWidth: isMobile ? "100%" : 400,
           }}
         >
           {slide.body}
@@ -983,7 +1013,7 @@ function GenericSlide({ slide }) {
               : "none",
             color: "#fff",
             borderRadius: 9,
-            padding: "10px 22px",
+            padding: isMobile ? "10px 18px" : "10px 22px",
             fontSize: 13,
             fontWeight: 700,
             cursor: "pointer",
@@ -998,14 +1028,15 @@ function GenericSlide({ slide }) {
 }
 
 /* ── Section ── */
-function Section({ title, count, items, onToggle, onSeeAll }) {
+function Section({ title, count, items, onToggle, onSeeAll, isMobile = false }) {
   return (
-    <div style={{ marginBottom: 36 }}>
+    <div style={{ marginBottom: isMobile ? 28 : 36 }}>
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 12,
+          alignItems: isMobile ? "flex-start" : "center",
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 6 : 12,
           marginBottom: 16,
         }}
       >
@@ -1027,12 +1058,14 @@ function Section({ title, count, items, onToggle, onSeeAll }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
-          gap: 14,
+          gridTemplateColumns: isMobile
+            ? "1fr"
+            : "repeat(auto-fill,minmax(200px,1fr))",
+          gap: isMobile ? 12 : 14,
         }}
       >
         {items.map((i) => (
-          <IntCard key={i.id} item={i} onToggle={onToggle} />
+          <IntCard key={i.id} item={i} onToggle={onToggle} compact={isMobile} />
         ))}
       </div>
     </div>
@@ -1214,6 +1247,18 @@ export default function ProMarket() {
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
   const [srOpen, setSrOpen] = useState(false);
+  const [vpWidth, setVpWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+
+  useEffect(() => {
+    const onResize = () => setVpWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const isMobile = vpWidth < 768;
+  const contentPadX = isMobile ? 14 : 24;
 
   const showToast = (icon, msg) => {
     setToast({ icon, msg });
@@ -1242,7 +1287,7 @@ export default function ProMarket() {
     if (tab === "installed") {
       const inst = Object.values(items).filter((i) => i.installed);
       return (
-        <div style={{ padding: "0 24px" }}>
+        <div style={{ padding: `0 ${contentPadX}px` }}>
           <div
             style={{
               fontWeight: 700,
@@ -1260,12 +1305,14 @@ export default function ProMarket() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
-                gap: 14,
+                gridTemplateColumns: isMobile
+                  ? "1fr"
+                  : "repeat(auto-fill,minmax(200px,1fr))",
+                gap: isMobile ? 12 : 14,
               }}
             >
               {inst.map((i) => (
-                <IntCard key={i.id} item={i} onToggle={toggleInstall} />
+                <IntCard key={i.id} item={i} onToggle={toggleInstall} compact={isMobile} />
               ))}
             </div>
           ) : (
@@ -1300,14 +1347,15 @@ export default function ProMarket() {
     if (tab === "all")
       return (
         <>
-          <Slider />
-          <div style={{ padding: "0 24px" }}>
+          <Slider isMobile={isMobile} />
+          <div style={{ padding: `0 ${contentPadX}px` }}>
             <Section
               title="Чаты и мессенджеры"
               count={330}
               items={catItems("chats")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("chats")}
+              isMobile={isMobile}
             />
             <Section
               title="Телефония"
@@ -1315,6 +1363,7 @@ export default function ProMarket() {
               items={catItems("telephony")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("telephony")}
+              isMobile={isMobile}
             />
             <Section
               title="Email и SMS рассылки"
@@ -1322,6 +1371,7 @@ export default function ProMarket() {
               items={catItems("email")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("email")}
+              isMobile={isMobile}
             />
             <Section
               title="Аналитика"
@@ -1329,6 +1379,7 @@ export default function ProMarket() {
               items={catItems("analytics")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("analytics")}
+              isMobile={isMobile}
             />
           </div>
         </>
@@ -1344,7 +1395,7 @@ export default function ProMarket() {
     }[tab] || { title: tab, count: 0 };
     const ci = catItems(tab);
     return (
-      <div style={{ padding: "0 24px" }}>
+      <div style={{ padding: `0 ${contentPadX}px` }}>
         <div
           style={{
             fontWeight: 700,
@@ -1361,13 +1412,15 @@ export default function ProMarket() {
         {ci.length ? (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
-              gap: 14,
+            display: "grid",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : "repeat(auto-fill,minmax(200px,1fr))",
+              gap: isMobile ? 12 : 14,
             }}
           >
             {ci.map((i) => (
-              <IntCard key={i.id} item={i} onToggle={toggleInstall} />
+              <IntCard key={i.id} item={i} onToggle={toggleInstall} compact={isMobile} />
             ))}
           </div>
         ) : (
@@ -1395,10 +1448,10 @@ export default function ProMarket() {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        minHeight: "100vh",
         background: C.pageBg,
         fontFamily: "'Segoe UI',system-ui,sans-serif",
-        overflow: "hidden",
+        overflow: isMobile ? "visible" : "hidden",
         color: C.text,
       }}
     >
@@ -1407,18 +1460,19 @@ export default function ProMarket() {
         style={{
           background: C.headerBg,
           borderBottom: `1px solid ${C.border}`,
-          padding: "0 24px",
-          height: 52,
+          padding: isMobile ? "10px 14px" : "0 24px",
+          minHeight: isMobile ? 96 : 52,
           display: "flex",
-          alignItems: "center",
-          gap: 16,
+          alignItems: isMobile ? "flex-start" : "center",
+          flexWrap: isMobile ? "wrap" : "nowrap",
+          gap: isMobile ? 10 : 16,
           flexShrink: 0,
         }}
       >
         <span
           style={{
             fontWeight: 900,
-            fontSize: 16,
+            fontSize: isMobile ? 15 : 16,
             color: C.text,
             letterSpacing: 0.3,
             whiteSpace: "nowrap",
@@ -1426,7 +1480,7 @@ export default function ProMarket() {
         >
           Kotibam <span style={{ color: C.blue }}>МАРКЕТ</span>
         </span>
-        <div style={{ position: "relative", maxWidth: 320, width: "100%" }}>
+        <div style={{ position: "relative", maxWidth: isMobile ? "100%" : 320, width: isMobile ? "100%" : "100%", order: isMobile ? 3 : 0 }}>
           <span
             style={{
               position: "absolute",
@@ -1528,7 +1582,7 @@ export default function ProMarket() {
             </div>
           )}
         </div>
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1, display: isMobile ? "none" : "block" }} />
         <span
           style={{
             color: C.textMuted,
@@ -1536,6 +1590,7 @@ export default function ProMarket() {
             fontSize: 18,
             letterSpacing: 2,
             padding: "2px 8px",
+            marginLeft: isMobile ? "auto" : 0,
           }}
         >
           <Ellipsis size={18} color={C.textMuted} />
@@ -1547,7 +1602,7 @@ export default function ProMarket() {
             color: C.text,
             border: `1px solid ${C.border}`,
             borderRadius: 8,
-            padding: "7px 14px",
+            padding: isMobile ? "7px 12px" : "7px 14px",
             fontSize: 12,
             fontWeight: 700,
             cursor: "pointer",
@@ -1567,7 +1622,7 @@ export default function ProMarket() {
           borderBottom: `1px solid ${C.border}`,
           display: "flex",
           alignItems: "center",
-          padding: "0 24px",
+          padding: `0 ${contentPadX}px`,
           overflowX: "auto",
           flexShrink: 0,
           scrollbarWidth: "none",
@@ -1604,7 +1659,7 @@ export default function ProMarket() {
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 32 }}>
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: isMobile ? 24 : 32 }}>
         {renderContent()}
       </div>
 

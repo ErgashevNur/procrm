@@ -4,15 +4,44 @@ import { Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 function ChartContainer({ className, children, config: _config, ...props }) {
+  const containerRef = React.useRef(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return undefined;
+
+    const updateSize = () => {
+      const nextWidth = node.clientWidth;
+      const nextHeight = node.clientHeight;
+
+      setSize((prev) =>
+        prev.width === nextWidth && prev.height === nextHeight
+          ? prev
+          : { width: nextWidth, height: nextHeight },
+      );
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div
+      ref={containerRef}
       data-slot="chart-container"
-      className={cn("w-full", className)}
+      className={cn("min-w-0 w-full", className)}
       {...props}
     >
-      <ResponsiveContainer width="100%" height="100%">
-        {children}
-      </ResponsiveContainer>
+      {size.width > 0 && size.height > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
+      ) : null}
     </div>
   );
 }

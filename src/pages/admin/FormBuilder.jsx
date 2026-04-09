@@ -8,8 +8,7 @@ import FieldEditor from "@/components/form-builder/FieldEditor";
 import FormPreview from "@/components/form-builder/FormPreview";
 import { getProjectSlugFromStorage, getPublicFormUrl } from "@/lib/formLinks";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 function createEmptyField() {
   return {

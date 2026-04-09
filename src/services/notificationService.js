@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API as API_BASE } from "@/lib/api";
 
 // ─────────────────────────────────────────────
 // 🔧 userData dan accessToken olish

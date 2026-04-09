@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 function toNumber(value) {
   const n = Number(value);

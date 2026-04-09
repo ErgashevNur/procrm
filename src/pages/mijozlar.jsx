@@ -46,8 +46,7 @@ import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
 import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 const maxBirthDate = (() => {
   const d = new Date();
@@ -1546,29 +1545,10 @@ export default function Pipeline() {
       }}
     >
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4 border-b border-[#284860] bg-[#0f2231] px-6 py-4 text-white">
+      <div className="flex flex-col gap-3 border-b border-[#284860] bg-[#0f2231] px-4 py-4 text-white sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         {/* Left: project select + search */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Select
-            value={currentProject?.name}
-            onValueChange={(name) => {
-              const p = projects.find((x) => x.name === name);
-              if (p) loadProject(p);
-            }}
-          >
-            <SelectTrigger className="w-56" style={{ height: "36px" }}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="mt-10">
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.name}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div ref={searchWrapRef} className="relative min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <div ref={searchWrapRef} className="relative min-w-0 w-full flex-1">
             <div className="flex h-10 items-center gap-2 rounded-md bg-[#10263b] px-3">
               <Search size={14} className="shrink-0 text-gray-500" />
               <input
@@ -1813,12 +1793,31 @@ export default function Pipeline() {
               </div>
             )}
           </div>
+
+          <Select
+            value={currentProject?.name}
+            onValueChange={(name) => {
+              const p = projects.find((x) => x.name === name);
+              if (p) loadProject(p);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-56" style={{ height: "36px" }}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="mt-10">
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.name}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Right: stats + action buttons */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           {/* Mijoz soni + filter natijasi */}
-          <span className="mr-2 text-xs text-gray-500">
+          <span className="mr-0 text-xs leading-5 text-gray-500 lg:mr-2">
             {isFiltering ? (
               <>
                 <span className="text-white">{totalFiltered}</span>/{totalAll}{" "}
@@ -1843,7 +1842,7 @@ export default function Pipeline() {
             )}
           </span>
 
-          <div ref={actionsWrapRef} className="relative">
+          <div ref={actionsWrapRef} className="relative ml-auto lg:ml-0">
             <button
               onClick={() => setActionsOpen((v) => !v)}
               className="flex h-9 w-9 items-center justify-center rounded-md border border-[#2a4868] text-gray-300 transition-colors hover:bg-[#1b3e57] hover:text-white"

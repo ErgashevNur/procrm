@@ -21,8 +21,7 @@ import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 import { Link } from "react-router-dom";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 // item.icon — rasm nomi yoki path
 // GET /image/:imageUrl → rasmni qaytaradi
@@ -369,11 +368,11 @@ export default function LeadSource() {
   // ─────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0f2231] text-gray-100">
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* ── Header ──────────────────────────────────────────────── */}
-        <div className="mb-8 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight text-indigo-300">
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <h1 className="text-xl font-semibold tracking-tight text-indigo-300 sm:text-2xl">
               Lead Manbalari
             </h1>
 
@@ -385,7 +384,7 @@ export default function LeadSource() {
                 if (p) loadProject(p);
               }}
             >
-              <SelectTrigger className="w-48 border-indigo-900/50 bg-indigo-950/50 text-sm text-gray-300">
+              <SelectTrigger className="w-full min-w-0 border-indigo-900/50 bg-indigo-950/50 text-xs text-gray-300 sm:w-48 sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="mt-1">
@@ -410,7 +409,7 @@ export default function LeadSource() {
             }}
           >
             <DialogTrigger asChild>
-              <button className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium transition-colors hover:bg-indigo-700">
+              <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium transition-colors hover:bg-indigo-700 sm:w-auto">
                 <Plus size={16} /> Yangi manba
               </button>
             </DialogTrigger>
@@ -496,6 +495,100 @@ export default function LeadSource() {
 
         {/* ── Table ───────────────────────────────────────────────── */}
         <div className="overflow-hidden rounded-xl border border-indigo-900/40 bg-gray-900/80 shadow-xl backdrop-blur-sm">
+          <div className="md:hidden">
+            {leadSource.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500">
+                Hozircha hech qanday lead manbasi mavjud emas
+              </div>
+            ) : (
+              <div className="divide-y divide-indigo-900/30">
+                {leadSource.map((item) => (
+                  <div
+                    key={item.id}
+                    className="space-y-3 px-4 py-4 transition-colors duration-150 hover:bg-indigo-950/30"
+                  >
+                    <div className="flex items-start gap-3">
+                      <IconImage icon={item.icon} name={item.name} size="h-12 w-12" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-100">
+                          {item.name || "—"}
+                        </p>
+                        <p className="mt-1 text-[11px] text-gray-500">ID: #{item.id}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => openEdit(item)}
+                          className="text-indigo-400 transition-colors hover:text-indigo-300"
+                          title="Tahrirlash"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </button>
+                        {canDeleteLeadSource ? (
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deletingId === item.id}
+                            className="text-rose-400 transition-colors hover:text-rose-300 disabled:opacity-40"
+                            title="O'chirish"
+                          >
+                            {deletingId === item.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                          item.isActive
+                            ? "border border-emerald-800/40 bg-emerald-900/50 text-emerald-300"
+                            : "border border-rose-800/40 bg-rose-900/50 text-rose-300"
+                        }`}
+                      >
+                        {item.isActive ? "Faol" : "Faol emas"}
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        {new Date(item.createdAt).toLocaleDateString("uz-UZ", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block">
           {/* Head */}
           <div className="grid grid-cols-12 gap-4 border-b border-indigo-900/50 bg-indigo-950/70 px-6 py-4 text-xs font-medium tracking-wider text-indigo-300/80 uppercase">
             <div className="col-span-4">Manba nomi</div>
@@ -513,8 +606,8 @@ export default function LeadSource() {
             >
               {/* Name + icon */}
               <div className="col-span-4 flex items-center gap-3">
-                <IconImage icon={item.icon} name={item.name} />
-                <span className="font-medium text-gray-100">
+                <IconImage icon={item.icon} name={item.name} size="h-10 w-10" />
+                <span className="truncate font-medium text-gray-100">
                   {item.name || "—"}
                 </span>
               </div>
@@ -603,6 +696,7 @@ export default function LeadSource() {
               Hozircha hech qanday lead manbasi mavjud emas
             </div>
           )}
+          </div>
         </div>
       </div>
 

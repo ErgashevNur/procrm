@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,10 +28,9 @@ import {
   isSuperAdminLikeRole,
 } from "@/lib/rbac";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME.replace(/\/+$/, "");
+import { API as API_BASE } from "@/lib/api";
 const PER_PAGE = 10;
-const ALL_PERMISSIONS = ["CRM", "PROHOME"];
+const ALL_PERMISSIONS = ["CRM"];
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = new Set([
   "image/png",
@@ -452,7 +452,7 @@ function FormField({ label, required = false, icon: Icon, error, children }) {
   );
 }
 
-function TInput({ value, onChange, placeholder, type = "text", maxLength, ...rest }) {
+function TInput({ value, onChange, placeholder, type = "text", maxLength, className = "", ...rest }) {
   return (
     <input
       type={type}
@@ -461,8 +461,31 @@ function TInput({ value, onChange, placeholder, type = "text", maxLength, ...res
       placeholder={placeholder}
       maxLength={maxLength}
       {...rest}
-      className="w-full rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]"
+      className={`w-full rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6] ${className}`}
     />
+  );
+}
+
+function PasswordInput({ value, onChange, placeholder, show, onToggleVisibility, maxLength }) {
+  return (
+    <div className="relative">
+      <TInput
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        type={show ? "text" : "password"}
+        maxLength={maxLength}
+        className="pr-14"
+      />
+      <button
+        type="button"
+        onClick={onToggleVisibility}
+        className="absolute top-1/2 right-3 -translate-y-1/2 text-black transition-colors hover:text-black/80"
+        aria-label={show ? "Parolni yashirish" : "Parolni ko'rsatish"}
+      >
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
   );
 }
 
@@ -825,12 +848,14 @@ function CompanyDrawer({ company, onClose, onSaved }) {
   );
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const objectUrlRef = useRef(null);
 
   useEffect(() => {
     setForm(getInitialForm(company));
     setPreview(company?.logo ? getImgUrl(company.logo) : null);
     setErrors({});
+    setShowPassword(false);
   }, [company]);
 
   useEffect(() => {
@@ -980,8 +1005,14 @@ function CompanyDrawer({ company, onClose, onSaved }) {
 
             {!isEdit ? (
               <FormField label="Parol" required error={errors.password}>
-                <TInput value={form.password} onChange={setField("password")}
-                  placeholder="Parol kiriting" type="password" maxLength={128} />
+                <PasswordInput
+                  value={form.password}
+                  onChange={setField("password")}
+                  placeholder="Parol kiriting"
+                  show={showPassword}
+                  onToggleVisibility={() => setShowPassword((prev) => !prev)}
+                  maxLength={128}
+                />
               </FormField>
             ) : null}
 
@@ -1041,7 +1072,7 @@ function CompanyDrawer({ company, onClose, onSaved }) {
               Bekor
             </button>
             <button type="submit" disabled={submitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50">
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-[linear-gradient(135deg,rgba(37,99,235,0.95),rgba(29,78,216,0.92))] py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.22)] transition-all hover:-translate-y-0.5 hover:border-blue-300/40 hover:shadow-[0_14px_28px_rgba(37,99,235,0.3)] active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none">
               {submitting ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
@@ -1217,7 +1248,7 @@ function CompaniesContent() {
                 className="w-48 rounded-xl border border-white/[0.07] bg-[#0a1929] py-2 pr-3 pl-8 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]" />
             </div>
             <button type="button" onClick={() => setDrawer("add")}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)] transition-all hover:opacity-90 active:scale-95">
+              className="flex items-center gap-2 rounded-xl border border-blue-400/20 bg-[linear-gradient(135deg,rgba(37,99,235,0.95),rgba(29,78,216,0.92))] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)] transition-all hover:-translate-y-0.5 hover:border-blue-300/40 hover:shadow-[0_14px_30px_rgba(37,99,235,0.34)] active:translate-y-0">
               <Plus size={16} />
               <span className="hidden sm:inline">Yangi kompaniya</span>
               <span className="sm:hidden">Yangi</span>
@@ -1244,7 +1275,7 @@ function CompaniesContent() {
             </p>
             {!normalizedQuery ? (
               <button type="button" onClick={() => setDrawer("add")}
-                className="mt-2 flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-2.5 text-sm font-semibold text-white">
+                className="mt-2 flex items-center gap-2 rounded-xl border border-blue-400/20 bg-[linear-gradient(135deg,rgba(37,99,235,0.95),rgba(29,78,216,0.92))] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.24)] transition-all hover:-translate-y-0.5 hover:border-blue-300/40 hover:shadow-[0_14px_30px_rgba(37,99,235,0.3)] active:translate-y-0">
                 <Plus size={15} /> Kompaniya qo'shish
               </button>
             ) : null}

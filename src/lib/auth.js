@@ -158,6 +158,8 @@ export async function persistAuthSession(data, apiBase) {
   localStorage.setItem("user", authData.accessToken);
   localStorage.setItem("companyId", authData.user.companyId ?? "");
   localStorage.setItem("isFirstLogin", String(Boolean(authData.isFirstLogin)));
+  localStorage.removeItem("projectId");
+  localStorage.removeItem("projectName");
   localStorage.setItem(
     "userData",
     JSON.stringify({
@@ -179,6 +181,9 @@ export async function persistAuthSession(data, apiBase) {
       if (Array.isArray(projects) && projects.length > 0) {
         localStorage.setItem("projectId", String(projects[0].id));
         localStorage.setItem("projectName", projects[0].name || "");
+      } else {
+        localStorage.removeItem("projectId");
+        localStorage.removeItem("projectName");
       }
     }
   } catch {}

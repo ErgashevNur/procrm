@@ -54,8 +54,7 @@ import {
 import { Button } from "../components/ui/button";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import { getProjectSlugFromStorage, getPublicFormUrl } from "@/lib/formLinks";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API } from "@/lib/api";
 
 const COLORS = [
   "#4B0082",

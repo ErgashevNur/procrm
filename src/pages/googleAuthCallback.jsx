@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getDefaultRouteByRole } from "@/lib/rbac";
 import { extractAuthPayloadFromUrl, persistAuthSession } from "@/lib/auth";
-
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API as API_BASE } from "@/lib/api";
 
 async function parseJsonSafe(response) {
   const text = await response.text();
