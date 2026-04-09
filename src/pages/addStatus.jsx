@@ -71,6 +71,7 @@ const COLORS = [
   "#f59e0b",
   "#ef4444",
 ];
+// salom
 
 const SOURCE_CARDS = [
   {
@@ -266,7 +267,6 @@ function normalizeTemplateItem(template, projectSlug) {
     link: getPublicFormUrl(id, { projectSlug }),
   };
 }
-
 
 function FormPreviewField({ field }) {
   if (field.type === "textarea") {
@@ -548,7 +548,9 @@ function FormBuilderDialog({
     setTelegramUrl(template.telegramUrl || "");
     setFields(mappedFields);
     setHeaderImage(template.headerImage || null);
-    setSavedLink(template.link || getPublicFormUrl(template.id, { projectSlug }));
+    setSavedLink(
+      template.link || getPublicFormUrl(template.id, { projectSlug }),
+    );
     setHasChanges(false);
     setCopied(false);
   };
@@ -708,7 +710,9 @@ function FormBuilderDialog({
         image: imageValue,
         isActive: true,
         fields: normalizedFields,
-        ...(isEditMode && deletedFieldIds.length > 0 ? { deletedFieldIds } : {}),
+        ...(isEditMode && deletedFieldIds.length > 0
+          ? { deletedFieldIds }
+          : {}),
       };
 
       const res = await fetch(endpoint, {
@@ -727,7 +731,9 @@ function FormBuilderDialog({
       }
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        const msg = Array.isArray(e?.message) ? e.message.join(", ") : e?.message;
+        const msg = Array.isArray(e?.message)
+          ? e.message.join(", ")
+          : e?.message;
         throw new Error(msg || "Saqlashda xatolik");
       }
 
@@ -878,7 +884,7 @@ function FormBuilderDialog({
                   height="14"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#229ED9]"
+                  className="absolute top-1/2 left-3 -translate-y-1/2 text-[#229ED9]"
                 >
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.12 14.367l-2.95-.924c-.64-.204-.654-.64.136-.953l11.527-4.444c.533-.194 1.001.13.73.201z" />
                 </svg>
@@ -898,7 +904,8 @@ function FormBuilderDialog({
                 </p>
               )}
               <p className="mt-1 text-[11px] text-gray-500">
-                Submit qilingandan so'ng foydalanuvchi shu kanalga yo'naltiriladi
+                Submit qilingandan so'ng foydalanuvchi shu kanalga
+                yo'naltiriladi
               </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#091827] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1043,9 +1050,7 @@ function FormBuilderDialog({
 
           <div
             className={`space-y-4 ${
-              isEditView
-                ? "lg:sticky lg:top-2 lg:self-start"
-                : ""
+              isEditView ? "lg:sticky lg:top-2 lg:self-start" : ""
             }`}
           >
             <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
@@ -1153,9 +1158,9 @@ function FormBuilderDialog({
                             </p>
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                               <span>
-                                {(Array.isArray(form.fields)
+                                {Array.isArray(form.fields)
                                   ? form.fields.length
-                                  : 0)}{" "}
+                                  : 0}{" "}
                                 ta field
                               </span>
                               {form.headerImage?.dataUrl && (
@@ -1279,10 +1284,10 @@ function FormBuilderDialog({
                 {loadingTemplateId
                   ? "Yuklanmoqda..."
                   : saving
-                  ? "Saqlanmoqda..."
-                  : editingTemplate
-                    ? "Formani yangilash"
-                    : "Formani saqlash"}
+                    ? "Saqlanmoqda..."
+                    : editingTemplate
+                      ? "Formani yangilash"
+                      : "Formani saqlash"}
               </Button>
             )}
           </div>
@@ -1468,7 +1473,11 @@ export default function AddStatus() {
   const projectSlug = getProjectSlugFromStorage();
   const role = getCurrentRole();
   const canDeleteStatuses = canDeleteData(role);
-  const canDeleteTemplates = [ROLES.SUPERADMIN, ROLES.ROP, ROLES.ADMIN].includes(role);
+  const canDeleteTemplates = [
+    ROLES.SUPERADMIN,
+    ROLES.ROP,
+    ROLES.ADMIN,
+  ].includes(role);
 
   const boardScrollRef = useRef(null);
   const [columns, setColumns] = useState([]);
@@ -1917,8 +1926,12 @@ export default function AddStatus() {
                               <div
                                 key={form.id}
                                 onClick={() => handleFormCardClick(form)}
-                                onDoubleClick={() => handleFormCardDoubleClick(form)}
-                                onContextMenu={(e) => handleFormContextMenu(e, form)}
+                                onDoubleClick={() =>
+                                  handleFormCardDoubleClick(form)
+                                }
+                                onContextMenu={(e) =>
+                                  handleFormContextMenu(e, form)
+                                }
                                 className="flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
                               >
                                 <FileText />
@@ -2342,7 +2355,10 @@ export default function AddStatus() {
           <div
             className="fixed inset-0 z-40"
             onClick={closeContextMenu}
-            onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeContextMenu();
+            }}
           />
           <div
             className="fixed z-50 min-w-[160px] overflow-hidden rounded-xl border border-[#1a3a52] bg-[#0f2942] shadow-2xl"
@@ -2353,7 +2369,11 @@ export default function AddStatus() {
               onClick={() => {
                 closeContextMenu();
                 if (contextMenu.form?.link) {
-                  window.open(contextMenu.form.link, "_blank", "noopener,noreferrer");
+                  window.open(
+                    contextMenu.form.link,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
                 }
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
