@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Eye as EyeIcon, EyeOff as EyeOffIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 import { getGoogleAuthUrl } from "@/lib/auth";
 import { API as API_BASE } from "@/lib/api";
 const DEFAULT_PERMISSIONS = ["CRM"];

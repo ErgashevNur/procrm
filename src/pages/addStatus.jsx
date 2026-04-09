@@ -70,6 +70,7 @@ const COLORS = [
   "#f59e0b",
   "#ef4444",
 ];
+// salom
 
 const SOURCE_CARDS = [
   {
@@ -266,7 +267,6 @@ function normalizeTemplateItem(template, projectSlug) {
   };
 }
 
-
 function FormPreviewField({ field }) {
   if (field.type === "textarea") {
     return (
@@ -453,6 +453,7 @@ function FormBuilderDialog({
   const [imageLoading, setImageLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedLink, setSavedLink] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [loadingTemplateId, setLoadingTemplateId] = useState(null);
@@ -472,6 +473,7 @@ function FormBuilderDialog({
     setImageLoading(false);
     setSaving(false);
     setSavedLink(null);
+    setHasChanges(false);
     setCopied(false);
     setEditingTemplate(null);
     setLoadingTemplateId(null);
@@ -486,10 +488,10 @@ function FormBuilderDialog({
   useEffect(() => {
     if (!open || !initialTemplateId || !onLoadTemplate) return;
     if (Number(editingTemplate?.id) === Number(initialTemplateId)) return;
-    if (Number(loadingTemplateId) === Number(initialTemplateId)) return;
 
     let cancelled = false;
-    setLoadingTemplateId(Number(initialTemplateId));
+    const targetTemplateId = Number(initialTemplateId);
+    setLoadingTemplateId(targetTemplateId);
 
     (async () => {
       try {
@@ -503,7 +505,9 @@ function FormBuilderDialog({
         }
       } finally {
         if (!cancelled) {
-          setLoadingTemplateId(null);
+          setLoadingTemplateId((current) =>
+            Number(current) === targetTemplateId ? null : current,
+          );
         }
       }
     })();
@@ -511,13 +515,7 @@ function FormBuilderDialog({
     return () => {
       cancelled = true;
     };
-  }, [
-    open,
-    initialTemplateId,
-    onLoadTemplate,
-    editingTemplate?.id,
-    loadingTemplateId,
-  ]);
+  }, [open, initialTemplateId, onLoadTemplate, editingTemplate?.id]);
 
   const hydrateEditorFromTemplate = (template) => {
     if (!template) return;
@@ -549,7 +547,10 @@ function FormBuilderDialog({
     setTelegramUrl(template.telegramUrl || "");
     setFields(mappedFields);
     setHeaderImage(template.headerImage || null);
-    setSavedLink(template.link || getPublicFormUrl(template.id, { projectSlug }));
+    setSavedLink(
+      template.link || getPublicFormUrl(template.id, { projectSlug }),
+    );
+    setHasChanges(false);
     setCopied(false);
   };
 
@@ -584,7 +585,13 @@ function FormBuilderDialog({
     }
   };
 
+  const markAsChanged = () => {
+    setHasChanges(true);
+    setCopied(false);
+  };
+
   const updateField = (fieldId, patch) => {
+    markAsChanged();
     setFields((prev) =>
       prev.map((field) =>
         field.id === fieldId ? { ...field, ...patch } : field,
@@ -593,10 +600,12 @@ function FormBuilderDialog({
   };
 
   const addField = (type) => {
+    markAsChanged();
     setFields((prev) => [...prev, createField(type)]);
   };
 
   const removeField = (fieldId) => {
+    markAsChanged();
     setFields((prev) =>
       prev.length === 1 ? prev : prev.filter((field) => field.id !== fieldId),
     );
@@ -606,6 +615,7 @@ function FormBuilderDialog({
     setActiveFieldId(null);
     if (!over || active.id === over.id) return;
 
+    markAsChanged();
     setFields((prev) => {
       const oldIndex = prev.findIndex((field) => field.id === active.id);
       const newIndex = prev.findIndex((field) => field.id === over.id);
@@ -699,7 +709,9 @@ function FormBuilderDialog({
         image: imageValue,
         isActive: true,
         fields: normalizedFields,
-        ...(isEditMode && deletedFieldIds.length > 0 ? { deletedFieldIds } : {}),
+        ...(isEditMode && deletedFieldIds.length > 0
+          ? { deletedFieldIds }
+          : {}),
       };
 
       const res = await fetch(endpoint, {
@@ -718,7 +730,9 @@ function FormBuilderDialog({
       }
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        const msg = Array.isArray(e?.message) ? e.message.join(", ") : e?.message;
+        const msg = Array.isArray(e?.message)
+          ? e.message.join(", ")
+          : e?.message;
         throw new Error(msg || "Saqlashda xatolik");
       }
 
@@ -726,6 +740,7 @@ function FormBuilderDialog({
       const savedTemplateId = Number(data?.id || editingTemplate?.id || 0);
       const link = getPublicFormUrl(savedTemplateId, { projectSlug });
       setSavedLink(link);
+      setHasChanges(false);
       if (onSaved) await onSaved();
 
       if (isEditMode) {
@@ -733,7 +748,10 @@ function FormBuilderDialog({
           onLoadTemplate && savedTemplateId
             ? await onLoadTemplate(savedTemplateId)
             : null;
-        if (refreshed) hydrateEditorFromTemplate(refreshed);
+        if (refreshed) {
+          hydrateEditorFromTemplate(refreshed);
+          setSavedLink(link);
+        }
         toast.success("Forma muvaffaqiyatli yangilandi!");
       } else {
         toast.success("Forma muvaffaqiyatli yaratildi!");
@@ -760,6 +778,7 @@ function FormBuilderDialog({
     setImageLoading(true);
     try {
       const optimizedImage = await optimizeHeaderImage(file);
+      markAsChanged();
       setHeaderImage(optimizedImage);
       toast.success("Header rasmi qo'shildi");
     } catch (error) {
@@ -770,14 +789,18 @@ function FormBuilderDialog({
     }
   };
 
+  const isEditView = Boolean(editingTemplate?.id || initialTemplateId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-4xl">
+      <DialogContent className="max-h-[84vh] overflow-y-auto border-[#1a3a52] bg-[#0f2231] text-white sm:max-w-[68rem]">
         <DialogHeader>
           <DialogTitle>
-            {source
-              ? `${source.name} uchun Google Form creator`
-              : "Google Form creator"}
+            {editingTemplate || initialTemplateId
+              ? `Edit ${source?.name || "Google Form"}`
+              : source
+                ? `${source.name} uchun Google Form creator`
+                : "Google Form creator"}
           </DialogTitle>
         </DialogHeader>
         {editingTemplate && (
@@ -832,7 +855,10 @@ function FormBuilderDialog({
               </label>
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  markAsChanged();
+                  setTitle(e.target.value);
+                }}
                 placeholder="Masalan, Google Form lead form"
                 className="w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
@@ -841,7 +867,10 @@ function FormBuilderDialog({
               </label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  markAsChanged();
+                  setDescription(e.target.value);
+                }}
                 placeholder="Forma nimaga ishlatiladi?"
                 className="min-h-24 w-full rounded-xl border border-white/10 bg-[#091827] px-3 py-2 text-sm text-white outline-none"
               />
@@ -854,13 +883,16 @@ function FormBuilderDialog({
                   height="14"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#229ED9]"
+                  className="absolute top-1/2 left-3 -translate-y-1/2 text-[#229ED9]"
                 >
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.12 14.367l-2.95-.924c-.64-.204-.654-.64.136-.953l11.527-4.444c.533-.194 1.001.13.73.201z" />
                 </svg>
                 <input
                   value={telegramUrl}
-                  onChange={(e) => setTelegramUrl(e.target.value)}
+                  onChange={(e) => {
+                    markAsChanged();
+                    setTelegramUrl(e.target.value);
+                  }}
                   placeholder="https://t.me/channelname"
                   className="w-full rounded-xl border border-white/10 bg-[#091827] py-2 pr-3 pl-8 text-sm text-white outline-none"
                 />
@@ -871,7 +903,8 @@ function FormBuilderDialog({
                 </p>
               )}
               <p className="mt-1 text-[11px] text-gray-500">
-                Submit qilingandan so'ng foydalanuvchi shu kanalga yo'naltiriladi
+                Submit qilingandan so'ng foydalanuvchi shu kanalga
+                yo'naltiriladi
               </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#091827] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -904,7 +937,10 @@ function FormBuilderDialog({
                     {headerImage && (
                       <button
                         type="button"
-                        onClick={() => setHeaderImage(null)}
+                        onClick={() => {
+                          markAsChanged();
+                          setHeaderImage(null);
+                        }}
                         className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition hover:border-red-400/40 hover:bg-red-500/15"
                       >
                         Olib tashlash
@@ -1011,7 +1047,11 @@ function FormBuilderDialog({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div
+            className={`space-y-4 ${
+              isEditView ? "lg:sticky lg:top-2 lg:self-start" : ""
+            }`}
+          >
             <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-blue-200">
@@ -1043,7 +1083,13 @@ function FormBuilderDialog({
                 <p className="mt-1 text-sm text-gray-400">
                   {description || "Forma tavsifi shu yerda ko'rinadi"}
                 </p>
-                <div className="mt-4 space-y-3">
+                <div
+                  className={`mt-4 space-y-3 ${
+                    isEditView
+                      ? "max-h-[30vh] overflow-y-auto pr-1 lg:max-h-[34vh]"
+                      : ""
+                  }`}
+                >
                   {fields.map((field) => (
                     <div key={`preview-${field.id}`}>
                       <div className="mb-1 flex items-center gap-2">
@@ -1063,125 +1109,129 @@ function FormBuilderDialog({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    Saqlangan formalar
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Shu loyiha uchun yaratilgan Google Form variantlari
-                  </p>
+            {!isEditView ? (
+              <div className="rounded-2xl border border-white/10 bg-[#091827] p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Saqlangan formalar
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Shu loyiha uchun yaratilgan Google Form variantlari
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {formsLoading ? "..." : `${forms.length} ta`}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  {formsLoading ? "..." : `${forms.length} ta`}
-                </span>
-              </div>
-              <div className="mt-3 space-y-2">
-                {formsLoading ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
-                    Formalar yuklanmoqda...
-                  </div>
-                ) : forms.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
-                    Hali forma yaratilmagan
-                  </div>
-                ) : (
-                  forms.map((form) => (
-                    <div
-                      key={form.id}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3"
-                    >
-                      {form.headerImage?.dataUrl && (
-                        <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
-                          <div className="aspect-[8/3] w-full bg-[#07111d]">
-                            <img
-                              src={form.headerImage.dataUrl}
-                              alt={form.title}
-                              className="h-full w-full object-cover"
-                            />
+                <div className="mt-3 space-y-2">
+                  {formsLoading ? (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                      Formalar yuklanmoqda...
+                    </div>
+                  ) : forms.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-gray-500">
+                      Hali forma yaratilmagan
+                    </div>
+                  ) : (
+                    forms.map((form) => (
+                      <div
+                        key={form.id}
+                        className="rounded-xl border border-white/10 bg-white/5 p-3"
+                      >
+                        {form.headerImage?.dataUrl && (
+                          <div className="mb-3 overflow-hidden rounded-xl border border-white/10">
+                            <div className="aspect-[8/3] w-full bg-[#07111d]">
+                              <img
+                                src={form.headerImage.dataUrl}
+                                alt={form.title}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white">
-                            {form.title}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                            <span>
-                              {(Array.isArray(form.fields)
-                                ? form.fields.length
-                                : 0)}{" "}
-                              ta field
-                            </span>
-                            {form.headerImage?.dataUrl && (
-                              <>
-                                <span className="h-1 w-1 rounded-full bg-gray-500" />
-                                <span>Header rasm bor</span>
-                              </>
-                            )}
-                            <span className="h-1 w-1 rounded-full bg-gray-500" />
-                            <span>
-                              {new Date(form.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {form.link && (
-                            <p className="mt-1 truncate text-[11px] text-blue-400">
-                              {form.link}
+                        )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-white">
+                              {form.title}
                             </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {form.link && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                              <span>
+                                {Array.isArray(form.fields)
+                                  ? form.fields.length
+                                  : 0}{" "}
+                                ta field
+                              </span>
+                              {form.headerImage?.dataUrl && (
+                                <>
+                                  <span className="h-1 w-1 rounded-full bg-gray-500" />
+                                  <span>Header rasm bor</span>
+                                </>
+                              )}
+                              <span className="h-1 w-1 rounded-full bg-gray-500" />
+                              <span>
+                                {new Date(form.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {form.link && (
+                              <p className="mt-1 truncate text-[11px] text-blue-400">
+                                {form.link}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {form.link && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    form.link,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                                }
+                                className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
+                              >
+                                Ochish
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() =>
-                                window.open(
-                                  form.link,
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                )
-                              }
-                              className="text-xs font-semibold text-blue-300 transition hover:text-blue-200"
+                              disabled={saving || loadingTemplateId === form.id}
+                              onClick={() => handleStartEdit(form)}
+                              className="text-xs font-semibold text-amber-300 transition hover:text-amber-200 disabled:opacity-50"
                             >
-                              Ochish
+                              {loadingTemplateId === form.id
+                                ? "Yuklanmoqda..."
+                                : "Tahrirlash"}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={saving || loadingTemplateId === form.id}
-                            onClick={() => handleStartEdit(form)}
-                            className="text-xs font-semibold text-amber-300 transition hover:text-amber-200 disabled:opacity-50"
-                          >
-                            {loadingTemplateId === form.id
-                              ? "Yuklanmoqda..."
-                              : "Tahrirlash"}
-                          </button>
-                          {canDeleteTemplates && (
-                            <button
-                              type="button"
-                              disabled={deletingTemplateId === form.id}
-                              onClick={() => handleDeleteTemplate(form.id)}
-                              className="text-xs font-semibold text-red-300 transition hover:text-red-200 disabled:opacity-50"
-                            >
-                              {deletingTemplateId === form.id
-                                ? "O'chirilmoqda..."
-                                : "O'chirish"}
-                            </button>
-                          )}
+                            {canDeleteTemplates && (
+                              <button
+                                type="button"
+                                disabled={deletingTemplateId === form.id}
+                                onClick={() => handleDeleteTemplate(form.id)}
+                                className="text-xs font-semibold text-red-300 transition hover:text-red-200 disabled:opacity-50"
+                              >
+                                {deletingTemplateId === form.id
+                                  ? "O'chirilmoqda..."
+                                  : "O'chirish"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
 
-            {savedLink ? (
+            {savedLink && !hasChanges ? (
               <div className="space-y-2 rounded-xl border border-green-400/20 bg-green-500/10 p-3">
                 <p className="text-xs font-semibold text-green-300">
-                  ✓ Forma muvaffaqiyatli yaratildi!
+                  {editingTemplate
+                    ? "✓ Forma muvaffaqiyatli yangilandi!"
+                    : "✓ Forma muvaffaqiyatli yaratildi!"}
                 </p>
                 <div className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2">
                   <span className="flex-1 truncate text-[11px] text-gray-300">
@@ -1199,16 +1249,29 @@ function FormBuilderDialog({
                     )}
                   </button>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setSavedLink(null);
-                    onOpenChange(false);
-                  }}
-                  className="w-full"
-                >
-                  Yopish
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      window.open(savedLink, "_blank", "noopener,noreferrer")
+                    }
+                    className="w-full"
+                  >
+                    Ochish
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setSavedLink(null);
+                      setHasChanges(false);
+                      onOpenChange(false);
+                    }}
+                    className="w-full"
+                  >
+                    Yopish
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button
@@ -1220,10 +1283,10 @@ function FormBuilderDialog({
                 {loadingTemplateId
                   ? "Yuklanmoqda..."
                   : saving
-                  ? "Saqlanmoqda..."
-                  : editingTemplate
-                    ? "Formani yangilash"
-                    : "Formani saqlash"}
+                    ? "Saqlanmoqda..."
+                    : editingTemplate
+                      ? "Formani yangilash"
+                      : "Formani saqlash"}
               </Button>
             )}
           </div>
@@ -1409,7 +1472,11 @@ export default function AddStatus() {
   const projectSlug = getProjectSlugFromStorage();
   const role = getCurrentRole();
   const canDeleteStatuses = canDeleteData(role);
-  const canDeleteTemplates = [ROLES.SUPERADMIN, ROLES.ROP, ROLES.ADMIN].includes(role);
+  const canDeleteTemplates = [
+    ROLES.SUPERADMIN,
+    ROLES.ROP,
+    ROLES.ADMIN,
+  ].includes(role);
 
   const boardScrollRef = useRef(null);
   const [columns, setColumns] = useState([]);
@@ -1425,6 +1492,8 @@ export default function AddStatus() {
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [formBuilderSource, setFormBuilderSource] = useState(null);
   const [formBuilderTemplateId, setFormBuilderTemplateId] = useState(null);
+  const [editBuilderOpen, setEditBuilderOpen] = useState(false);
+  const [editBuilderTemplateId, setEditBuilderTemplateId] = useState(null);
   const [formTemplates, setFormTemplates] = useState([]);
   const [formsLoading, setFormsLoading] = useState(false);
   const formClickTimerRef = useRef(null);
@@ -1453,23 +1522,44 @@ export default function AddStatus() {
 
   const openFormBuilder = (template, templateId = null) => {
     if (!template) return;
+    setEditBuilderOpen(false);
+    setEditBuilderTemplateId(null);
     setSourceModalOpen(false);
     setFormBuilderTemplateId(templateId ? Number(templateId) : null);
     setFormBuilderSource(template);
   };
 
-  const handleFormCardClick = (template, formId) => {
+  const openEditBuilder = (form) => {
+    const sourceTemplate = SOURCE_CARDS.find(
+      (card) => card.variant === "template",
+    )?.template;
+    const formId = Number(form?.id || 0);
+    if (!sourceTemplate || !formId) {
+      toast.error("Tahrirlanadigan forma topilmadi");
+      return;
+    }
+
+    setFormBuilderSource(null);
+    setFormBuilderTemplateId(null);
+    setSourceModalOpen(false);
+    setEditBuilderTemplateId(formId);
+    setEditBuilderOpen(true);
+  };
+
+  const handleFormCardClick = (form) => {
     clearFormClickTimer();
     formClickTimerRef.current = setTimeout(() => {
-      openFormBuilder(template, formId);
+      closeContextMenu();
+      if (!form?.link) return;
+      window.open(form.link, "_blank", "noopener,noreferrer");
       formClickTimerRef.current = null;
     }, 220);
   };
 
-  const handleFormCardDoubleClick = (link) => {
+  const handleFormCardDoubleClick = (form) => {
     clearFormClickTimer();
-    if (!link) return;
-    window.open(link, "_blank", "noopener,noreferrer");
+    closeContextMenu();
+    openEditBuilder(form);
   };
 
   const handleFormContextMenu = (e, form) => {
@@ -1834,24 +1924,23 @@ export default function AddStatus() {
                             googleForms.slice(0, 3).map((form) => (
                               <div
                                 key={form.id}
-                                onContextMenu={(e) => handleFormContextMenu(e, form)}
-                                className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+                                onClick={() => handleFormCardClick(form)}
+                                onDoubleClick={() =>
+                                  handleFormCardDoubleClick(form)
+                                }
+                                onContextMenu={(e) =>
+                                  handleFormContextMenu(e, form)
+                                }
+                                className="flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
                               >
                                 <FileText />
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleFormCardClick(card.template, form.id)
-                                  }
-                                  onDoubleClick={() =>
-                                    handleFormCardDoubleClick(form.link)
-                                  }
+                                <span
                                   className="block w-full truncate text-left text-[12px] font-semibold text-blue-200 underline decoration-blue-300/60 underline-offset-3 transition hover:text-blue-100"
                                   title={form.title}
                                 >
                                   {form.title}
-                                </button>
+                                </span>
                               </div>
                             ))
                           )}
@@ -2236,13 +2325,39 @@ export default function AddStatus() {
         projectSlug={projectSlug}
       />
 
+      <FormBuilderDialog
+        open={editBuilderOpen}
+        onOpenChange={(open) => {
+          setEditBuilderOpen(open);
+          if (!open) {
+            setEditBuilderTemplateId(null);
+          }
+        }}
+        source={
+          SOURCE_CARDS.find((card) => card.variant === "template")?.template ||
+          null
+        }
+        initialTemplateId={editBuilderTemplateId}
+        forms={googleForms}
+        formsLoading={formsLoading}
+        onSaved={fetchFormTemplates}
+        onLoadTemplate={fetchFormTemplateById}
+        onDeleteTemplate={deleteFormTemplate}
+        canDeleteTemplates={canDeleteTemplates}
+        projectId={projectId}
+        projectSlug={projectSlug}
+      />
+
       {/* Form card right-click context menu */}
       {contextMenu && (
         <>
           <div
             className="fixed inset-0 z-40"
             onClick={closeContextMenu}
-            onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeContextMenu();
+            }}
           />
           <div
             className="fixed z-50 min-w-[160px] overflow-hidden rounded-xl border border-[#1a3a52] bg-[#0f2942] shadow-2xl"
@@ -2253,7 +2368,11 @@ export default function AddStatus() {
               onClick={() => {
                 closeContextMenu();
                 if (contextMenu.form?.link) {
-                  window.open(contextMenu.form.link, "_blank", "noopener,noreferrer");
+                  window.open(
+                    contextMenu.form.link,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
                 }
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
@@ -2264,9 +2383,9 @@ export default function AddStatus() {
             <button
               type="button"
               onClick={() => {
+                const selectedForm = contextMenu.form;
                 closeContextMenu();
-                const SOURCE_TEMPLATE = SOURCE_CARDS[0]?.template;
-                if (SOURCE_TEMPLATE) openFormBuilder(SOURCE_TEMPLATE, contextMenu.form?.id);
+                openEditBuilder(selectedForm);
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#9ab8cc] transition-colors hover:bg-[#1a3a52] hover:text-white"
             >
