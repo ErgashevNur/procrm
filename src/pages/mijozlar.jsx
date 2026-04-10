@@ -1318,19 +1318,17 @@ export default function Pipeline() {
     setAiProcessing(true);
     try {
       const sourceMimeType = recordedBlob.type || "audio/webm";
-      const normalizedMimeType = sourceMimeType.includes("ogg")
-        ? sourceMimeType
-        : "audio/ogg";
-      const extension = getAudioFileExtension(normalizedMimeType);
+      const extension = getAudioFileExtension(sourceMimeType);
       const audioFile = new File(
         [recordedBlob],
         `recorded_audio.${extension}`,
-        { type: normalizedMimeType },
+        { type: sourceMimeType },
       );
       const formData = new FormData();
-      formData.append("audio", audioFile);
+      formData.append("file", audioFile);
+      formData.append("projectId", String(currentProject.id));
 
-      const res = await apiFetch(`${API}/leeds/audio/${currentProject.id}`, {
+      const res = await apiFetch(`${API}/leeds/audio`, {
         method: "POST",
         body: formData,
       });
