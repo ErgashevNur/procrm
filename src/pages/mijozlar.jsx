@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -298,9 +299,7 @@ function formatPhoneDisplay(raw) {
   const part3 = digits.slice(8, 10);
   const part4 = digits.slice(10, 12);
 
-  return ["+" + country, part1, part2, part3, part4]
-    .filter(Boolean)
-    .join(" ");
+  return ["+" + country, part1, part2, part3, part4].filter(Boolean).join(" ");
 }
 
 function normalizeBudgetInput(raw) {
@@ -1206,6 +1205,29 @@ export default function Pipeline() {
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
+  const handleAiDraftFieldChange = (field, value) => {
+    setAiDraft((prev) => {
+      if (field === "phone" || field === "extraPhone") {
+        return { ...prev, [field]: normalizeAiPhone(value) };
+      }
+      if (field === "budjet") {
+        return { ...prev, budjet: normalizeBudgetInput(value) };
+      }
+      if (field === "birthDate") {
+        return { ...prev, birthDate: value };
+      }
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const handleAiDraftTagsChange = (value) => {
+    const tags = String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    setAiDraft((prev) => ({ ...prev, tags }));
+  };
+
   const resetLeadForm = () => {
     setFormData(EMPTY_FORM);
     setAiDialogOpen(false);
@@ -1222,6 +1244,16 @@ export default function Pipeline() {
   };
 
   const applyAiDraftToForm = (draft) => {
+    const matchedSource = leadSource.find(
+      (item) =>
+        String(item?.name || "")
+          .trim()
+          .toLowerCase() ===
+        String(draft?.source || "")
+          .trim()
+          .toLowerCase(),
+    );
+
     setFormData((prev) => ({
       ...prev,
       firstName: draft.firstName || prev.firstName,
@@ -1237,6 +1269,7 @@ export default function Pipeline() {
           : prev.tags?.length
             ? prev.tags
             : [""],
+      ...(matchedSource?.id ? { leadSourceId: Number(matchedSource.id) } : {}),
     }));
   };
 
@@ -1294,14 +1327,95 @@ export default function Pipeline() {
     recognition.start();
   };
 
-  const handleApplyAi = () => {
+  const createLeadFromData = async (values) => {
+    if (!currentProject?.id) {
+      throw new Error("Loyiha tanlanmagan");
+    }
+
+    const body = {
+      firstName: values.firstName,
+      lastName: values.lastName,
+      phone: values.phone,
+      projectId: Number(currentProject.id),
+      ...(values.extraPhone && { extraPhone: values.extraPhone }),
+      ...(values.adress && { adress: values.adress }),
+      ...(values.budjet && { budjet: Number(values.budjet) }),
+      ...(values.leadSourceId && { leadSourceId: Number(values.leadSourceId) }),
+      ...(values.birthDate && { birthDate: values.birthDate }),
+      tag: (values.tags || []).map((t) => String(t).trim()).filter(Boolean),
+    };
+
+    const res = await apiFetch(`${API}/leeds`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!res) throw new Error("Sessiya tugagan");
+    if (!res.ok) {
+      const msg = await extractApiMessage(res, "Lead qo'shishda xatolik");
+      throw new Error(msg);
+    }
+
+    const newLead = await res.json();
+    return normalizeLead(newLead);
+  };
+
+  const prependLeadToBoard = (normalizedLead) => {
+    setStatuses((prev) =>
+      prev.map((s, i) =>
+        i === 0 ? { ...s, leads: [normalizedLead, ...s.leads] } : s,
+      ),
+    );
+  };
+
+  const handleApplyAi = async () => {
     if (!hasAiDraftData(aiDraft)) {
       showToast("AI javobidan forma uchun ma'lumot topilmadi", "error");
       return;
     }
-    applyAiDraftToForm(aiDraft);
-    setAiDialogOpen(false);
-    showToast("AI orqali forma to'ldirildi", "success");
+
+    const matchedSource = leadSource.find(
+      (item) =>
+        String(item?.name || "")
+          .trim()
+          .toLowerCase() ===
+        String(aiDraft?.source || "")
+          .trim()
+          .toLowerCase(),
+    );
+
+    const mergedValues = {
+      ...formData,
+      ...aiDraft,
+      tags:
+        Array.isArray(aiDraft.tags) && aiDraft.tags.length
+          ? aiDraft.tags
+          : formData.tags,
+      ...(matchedSource?.id
+        ? { leadSourceId: Number(matchedSource.id) }
+        : { leadSourceId: formData.leadSourceId }),
+    };
+
+    if (!String(mergedValues.firstName || "").trim()) {
+      showToast("Ism kiritilmagan", "error");
+      return;
+    }
+    if (!String(mergedValues.phone || "").trim()) {
+      showToast("Telefon kiritilmagan", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const normalizedLead = await createLeadFromData(mergedValues);
+      prependLeadToBoard(normalizedLead);
+      setAiDialogOpen(false);
+      closeLeadSheet();
+      showToast("Lead qo'shildi!", "success");
+    } catch (err) {
+      showToast(err?.message || "Lead qo'shishda xatolik", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleProcessAiAudio = async () => {
@@ -1385,36 +1499,12 @@ export default function Pipeline() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const body = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        projectId: Number(currentProject.id),
-        ...(formData.extraPhone && { extraPhone: formData.extraPhone }),
-        ...(formData.adress && { adress: formData.adress }),
-        ...(formData.budjet && { budjet: Number(formData.budjet) }),
-        ...(formData.leadSourceId && {
-          leadSourceId: Number(formData.leadSourceId),
-        }),
-        ...(formData.birthDate && { birthDate: formData.birthDate }),
-        tag: formData.tags.map((t) => t.trim()).filter(Boolean),
-      };
-      const res = await apiFetch(`${API}/leeds`, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      if (!res || !res.ok) throw new Error();
-      const newLead = await res.json();
-      const normalizedNewLead = normalizeLead(newLead);
-      setStatuses((prev) =>
-        prev.map((s, i) =>
-          i === 0 ? { ...s, leads: [normalizedNewLead, ...s.leads] } : s,
-        ),
-      );
+      const normalizedLead = await createLeadFromData(formData);
+      prependLeadToBoard(normalizedLead);
       closeLeadSheet();
       showToast("Lead qo\'shildi!", "success");
-    } catch {
-      showToast("Lead qo\'shishda xatolik", "error");
+    } catch (err) {
+      showToast(err?.message || "Lead qo\'shishda xatolik", "error");
     } finally {
       setSubmitting(false);
     }
@@ -1451,6 +1541,28 @@ export default function Pipeline() {
           ),
       )
     : 0;
+  const hasRecordedAudio = Boolean(recordedBlob);
+  const voiceStatusText = aiProcessing
+    ? "AI tahlil qilmoqda"
+    : isProcessingRecordedAudio
+      ? "Audio tayyorlanmoqda"
+      : isRecordingInProgress
+        ? "Audio yozilmoqda"
+        : hasRecordedAudio || isAvailableRecordedAudio
+          ? "Yuborishga tayyor"
+          : "Audio kutilmoqda";
+  const voiceStatusClass = aiProcessing
+    ? "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"
+    : isRecordingInProgress
+      ? "border-red-400/30 bg-red-500/10 text-red-200"
+      : hasRecordedAudio || isAvailableRecordedAudio
+        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+        : "border-white/10 bg-white/5 text-gray-300";
+  const canSendRecordedAudio =
+    hasRecordedAudio &&
+    !aiProcessing &&
+    !isRecordingInProgress &&
+    !isProcessingRecordedAudio;
 
   if (appState === "loading") {
     return (
@@ -1894,18 +2006,58 @@ export default function Pipeline() {
                 <IconBtn icon={Plus} label="Yangi mijoz" />
               </div>
             </SheetTrigger>
-            <SheetContent className="overflow-y-auto bg-[#07131d] px-5">
+            <SheetContent
+              className={`bg-[#07131d] px-5 ${
+                aiDialogOpen ? "hidden" : "overflow-y-auto"
+              }`}
+            >
               <SheetHeader>
                 <SheetTitle className="text-white">Lead qo'shish</SheetTitle>
               </SheetHeader>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4">
                 <button
                   type="button"
                   onClick={() => setAiDialogOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-md border border-[#2a4868] bg-[#11263a] px-3 py-3 text-xs text-gray-200 transition-colors hover:bg-[#1a3552] hover:text-white"
+                  className="group relative w-full overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0d2235] px-4 py-3 text-left transition-all duration-300 hover:border-cyan-300/60 hover:shadow-[0_0_28px_rgba(34,211,238,0.22)]"
                 >
-                  <Sparkles size={14} className="text-cyan-300" />
-                  AI yordamida to'ldirish
+                  <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-cyan-400/10 via-transparent to-blue-400/10" />
+                  <span className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+
+                  <span className="relative flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-3">
+                      <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/45 bg-cyan-500/15 text-cyan-100">
+                        <span className="absolute inset-0 animate-pulse rounded-2xl bg-cyan-300/20" />
+                        <Mic size={18} className="relative z-10" />
+                        <span className="absolute -right-2 -bottom-2 inline-flex items-end gap-0.5 rounded-md border border-cyan-300/40 bg-[#0b1c2b] px-1 py-0.5">
+                          <span className="h-2 w-0.5 animate-bounce rounded-full bg-cyan-200/90 [animation-delay:0ms]" />
+                          <span className="h-3 w-0.5 animate-bounce rounded-full bg-cyan-200/90 [animation-delay:120ms]" />
+                          <span className="h-2.5 w-0.5 animate-bounce rounded-full bg-cyan-200/90 [animation-delay:220ms]" />
+                        </span>
+                      </span>
+                      <span className="space-y-1">
+                        <p className="text-sm font-semibold text-white">
+                          AI yordamida to'ldirish
+                        </p>
+                        <p className="text-[11px] text-cyan-100/80">
+                          Ovoz bilan gapiring, forma maydonlari avtomatik
+                          to'ldiriladi
+                        </p>
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/35 bg-cyan-500/15 px-2 py-1 text-[10px] font-semibold tracking-wide text-cyan-100 uppercase">
+                        <Sparkles size={12} />
+                        Voice AI
+                      </span>
+                      {/* <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/35 bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold tracking-wide text-emerald-100 uppercase">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-200" />
+                        </span>
+                        Live
+                      </span> */}
+                    </span>
+                  </span>
                 </button>
               </div>
               <form className="mt-4 w-full text-white" onSubmit={handleSubmit}>
@@ -2104,103 +2256,233 @@ export default function Pipeline() {
                   if (!open) resetAiAudioState();
                 }}
               >
-                <DialogContent className="border-[#21435b] bg-[#0f2236] text-white sm:max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>AI audio yordamchisi</DialogTitle>
+                <DialogContent className="!top-4 !right-6 !bottom-4 !left-6 !h-auto !w-auto !max-w-none !translate-x-0 !translate-y-0 overflow-hidden rounded-2xl border border-[#21435b] bg-[#0b1c2d] p-0 text-white">
+                  <DialogHeader className="border-b border-white/10 bg-[#10273c] px-6 py-4 text-left">
+                    <DialogTitle className="text-xl">
+                      AI audio yordamchisi
+                    </DialogTitle>
+                    <DialogDescription className="text-cyan-100/80">
+                      Audio yozing, AI tahlil qiladi va o'ng paneldagi maydonlar
+                      orqali natijani kuzating.
+                    </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-cyan-200">
-                        1. Audio yozib oling
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-gray-300">
-                        2. AI tahlil qiladi va serverga yuboradi
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-gray-300">
-                        3. Forma avtomatik to'ldiriladi
-                      </span>
-                    </div>
 
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-black">
-                      <VoiceVisualizer
-                        controls={recorderControls}
-                        isDownloadAudioButtonShown={false}
-                      />
-                      {recordedBlob && (
-                        <div className="mt-4 flex justify-center">
-                          <button
+                  <div className="grid h-[calc(100%-88px)] grid-cols-1 lg:grid-cols-[13fr_7fr]">
+                    <div className="min-h-0 p-5 lg:p-6">
+                      <div className="rounded-2xl border border-white/10 bg-[#0f2437] p-5">
+                        <p className="text-xs font-semibold tracking-wide text-cyan-100 uppercase">
+                          AI topgan maydonlar
+                        </p>
+                        <div className="mt-4 w-full text-white">
+                          <FieldGroup>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Field>
+                                <FieldLabel>Ism</FieldLabel>
+                                <Input
+                                  value={aiDraft.firstName || ""}
+                                  placeholder="Ism"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "firstName",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Familiya</FieldLabel>
+                                <Input
+                                  value={aiDraft.lastName || ""}
+                                  placeholder="Familiya"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "lastName",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Field>
+                                <FieldLabel>Telefon</FieldLabel>
+                                <Input
+                                  value={formatPhoneDisplay(
+                                    aiDraft.phone || "",
+                                  )}
+                                  placeholder="+998 90 123 45 67"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "phone",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Qo'shimcha</FieldLabel>
+                                <Input
+                                  value={formatPhoneDisplay(
+                                    aiDraft.extraPhone || "",
+                                  )}
+                                  placeholder="+998 90 123 45 67"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "extraPhone",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Field>
+                                <FieldLabel>Tug'ilgan sana</FieldLabel>
+                                <Input
+                                  type="date"
+                                  value={aiDraft.birthDate || ""}
+                                  max={maxBirthDate}
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "birthDate",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Budjet</FieldLabel>
+                                <Input
+                                  value={formatBudgetDisplay(
+                                    aiDraft.budjet || "",
+                                  )}
+                                  placeholder="120 000 000"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "budjet",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Field>
+                                <FieldLabel>Manzil</FieldLabel>
+                                <Input
+                                  value={aiDraft.adress || ""}
+                                  placeholder="Manzil"
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "adress",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel>Manba</FieldLabel>
+                                <Input
+                                  value={aiDraft.source || ""}
+                                  placeholder="Tanlang..."
+                                  onChange={(e) =>
+                                    handleAiDraftFieldChange(
+                                      "source",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            </div>
+                            <Field>
+                              <FieldLabel>Teg</FieldLabel>
+                              <Input
+                                value={
+                                  Array.isArray(aiDraft.tags) &&
+                                  aiDraft.tags.length
+                                    ? aiDraft.tags.join(", ")
+                                    : ""
+                                }
+                                placeholder="VIP, comfort..."
+                                onChange={(e) =>
+                                  handleAiDraftTagsChange(e.target.value)
+                                }
+                              />
+                            </Field>
+                          </FieldGroup>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-end gap-2">
+                          <Button
                             type="button"
-                            onClick={handleProcessAiAudio}
-                            disabled={
-                              aiProcessing ||
-                              isRecordingInProgress ||
-                              isProcessingRecordedAudio
-                            }
-                            className="inline-flex min-w-40 items-center justify-center rounded-full bg-[#d8d0c4] px-6 py-3 text-base font-medium text-[#1f2f45] transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                            variant="outline"
+                            className="border-[#2a4868] bg-[#11263a] text-white hover:bg-[#1a3552]"
+                            onClick={() => setAiDialogOpen(false)}
                           >
-                            {aiProcessing ? "Yuborilmoqda..." : "Yuborish"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-white/10 bg-[#0b1a29] p-4">
-                        <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                          Muhim ma'lumotlar
-                        </p>
-                        <div className="mt-3 space-y-2 text-sm text-gray-400">
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Ism</span>
-                            <span>—</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Familiya</span>
-                            <span>—</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Telefon</span>
-                            <span>—</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Manba</span>
-                            <span>—</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-white/10 bg-[#0b1a29] p-4">
-                        <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                          Qoshimcha ma'lumotlar
-                        </p>
-                        <div className="mt-3 space-y-2 text-sm text-gray-200">
-                          <p>
-                            <span className="text-gray-400">
-                              Qo'shimcha raqam:
-                            </span>{" "}
-                            {aiDraft.lastName || "—"}
-                          </p>
-                          <p>
-                            <span className="text-gray-400">
-                              Tug'ilgan yil:
-                            </span>{" "}
-                            <span>—</span>
-                          </p>
-                          <p>
-                            <span className="text-gray-400">Budjet:</span>{" "}
-                            {aiDraft.phone || "—"}
-                          </p>
-                          <p>
-                            <span className="text-gray-400">Manzil:</span>{" "}
-                            {aiDraft.adress || "—"}
-                          </p>
-                          <p>
-                            <span className="text-gray-400">Teg:</span>{" "}
-                            {aiDraft.source || "—"}
-                          </p>
+                            Bekor qilish
+                          </Button>
+                          <Button
+                            type="button"
+                            className="border bg-[#07131d]"
+                            onClick={handleApplyAi}
+                            disabled={!hasAiDraftData(aiDraft)}
+                          >
+                            Saqlash
+                          </Button>
                         </div>
                       </div>
                     </div>
+
+                    <aside className="min-h-0 p-5 lg:p-6">
+                      <div className="rounded-2xl border border-white/10 bg-[#0f2437] p-5">
+                        <div className="rounded-2xl border border-[#2a4868] bg-[#11263a] p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold tracking-wide text-cyan-100 uppercase">
+                              Voice Yordamchi
+                            </p>
+                            <span
+                              className={`rounded-full border px-2 py-1 text-[10px] whitespace-nowrap ${voiceStatusClass}`}
+                            >
+                              {voiceStatusText}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                            <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-center text-cyan-200">
+                              1. Audio
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-center text-gray-300">
+                              2. Tahlil
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-center text-gray-300">
+                              3. To'ldirish
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-[#2a4868] bg-[#11263a] p-3">
+                          <div className="rounded-2xl border border-[#2a4868] bg-[#11263a] p-2 text-black">
+                            <VoiceVisualizer
+                              controls={recorderControls}
+                              isDownloadAudioButtonShown={false}
+                            />
+                          </div>
+                          <div className="mt-4 flex justify-center">
+                            <button
+                              type="button"
+                              onClick={handleProcessAiAudio}
+                              disabled={!canSendRecordedAudio}
+                              className="inline-flex min-w-44 items-center justify-center rounded-full bg-[#d8d0c4] px-5 py-2.5 text-sm font-medium text-[#1f2f45] transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {aiProcessing
+                                ? "Yuborilmoqda..."
+                                : hasRecordedAudio
+                                  ? "Yuborish"
+                                  : "Avval audio yozing"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </aside>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -2296,125 +2578,127 @@ export default function Pipeline() {
                     ref={provided.innerRef}
                     className={`rounded-lg transition-colors duration-150 ${snapshot.isDraggingOver ? "bg-[#1a3552]/60" : ""}`}
                   >
-                  <div
-                    onScroll={(e) => handleColumnScroll(col.id, e)}
-                    className="flex flex-col gap-2.5 p-2"
-                    style={{
-                      minHeight: 80,
-                      maxHeight: "calc(100vh - 245px)",
-                      overflowY: "auto",
-                    }}
-                  >
-                    {col.leads.length === 0 ? (
-                      <div
-                        className={`rounded-lg border-2 border-dashed p-6 text-center text-xs transition-colors ${snapshot.isDraggingOver ? "border-blue-400/60 bg-blue-900/10 text-blue-400" : "border-[#2a4868]/40 text-gray-500"}`}
-                      >
-                        {snapshot.isDraggingOver
-                          ? "Bu yerga tashlang"
-                          : "Bo'sh"}
-                      </div>
-                    ) : (
-                      col.leads.map((lead, index) => (
-                        <Draggable
-                          key={lead.id}
-                          draggableId={String(lead.id)}
-                          index={index}
+                    <div
+                      onScroll={(e) => handleColumnScroll(col.id, e)}
+                      className="flex flex-col gap-2.5 p-2"
+                      style={{
+                        minHeight: 80,
+                        maxHeight: "calc(100vh - 245px)",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {col.leads.length === 0 ? (
+                        <div
+                          className={`rounded-lg border-2 border-dashed p-6 text-center text-xs transition-colors ${snapshot.isDraggingOver ? "border-blue-400/60 bg-blue-900/10 text-blue-400" : "border-[#2a4868]/40 text-gray-500"}`}
                         >
-                          {(provided, snapshot) => {
-                            const taskBadge = buildTaskBadgeMeta(
-                              lead.taskRemainingDays,
-                            );
-                            return (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                onClick={() =>
-                                  handleLeadOpen(lead.id, snapshot.isDragging)
-                                }
-                                className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
-                                  snapshot.isDragging
-                                    ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
-                                    : ""
-                                }`}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                  opacity: 1,
-                                }}
-                              >
-                                {/* Ism */}
-                                <div className="font-medium">
-                                  {lead.firstName} {lead.lastName}
-                                </div>
-                                {/* Telefon */}
-                                <div className="mt-0.5 text-xs opacity-50">
-                                  {lead.phone}
-                                </div>
-
-                                {/* Manba */}
-                                {lead.leadSource?.name && (
-                                  <div className="mt-1.5 text-[11px] text-blue-400/80">
-                                    {lead.leadSource.name}
+                          {snapshot.isDraggingOver
+                            ? "Bu yerga tashlang"
+                            : "Bo'sh"}
+                        </div>
+                      ) : (
+                        col.leads.map((lead, index) => (
+                          <Draggable
+                            key={lead.id}
+                            draggableId={String(lead.id)}
+                            index={index}
+                          >
+                            {(provided, snapshot) => {
+                              const taskBadge = buildTaskBadgeMeta(
+                                lead.taskRemainingDays,
+                              );
+                              return (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  onClick={() =>
+                                    handleLeadOpen(lead.id, snapshot.isDragging)
+                                  }
+                                  className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
+                                    snapshot.isDragging
+                                      ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
+                                      : ""
+                                  }`}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    opacity: 1,
+                                  }}
+                                >
+                                  {/* Ism */}
+                                  <div className="font-medium">
+                                    {lead.firstName} {lead.lastName}
                                   </div>
-                                )}
+                                  {/* Telefon */}
+                                  <div className="mt-0.5 text-xs opacity-50">
+                                    {lead.phone}
+                                  </div>
 
-                                {/* Taglar */}
-                                {Array.isArray(lead.tag) &&
-                                  lead.tag.length > 0 && (
-                                    <div className="mt-1.5 flex flex-wrap gap-1">
-                                      {lead.tag.map((t, i) => (
-                                        <span
-                                          key={i}
-                                          className="rounded border border-[#2a4868]/50 bg-[#0d2a3e] px-1.5 py-0.5 text-[10px] text-gray-300"
-                                        >
-                                          {t}
-                                        </span>
-                                      ))}
+                                  {/* Manba */}
+                                  {lead.leadSource?.name && (
+                                    <div className="mt-1.5 text-[11px] text-blue-400/80">
+                                      {lead.leadSource.name}
                                     </div>
                                   )}
 
-                                {/* Budjet + Tasklar + Task holati */}
-                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 text-xs">
-                                    {lead.budjet > 0 && (
-                                      <div className="text-xs text-green-400">
-                                        {Number(lead.budjet).toLocaleString()}{" "}
-                                        so'm
+                                  {/* Taglar */}
+                                  {Array.isArray(lead.tag) &&
+                                    lead.tag.length > 0 && (
+                                      <div className="mt-1.5 flex flex-wrap gap-1">
+                                        {lead.tag.map((t, i) => (
+                                          <span
+                                            key={i}
+                                            className="rounded border border-[#2a4868]/50 bg-[#0d2a3e] px-1.5 py-0.5 text-[10px] text-gray-300"
+                                          >
+                                            {t}
+                                          </span>
+                                        ))}
                                       </div>
                                     )}
-                                    {Array.isArray(lead.tasks) &&
-                                      lead.tasks.length > 0 && (
-                                        <div className="flex items-center gap-1 text-xs text-yellow-400/80">
-                                          <CalendarCheck2 className="h-3 w-3" />
-                                          <span>{lead.tasks.length} task</span>
+
+                                  {/* Budjet + Tasklar + Task holati */}
+                                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 text-xs">
+                                      {lead.budjet > 0 && (
+                                        <div className="text-xs text-green-400">
+                                          {Number(lead.budjet).toLocaleString()}{" "}
+                                          so'm
                                         </div>
                                       )}
-                                  </div>
-                                  {taskBadge && (
-                                    <div
-                                      className={`inline-flex max-w-[180px] items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${taskBadge.text} ${taskBadge.border} ${taskBadge.bg}`}
-                                    >
-                                      <CalendarCheck2 className="h-3 w-3" />
-                                      <span className="truncate">
-                                        {taskBadge.label}
-                                      </span>
+                                      {Array.isArray(lead.tasks) &&
+                                        lead.tasks.length > 0 && (
+                                          <div className="flex items-center gap-1 text-xs text-yellow-400/80">
+                                            <CalendarCheck2 className="h-3 w-3" />
+                                            <span>
+                                              {lead.tasks.length} task
+                                            </span>
+                                          </div>
+                                        )}
                                     </div>
-                                  )}
+                                    {taskBadge && (
+                                      <div
+                                        className={`inline-flex max-w-[180px] items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${taskBadge.text} ${taskBadge.border} ${taskBadge.bg}`}
+                                      >
+                                        <CalendarCheck2 className="h-3 w-3" />
+                                        <span className="truncate">
+                                          {taskBadge.label}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          }}
-                        </Draggable>
-                      ))
-                    )}
-                    {!hasActiveSearch && statusMeta[col.id]?.loading && (
-                      <div className="flex items-center justify-center py-2 text-xs text-blue-300">
-                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                        Yuklanmoqda...
-                      </div>
-                    )}
-                    {provided.placeholder}
-                  </div>
+                              );
+                            }}
+                          </Draggable>
+                        ))
+                      )}
+                      {!hasActiveSearch && statusMeta[col.id]?.loading && (
+                        <div className="flex items-center justify-center py-2 text-xs text-blue-300">
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          Yuklanmoqda...
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
                   </div>
                 )}
               </Droppable>
