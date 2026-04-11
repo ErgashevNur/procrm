@@ -13,6 +13,33 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+const IMAGE_STREAM_BASE = "https://backend-b2b-dev.prohome.uz/api/v1/image";
+
+function getImageSource(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return null;
+  if (raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
+
+  let cleaned = raw;
+  if (/^https?:\/\//i.test(cleaned)) {
+    try {
+      cleaned = new URL(cleaned).pathname || "";
+    } catch {
+      // keep as-is
+    }
+  }
+
+  cleaned = cleaned.split("?")[0].split("#")[0].replace(/\\/g, "/");
+  const fileName =
+    cleaned
+      .split("/")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .pop() || "";
+
+  if (!fileName) return null;
+  return `${IMAGE_STREAM_BASE}/${encodeURIComponent(fileName)}`;
+}
 
 function normalizeFieldType(field) {
   return String(field?.type || field?.fieldType || "text").toLowerCase();
@@ -115,10 +142,18 @@ function normalizeFormPayload(payload) {
     };
   });
 
+  const headerSource =
+    payload?.headerImage?.dataUrl ||
+    payload?.headerImage?.name ||
+    payload?.image;
+
   const headerImage = payload?.headerImage
-    ? payload.headerImage
-    : payload?.image
-      ? { dataUrl: `${API}/image/${payload.image}` }
+    ? {
+        ...payload.headerImage,
+        dataUrl: getImageSource(headerSource),
+      }
+    : headerSource
+      ? { dataUrl: getImageSource(headerSource) }
       : null;
 
   return {
