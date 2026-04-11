@@ -145,6 +145,33 @@ const HEADER_IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
 const HEADER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 const HEADER_IMAGE_MAX_WIDTH = 1600;
 const HEADER_IMAGE_MAX_HEIGHT = 600;
+const IMAGE_STREAM_BASE = "https://backend-b2b-dev.prohome.uz/api/v1/image";
+
+function getImageSource(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return null;
+  if (raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
+
+  let cleaned = raw;
+  if (/^https?:\/\//i.test(cleaned)) {
+    try {
+      cleaned = new URL(cleaned).pathname || "";
+    } catch {
+      // keep as-is
+    }
+  }
+
+  cleaned = cleaned.split("?")[0].split("#")[0].replace(/\\/g, "/");
+  const fileName =
+    cleaned
+      .split("/")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .pop() || "";
+
+  if (!fileName) return null;
+  return `${IMAGE_STREAM_BASE}/${encodeURIComponent(fileName)}`;
+}
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -243,12 +270,20 @@ function normalizeTemplateItem(template, projectSlug) {
   const id = Number(template?.id || template?.formTemplateId);
   if (!id) return null;
 
+  const headerSource =
+    template?.headerImage?.dataUrl ||
+    template?.headerImage?.name ||
+    template?.image;
+
   const headerImage = template?.headerImage
-    ? template.headerImage
-    : template?.image
+    ? {
+        ...template.headerImage,
+        dataUrl: getImageSource(headerSource),
+      }
+    : headerSource
       ? {
-          dataUrl: `${API}/image/${template.image}`,
-          name: template.image,
+          dataUrl: getImageSource(headerSource),
+          name: headerSource,
           _persisted: true,
         }
       : null;
