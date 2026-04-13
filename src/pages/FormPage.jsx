@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
@@ -196,7 +186,7 @@ export default function FormPage() {
   useEffect(() => {
     async function loadForm() {
       try {
-        const res = await fetch(`${API}/form-template/public/${id}`);
+        const res = await fetch(apiUrl(`form-template/public/${id}`));
         if (!res.ok) throw new Error("Forma topilmadi");
         const data = await res.json();
         const normalized = normalizeFormPayload(data);
@@ -304,7 +294,7 @@ export default function FormPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/form-template/public/${id}/submit`, {
+      const res = await fetch(apiUrl(`form-template/public/${id}/submit`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -329,78 +319,21 @@ export default function FormPage() {
 
   /* ——— Loading ——— */
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020711]">
-        <div className="text-sm text-[#9ab8cc]">Yuklanmoqda...</div>
-      </div>
-    );
+    return <FormPageLoading />;
   }
 
   /* ——— Error ——— */
   if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020711]">
-        <div className="text-center">
-          <p className="mb-2 text-lg font-semibold text-white">Xatolik</p>
-          <p className="text-sm text-[#9ab8cc]">{error}</p>
-        </div>
-      </div>
-    );
+    return <FormPageError error={error} />;
   }
 
   /* ——— Success ——— */
   if (submitted) {
-    const hasTelegram = Boolean(form?.telegramUrl);
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020711] px-4">
-        <div className="w-full max-w-md rounded-2xl border border-[#1a4a2a] bg-[#0a2010] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1a4a2a]">
-            <svg
-              className="h-7 w-7 text-[#4ade80]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h2 className="mb-2 text-xl font-bold text-white">
-            Muvaffaqiyatli yuborildi!
-          </h2>
-          <p className="text-sm text-[#9ab8cc]">
-            Arizangiz qabul qilindi. Tez orada siz bilan bog'lanamiz.
-          </p>
-          {hasTelegram && redirectCountdown !== null && (
-            <div className="mt-5 flex flex-col items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-[#1a3a4a] bg-[#091827] px-4 py-3 text-sm text-[#9ab8cc]">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="shrink-0 text-[#229ED9]"
-                >
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.12 14.367l-2.95-.924c-.64-.204-.654-.64.136-.953l11.527-4.444c.533-.194 1.001.13.73.201z" />
-                </svg>
-                {redirectCountdown > 0
-                  ? `${redirectCountdown} soniyada Telegram kanaliga o'tasiz...`
-                  : "Yo'naltirilmoqda..."}
-              </div>
-              <button
-                onClick={() => (window.location.href = form.telegramUrl)}
-                className="text-xs text-[#229ED9] underline underline-offset-2 hover:no-underline"
-              >
-                Hozir o'tish
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <FormPageSuccess
+        form={form}
+        redirectCountdown={redirectCountdown}
+      />
     );
   }
 
@@ -416,108 +349,19 @@ export default function FormPage() {
       />
 
       <div className="relative mx-auto w-full max-w-lg">
-        <div className="mb-6 overflow-hidden rounded-[28px] border border-[#1e3448] bg-[linear-gradient(180deg,rgba(15,34,49,0.94),rgba(9,22,34,0.96))] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
-          {form.headerImage?.dataUrl && (
-            <div className="relative aspect-[8/3] w-full overflow-hidden border-b border-white/10 bg-[#07111d]">
-              <img
-                src={form.headerImage.dataUrl}
-                alt={form.title}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,7,17,0.04),rgba(2,7,17,0.55))]" />
-            </div>
-          )}
-          <div className="px-6 py-6 text-center">
-            <p className="text-[11px] font-semibold tracking-[0.32em] text-[#7e9bb1] uppercase">
-              Lead Form
-            </p>
-            <h1 className="mt-3 text-2xl font-bold text-white">{form.title}</h1>
-            {form.description && (
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#9ab8cc]">
-                {form.description}
-              </p>
-            )}
-          </div>
-        </div>
+        <FormPageHeader form={form} />
 
         <form
           onSubmit={handleSubmit}
           className="flex flex-col gap-4 rounded-[28px] border border-[#1e3448] bg-[#0d1e2e] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.22)]"
         >
           {(form.fields || []).map((field) => (
-            <div key={field.id} className="flex flex-col gap-1.5">
-              <Label className="text-sm text-[#9ab8cc]">
-                {field.label}
-                {field.required && (
-                  <span className="ml-1 text-[#e05d5d]">*</span>
-                )}
-              </Label>
-
-              {field.type === "text" && (
-                <Input
-                  className="crm-control h-10"
-                  placeholder={field.placeholder || field.label}
-                  value={fieldValues[field.id] ?? ""}
-                  onChange={(e) => setFieldValue(field.id, e.target.value)}
-                />
-              )}
-
-              {(field.type === "email" || field.type === "phone") && (
-                <Input
-                  type={field.type === "phone" ? "tel" : field.type}
-                  className="crm-control h-10"
-                  placeholder={field.placeholder || field.label}
-                  value={fieldValues[field.id] ?? ""}
-                  onChange={(e) => setFieldValue(field.id, e.target.value)}
-                />
-              )}
-
-              {field.type === "textarea" && (
-                <Textarea
-                  className="crm-control resize-none"
-                  rows={3}
-                  placeholder={field.placeholder || field.label}
-                  value={fieldValues[field.id] ?? ""}
-                  onChange={(e) => setFieldValue(field.id, e.target.value)}
-                />
-              )}
-
-              {field.type === "select" && (
-                <Select
-                  value={fieldValues[field.id] ?? ""}
-                  onValueChange={(val) => setFieldValue(field.id, val)}
-                >
-                  <SelectTrigger className="crm-control h-10">
-                    <SelectValue placeholder="Tanlang..." />
-                  </SelectTrigger>
-                  <SelectContent className="border-[#1e3448] bg-[#0d1e2e]">
-                    {(field.options || []).map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {field.type === "checkbox" && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`field-${field.id}`}
-                    checked={!!fieldValues[field.id]}
-                    onChange={(e) => setFieldValue(field.id, e.target.checked)}
-                    className="h-4 w-4 rounded accent-[#69a7ff]"
-                  />
-                  <label
-                    htmlFor={`field-${field.id}`}
-                    className="cursor-pointer text-sm text-[#9ab8cc]"
-                  >
-                    {field.label}
-                  </label>
-                </div>
-              )}
-            </div>
+            <FormPageField
+              key={field.id}
+              field={field}
+              fieldValues={fieldValues}
+              setFieldValue={setFieldValue}
+            />
           ))}
 
           {(form.fields || []).length === 0 && (

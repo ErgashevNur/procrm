@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { MANAGEMENT_ROLES, getCurrentRole } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { apiUrl } from "@/lib/api";
 
 function saveProject(project) {
   localStorage.setItem("projectId", String(project.id));
@@ -27,7 +26,7 @@ export default function ProjectGate({ children }) {
 
     const loadProjects = async () => {
       try {
-        const res = await fetch(`${API}/projects`, {
+        const res = await fetch(apiUrl("projects"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

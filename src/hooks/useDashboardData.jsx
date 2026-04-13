@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { apiUrl } from "@/lib/api";
 
 function toNumber(value) {
   const n = Number(value);
@@ -118,7 +117,7 @@ export default function useDashboardData(navigate) {
           }
 
           const res = await apiFetch(
-            `${API}/dashboard/crm/leads/statistik/${projectId}?${params.toString()}`,
+            apiUrl(`dashboard/crm/leads/statistik/${projectId}?${params.toString()}`),
           );
           if (!res) return;
           if (res.status === 403) {

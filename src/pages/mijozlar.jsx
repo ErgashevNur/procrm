@@ -34,12 +34,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useExcelWorker } from "../hooks/Useexcelworker";
+import { apiUrl } from "@/lib/api";
 import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
-import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
-import HorizontalScrollDock from "@/components/HorizontalScrollDock";
+import {
+  useVoiceVisualizer,
+  VoiceVisualizer,
+} from "react-voice-visualizer";
+import PipelineLoading from "@/components/mijozlar/PipelineLoading";
+import PipelineNoProject from "@/components/mijozlar/PipelineNoProject";
+import PipelineHeader from "@/components/mijozlar/PipelineHeader";
+import PipelineBoard from "@/components/mijozlar/PipelineBoard";
+import IconBtn from "@/components/mijozlar/IconBtn";
 
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+
+
+
+
 
 const maxBirthDate = (() => {
   const d = new Date();
@@ -142,7 +153,7 @@ async function fetchProjectOperators(projectId) {
   params.set("page", "1");
   const query = params.toString();
   const res = await apiFetch(
-    `${API}/user/all/sales-manager${query ? `?${query}` : ""}`,
+    apiUrl(`user/all/sales-manager${query ? `?${query}` : ""}`),
   );
   if (!res || !res.ok) return [];
   const payload = await res.json();
@@ -532,38 +543,6 @@ function normalizeLead(raw) {
   };
 }
 
-// ── Icon button — iconOnly: faqat icon, aks holda icon+text ──────────────────
-function IconBtn({
-  icon: Icon,
-  label,
-  onClick,
-  className = "",
-  disabled = false,
-  variant = "default",
-  iconOnly = false,
-  spin = false,
-}) {
-  const colors = {
-    default:
-      "border-[#2a4868] text-gray-300 hover:bg-[#1b3e57] hover:text-white",
-    success:
-      "border-green-700/50 text-green-400 hover:bg-green-900/30 hover:text-green-300",
-    warning:
-      "border-yellow-700/50 text-yellow-400 hover:bg-yellow-900/30 hover:text-yellow-300",
-  };
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors duration-150 disabled:opacity-40 ${colors[variant]} ${className}`}
-      style={{ height: "36px" }}
-    >
-      <Icon size={14} className={`shrink-0 ${spin ? "animate-spin" : ""}`} />
-      {!iconOnly && <span className="whitespace-nowrap">{label}</span>}
-    </button>
-  );
-}
-
 export default function Pipeline() {
   const navigate = useNavigate();
   const boardRef = useRef(null);
@@ -612,6 +591,7 @@ export default function Pipeline() {
   const [statusMeta, setStatusMeta] = useState({});
   const [operatorsList, setOperatorsList] = useState([]);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
+  const [isBoardDragging, setIsBoardDragging] = useState(false);
   const role = getCurrentRole();
   const canManageStatuses = MANAGEMENT_ROLES.includes(role);
   const showToast = (message, type = "error") =>
@@ -696,7 +676,7 @@ export default function Pipeline() {
 
     try {
       const res = await apiFetch(
-        `${API}/leeds/by/${statusId}?page=${page}&limit=${PAGE_LIMIT}`,
+        apiUrl(`leeds/by/${statusId}?page=${page}&limit=${PAGE_LIMIT}`),
       );
       if (!res) return;
       if (!res.ok) {
@@ -767,7 +747,7 @@ export default function Pipeline() {
     // Faqat Sales Manager uchun 403 ni oldindan tutamiz
     if (role === ROLES.SALESMANAGER) {
       try {
-        const res = await apiFetch(`${API}/leeds/${leadId}`);
+        const res = await apiFetch(apiUrl(`leeds/${leadId}`));
         if (!res) return;
         if (res.status === 403) {
           const msg = await extractApiMessage(
@@ -802,7 +782,7 @@ export default function Pipeline() {
         formData.append("file", file);
         formData.append("projectId", String(currentProject.id));
 
-        const res = await apiFetch(`${API}/leeds/import-excel`, {
+        const res = await apiFetch(apiUrl("leeds/import-excel"), {
           method: "POST",
           body: formData,
         });
@@ -875,12 +855,15 @@ export default function Pipeline() {
     const init = async () => {
       try {
         if (savedId) {
+          // Leadlar chiqmayotganining asosiy sababi shu init bosqichida edi:
+          // `apiUrl` import qilinmagani uchun bu yerda ReferenceError bo'lib,
+          // statuslar ham, keyingi `fetchLeadsByStatus(...)` chaqiruvlari ham ishlamay qolayotgan edi.
           const [projectsRes, statusesRes, sourcesRes, totalsRes] =
             await Promise.all([
-              apiFetch(`${API}/projects`),
-              apiFetch(`${API}/status/${savedId}`),
-              apiFetch(`${API}/lead-source/${savedId}`),
-              apiFetch(`${API}/status/all/${savedId}`),
+              apiFetch(apiUrl("projects")),
+              apiFetch(apiUrl(`status/${savedId}`)),
+              apiFetch(apiUrl(`lead-source/${savedId}`)),
+              apiFetch(apiUrl(`status/all/${savedId}`)),
             ]);
           if (!projectsRes || !statusesRes) return;
           const [projectsData, statusesData, sourcesData, totalsData] =
@@ -919,7 +902,7 @@ export default function Pipeline() {
             normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
           );
         } else {
-          const res = await apiFetch(`${API}/projects`);
+          const res = await apiFetch(apiUrl("projects"));
           if (!res) return;
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];
@@ -943,9 +926,9 @@ export default function Pipeline() {
     setCurrentProject({ id: project.id, name: project.name });
     try {
       const [statusesRes, sourcesRes, totalsRes] = await Promise.all([
-        apiFetch(`${API}/status/${project.id}`),
-        apiFetch(`${API}/lead-source/${project.id}`),
-        apiFetch(`${API}/status/all/${project.id}`),
+        apiFetch(apiUrl(`status/${project.id}`)),
+        apiFetch(apiUrl(`lead-source/${project.id}`)),
+        apiFetch(apiUrl(`status/all/${project.id}`)),
       ]);
       if (!statusesRes) return;
       const [statusesData, sourcesData, totalsData] = await Promise.all([
@@ -1039,12 +1022,9 @@ export default function Pipeline() {
         setSearchLoading(true);
         const params = buildSearchQuery(searchParams, currentProject.id);
 
-        const res = await apiFetch(
-          `${API}/leeds/all/search?${params.toString()}`,
-          {
-            signal: controller.signal,
-          },
-        );
+        const res = await apiFetch(apiUrl(`leeds/all/search?${params.toString()}`), {
+          signal: controller.signal,
+        });
         if (!res) return;
         if (!res.ok) {
           const msg = await extractApiMessage(res, "Qidiruvda xatolik");
@@ -1126,12 +1106,48 @@ export default function Pipeline() {
     };
   }, []);
 
+  useEffect(() => {
+    const blockedMessages = [
+      "unsupported nested scroll container detected",
+      "A Droppable can only have one scroll parent",
+    ];
+
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    const shouldBlock = (args) =>
+      args.some((arg) => {
+        const text = typeof arg === "string" ? arg : "";
+        return blockedMessages.some((message) => text.includes(message));
+      });
+
+    console.error = (...args) => {
+      if (shouldBlock(args)) return;
+      originalError(...args);
+    };
+
+    console.warn = (...args) => {
+      if (shouldBlock(args)) return;
+      originalWarn(...args);
+    };
+
+    return () => {
+      console.error = originalError;
+      console.warn = originalWarn;
+    };
+  }, []);
+
+  const onBeforeCapture = () => {
+    setIsBoardDragging(true);
+  };
+
   const onDragStart = () => {
     isDragging.current = true;
     startAutoScroll();
   };
 
   const onDragEnd = async (result) => {
+    setIsBoardDragging(false);
     stopAutoScroll();
     const { source, destination, draggableId } = result;
     if (!destination) return;
@@ -1145,7 +1161,7 @@ export default function Pipeline() {
     const destId = Number(destination.droppableId);
     try {
       const res = await apiFetch(
-        `${API}/leeds/status/${draggableId}?statusId=${destId}`,
+        apiUrl(`leeds/status/${draggableId}?statusId=${destId}`),
         { method: "PATCH" },
       );
       if (res && !res.ok) throw new Error(`PATCH ${res.status}`);
@@ -1383,7 +1399,7 @@ export default function Pipeline() {
       formData.append("file", audioFile);
       formData.append("projectId", String(currentProject.id));
 
-      const res = await apiFetch(`${API}/leeds/audio`, {
+      const res = await apiFetch(apiUrl("leeds/audio"), {
         method: "POST",
         body: formData,
       });
@@ -1514,86 +1530,11 @@ export default function Pipeline() {
   };
 
   if (appState === "loading") {
-    return (
-      <div className="flex h-full flex-col bg-[#0d1e35]">
-        <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6">
-          <Skeleton className="h-10 w-64 rounded-lg" />
-        </div>
-        <div className="flex flex-1 gap-4 overflow-x-auto p-6">
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="w-80 shrink-0">
-                <Skeleton className="mb-3 h-10 rounded-lg" />
-                <Skeleton className="h-64 rounded-lg" />
-              </div>
-            ))}
-        </div>
-      </div>
-    );
+    return <PipelineLoading />;
   }
 
   if (appState === "no-project") {
-    return (
-      <div className="flex h-full flex-col bg-[#0d1e35]">
-        <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6 text-white">
-          <Select
-            onValueChange={(name) => {
-              const p = projects.find((x) => x.name === name);
-              if (p) loadProject(p);
-            }}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Loyihani tanlang" />
-            </SelectTrigger>
-            <SelectContent className="mt-10">
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.name}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-          {projects.length === 0 ? (
-            <>
-              <AlertCircle className="h-12 w-12 text-yellow-400" />
-              <p className="text-lg font-semibold text-white">
-                Loyiha topilmadi
-              </p>
-              <p className="text-sm text-gray-400">
-                Avval loyiha yarating yoki admin bilan bog\'laning.
-              </p>
-              <Link
-                to="/projects"
-                className="rounded-xl border border-blue-400 px-4 py-2 text-blue-400 hover:bg-blue-400 hover:text-white"
-              >
-                Projects
-              </Link>
-            </>
-          ) : (
-            <>
-              <FolderOpen className="h-14 w-14 text-blue-400" />
-              <p className="text-xl font-semibold text-white">
-                Loyihani tanlang
-              </p>
-              <div className="flex w-72 flex-col gap-2">
-                {projects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => loadProject(p)}
-                    className="rounded-lg border border-[#2a4868] bg-[#11263a] px-4 py-3 text-left text-white transition-colors hover:bg-[#1a3552]"
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
+    return <PipelineNoProject projects={projects} loadProject={loadProject} />;
   }
 
   return (
@@ -2389,7 +2330,6 @@ export default function Pipeline() {
           ))}
         </div>
       </DragDropContext>
-      <HorizontalScrollDock targetRef={boardRef} />
     </div>
   );
 }

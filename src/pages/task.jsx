@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/dialog";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
 
 function getImageUrl(src) {
   if (!src) return null;
@@ -430,13 +429,13 @@ export default function Tasks() {
       />
 
       {/* ── Header ── */}
-      <div className="relative z-10 shrink-0 border-b border-white/5 bg-[#071828]/90 px-6 py-4 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4">
+      <div className="relative z-10 shrink-0 border-b border-white/5 bg-[#071828]/90 px-4 py-4 backdrop-blur-sm sm:px-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
           <div>
             <h1 className="text-lg font-bold text-white">Vazifalar</h1>
             <p className="text-xs text-gray-600">{stats.all} ta vazifa</p>
           </div>
-          <div className="flex max-w-sm flex-1 items-center gap-2 rounded-xl border border-white/5 bg-white/3 px-3 py-2">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-white/5 bg-white/3 px-3 py-2 lg:max-w-sm lg:flex-1">
             <Search size={14} className="shrink-0 text-gray-600" />
             <input
               type="text"
@@ -449,7 +448,8 @@ export default function Tasks() {
         </div>
 
         {/* Tabs + Filters */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
           {[
             { key: "all", label: "Barchasi", count: stats.all, alert: false },
             {
@@ -474,7 +474,7 @@ export default function Tasks() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === tab.key
                   ? "bg-white/10 text-white"
                   : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
@@ -492,92 +492,95 @@ export default function Tasks() {
               </span>
             </button>
           ))}
-
-          <div className="mx-1 h-4 w-px bg-white/5" />
-
-          {/* Status select */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-white/5 bg-white/3 px-2 py-1.5 text-xs text-gray-400 outline-none"
-          >
-            <option value="all">Barcha holat</option>
-            {Object.entries(API_STATUSES).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Date range */}
-          <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/3 px-3 py-1.5">
-            <Filter size={12} className="text-gray-600" />
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
-            />
-            <span className="text-gray-600">—</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
-            />
           </div>
 
-          {hasFilters && (
-            <button
-              onClick={() => {
-                setFilterStatus("all");
-                setDateFrom("");
-                setDateTo("");
-                setSearch("");
-                setActiveTab("all");
-              }}
-              className="text-xs text-gray-600 transition-colors hover:text-red-400"
-            >
-              Tozalash ✕
-            </button>
-          )}
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full rounded-lg border border-white/5 bg-white/3 px-2 py-2 text-xs text-gray-400 outline-none sm:w-auto"
+              >
+                <option value="all">Barcha holat</option>
+                {Object.entries(API_STATUSES).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
 
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center rounded-lg border border-white/5 bg-white/3 p-0.5">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
-                  viewMode === "table"
-                    ? "bg-white/10 text-white"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                <LayoutList size={12} />
-                Table
-              </button>
-              <button
-                onClick={() => setViewMode("column")}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
-                  viewMode === "column"
-                    ? "bg-white/10 text-white"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                <Columns3 size={12} />
-                Column
-              </button>
+              <div className="flex flex-col gap-2 rounded-lg border border-white/5 bg-white/3 px-3 py-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <Filter size={12} className="text-gray-600" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="min-w-0 bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
+                  />
+                </div>
+                <span className="hidden text-gray-600 sm:inline">—</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="min-w-0 bg-transparent text-xs text-gray-400 [color-scheme:dark] outline-none"
+                />
+              </div>
+
+              {hasFilters && (
+                <button
+                  onClick={() => {
+                    setFilterStatus("all");
+                    setDateFrom("");
+                    setDateTo("");
+                    setSearch("");
+                    setActiveTab("all");
+                  }}
+                  className="self-start text-xs text-gray-600 transition-colors hover:text-red-400"
+                >
+                  Tozalash ✕
+                </button>
+              )}
             </div>
-            <span className="text-xs text-gray-600">
-              {filtered.length} ta natija
-            </span>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between xl:justify-end">
+              <div className="flex items-center rounded-lg border border-white/5 bg-white/3 p-0.5">
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                    viewMode === "table"
+                      ? "bg-white/10 text-white"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  <LayoutList size={12} />
+                  Table
+                </button>
+                <button
+                  onClick={() => setViewMode("column")}
+                  className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                    viewMode === "column"
+                      ? "bg-white/10 text-white"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  <Columns3 size={12} />
+                  Column
+                </button>
+              </div>
+              <span className="text-xs text-gray-600">
+                {filtered.length} ta natija
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Content ── */}
-      <div className="relative z-10 flex-1 overflow-auto px-6 py-4">
+      <div className="relative z-10 flex-1 overflow-auto px-4 py-4 sm:px-6">
         {viewMode === "column" ? (
-          <div className="grid min-w-[980px] grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {[
               {
                 key: "past",

@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
 import { getGoogleAuthUrl } from "@/lib/auth";
-
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import RegisterBackButton from "@/components/register/RegisterBackButton";
+import RegisterBrand from "@/components/register/RegisterBrand";
+import RegisterGoogleButton from "@/components/register/RegisterGoogleButton";
+import RegisterHeader from "@/components/register/RegisterHeader";
+import RegisterInfoPanel from "@/components/register/RegisterInfoPanel";
+import RegisterInputField from "@/components/register/RegisterInputField";
+import RegisterPasswordField from "@/components/register/RegisterPasswordField";
+import { API_BASE, apiUrl } from "@/lib/api";
 const DEFAULT_PERMISSIONS = ["CRM"];
 
 const initialForm = {
@@ -88,7 +93,7 @@ export default function Register() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE}/company/public`, {
+      const response = await fetch(apiUrl("company/public"), {
         method: "POST",
         headers: {
           accept: "*/*",
@@ -175,114 +180,15 @@ export default function Register() {
           }}
         >
           {!isMobile && (
-            <div
-              style={{
-                background: "rgba(11,16,24,.9)",
-                border: "1px solid rgba(255,255,255,.07)",
-                borderRadius: 24,
-                padding: 32,
-              }}
-            >
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  background: "rgba(14,165,233,.1)",
-                  border: "1px solid rgba(14,165,233,.2)",
-                  color: "#38bdf8",
-                  fontSize: 12,
-                  marginBottom: 18,
-                }}
-              >
-                Public Register
-              </div>
-
-              <h1
-                style={{
-                  fontSize: "clamp(2rem, 4vw, 3.3rem)",
-                  lineHeight: 1.05,
-                  fontWeight: 800,
-                  marginBottom: 14,
-                }}
-              >
-                Kompaniyangizni
-                <br />
-                tizimga ulang
-              </h1>
-
-              <p
-                style={{
-                  fontSize: 15,
-                  lineHeight: 1.8,
-                  color: "rgba(255,255,255,.55)",
-                  marginBottom: 28,
-                  maxWidth: 520,
-                }}
-              >
-                Siz bergan `company/public` endpointiga mos ro'yxatdan o'tish formasi.
-                So'rov faqat kerakli maydonlar bilan yuboriladi.
-              </p>
-
-              <div style={{ display: "grid", gap: 14 }}>
-                {[
-                  "Kompaniya nomi va manager ma'lumoti",
-                  "Telefon, email va password yuborish",
-                  "Permission avtomatik CRM sifatida yuboriladi",
-                  "Logo bilan multipart/form-data jo'natish",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "14px 16px",
-                      borderRadius: 14,
-                      background: "#0f1724",
-                      border: "1px solid rgba(255,255,255,.06)",
-                      color: "rgba(255,255,255,.78)",
-                      fontSize: 14,
-                    }}
-                  >
-                    <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RegisterInfoPanel />
           )}
 
-          <div className="mt-2 mb-4 flex items-center gap-3 xl:hidden">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{
-                background:
-                  "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
-                border: "1px solid rgba(255,255,255,.82)",
-                boxShadow:
-                  "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
-              }}
-            >
-              <img src="/logo.png" alt="Kotibam" className="h-5 w-5" />
-            </div>
-            <span className="text-[11px] font-semibold tracking-[0.26em] text-white/40 uppercase">
-              Kotibam
-            </span>
-          </div>
+          <RegisterBrand className="mt-2 mb-4 flex items-center gap-3 xl:hidden" />
           <div className="mb-2 flex xl:hidden">
-            <button
-              type="button"
+            <RegisterBackButton
               onClick={() => navigate("/")}
               className="inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs"
-            >
-              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                <span aria-hidden="true">←</span>
-                <span>Orqaga</span>
-              </span>
-            </button>
+            />
           </div>
 
           <form
@@ -296,156 +202,47 @@ export default function Register() {
               maxWidth: isMobile ? 420 : "100%",
             }}
           >
-            <div
-              style={{
-                marginBottom: 24,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: 16,
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    marginBottom: 12,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: "0.28em",
-                    color: "rgba(56,189,248,.8)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Ro'yxatdan o'tish
-                </p>
-                <h1
-                  style={{
-                    fontSize: isMobile ? 24 : 26,
-                    lineHeight: 1.15,
-                    fontWeight: 600,
-                    letterSpacing: "-0.02em",
-                    color: "#fff",
-                  }}
-                >
-                  Hisobingizni yarating
-                </h1>
-                <p
-                  style={{
-                    marginTop: 12,
-                    fontSize: 14,
-                    lineHeight: 1.6,
-                    color: "rgba(255,255,255,.38)",
-                  }}
-                >
-                  Kerakli ma'lumotlarni kiriting va kompaniyangizni ulang.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="hidden xl:inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs"
-              >
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <span aria-hidden="true">←</span>
-                  <span>Orqaga</span>
-                </span>
-              </button>
-            </div>
+            <RegisterHeader isMobile={isMobile} navigate={navigate} />
 
             <div style={{ display: "grid", gap: 16 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
-                  Kompaniya nomi *
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setField("name", e.target.value)}
-                  placeholder="ABC Group"
-                  style={inputStyle("name")}
-                />
-                {errors.name && <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.name}</p>}
-              </div>
+              <RegisterInputField
+                label="Kompaniya nomi *"
+                value={form.name}
+                onChange={(e) => setField("name", e.target.value)}
+                placeholder="ABC Group"
+                style={inputStyle("name")}
+                error={errors.name}
+              />
 
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
-                  Telefon raqam *
-                </label>
-                <input
-                  value={form.phoneNumber}
-                  onChange={(e) => setField("phoneNumber", e.target.value)}
-                  placeholder="+998901234567"
-                  style={inputStyle("phoneNumber")}
-                />
-                {errors.phoneNumber && (
-                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.phoneNumber}</p>
-                )}
-              </div>
+              <RegisterInputField
+                label="Telefon raqam *"
+                value={form.phoneNumber}
+                onChange={(e) => setField("phoneNumber", e.target.value)}
+                placeholder="+998901234567"
+                style={inputStyle("phoneNumber")}
+                error={errors.phoneNumber}
+              />
 
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                  placeholder="company@mail.com"
-                  style={inputStyle("email")}
-                />
-                {errors.email && <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.email}</p>}
-              </div>
+              <RegisterInputField
+                label="Email *"
+                type="email"
+                value={form.email}
+                onChange={(e) => setField("email", e.target.value)}
+                placeholder="company@mail.com"
+                style={inputStyle("email")}
+                error={errors.email}
+              />
 
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
-                  Parol *
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={(e) => setField("password", e.target.value)}
-                    placeholder="Parol kiriting"
-                    style={{ ...inputStyle("password"), paddingRight: 44 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,.65)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      padding: 4,
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.password}</p>
-                )}
-              </div>
+              <RegisterPasswordField
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                value={form.password}
+                onChange={(e) => setField("password", e.target.value)}
+                style={inputStyle("password")}
+                error={errors.password}
+              />
 
-              <div
-                style={{
-                  display: "grid",
-                  gap: 12,
-                  borderRadius: 16,
-                  border: "1px solid rgba(255,255,255,.06)",
-                  background: "rgba(255,255,255,.02)",
-                  padding: 16,
-                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-                }}
-              >
-              </div>
+            
 
               <button
                 type="submit"
@@ -465,68 +262,11 @@ export default function Register() {
                 {submitting ? "Yuborilmoqda..." : "Ro'yxatdan o'tish"}
               </button>
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={googleLoading || submitting}
-                style={{
-                  height: 44,
-                  borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,.08)",
-                  background: "#111927",
-                  color: "#fff",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor:
-                    googleLoading || submitting ? "not-allowed" : "pointer",
-                  opacity: googleLoading || submitting ? 0.7 : 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                }}
-              >
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: "#fff",
-                    border: "1px solid rgba(255,255,255,.12)",
-                    boxShadow: "0 2px 10px rgba(0,0,0,.18)",
-                  }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M21.805 12.23c0-.79-.069-1.546-.198-2.272H12v4.302h5.498a4.701 4.701 0 0 1-2.04 3.084v2.56h3.305c1.935-1.782 3.042-4.408 3.042-7.674Z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 22c2.754 0 5.062-.913 6.75-2.477l-3.305-2.56c-.913.613-2.08.975-3.445.975-2.648 0-4.89-1.787-5.693-4.19H2.89v2.64A9.998 9.998 0 0 0 12 22Z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M6.307 13.748A5.996 5.996 0 0 1 5.988 12c0-.607.11-1.196.319-1.748v-2.64H2.89A9.998 9.998 0 0 0 2 12c0 1.61.385 3.13 1.069 4.388l3.238-2.64Z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 6.062c1.496 0 2.84.515 3.898 1.527l2.924-2.924C17.058 3.026 14.75 2 12 2A9.998 9.998 0 0 0 2.89 7.612l3.417 2.64c.803-2.403 3.045-4.19 5.693-4.19Z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-                </span>
-                {googleLoading ? "Google ochilmoqda..." : "Google bilan kirish"}
-              </button>
+              <RegisterGoogleButton
+                handleGoogleLogin={handleGoogleLogin}
+                googleLoading={googleLoading}
+                submitting={submitting}
+              />
             </div>
           </form>
         </div>
