@@ -21,6 +21,8 @@ import {
   ExternalLink,
   SendHorizonal,
   ImagePlus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -86,14 +88,20 @@ function FieldRow({ label, children }) {
   );
 }
 
-function StyledInput({ value, onChange, placeholder, type = "text" }) {
+function StyledInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  className = "",
+}) {
   return (
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50"
+      className={`w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50 ${className}`}
     />
   );
 }
@@ -220,12 +228,14 @@ export default function settings() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState("SALESMANAGER");
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [editUserId, setEditUserId] = useState(null);
   const [editFullName, setEditFullName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
 
   // ── Notifications ─────────────────────────────────────────────────────
@@ -373,6 +383,7 @@ export default function settings() {
       setInviteFullName("");
       setInviteEmail("");
       setInvitePassword("");
+      setShowInvitePassword(false);
       await loadUsers();
     } catch {
       toast.error("Xatolik ❌");
@@ -411,6 +422,7 @@ export default function settings() {
     setEditFullName(user.fullName || "");
     setEditEmail(user.email || "");
     setEditPassword("");
+    setShowEditPassword(false);
   };
 
   const cancelEditUser = () => {
@@ -418,6 +430,7 @@ export default function settings() {
     setEditFullName("");
     setEditEmail("");
     setEditPassword("");
+    setShowEditPassword(false);
   };
 
   const handleUpdateUser = async (user) => {
@@ -715,12 +728,33 @@ export default function settings() {
                       />
                     </FieldRow>
                     <FieldRow label="Пароль">
-                      <StyledInput
-                        type="password"
-                        value={invitePassword}
-                        onChange={setInvitePassword}
-                        placeholder="Kamida 6 belgi"
-                      />
+                      <div className="relative w-full max-w-xs">
+                        <StyledInput
+                          type={showInvitePassword ? "text" : "password"}
+                          value={invitePassword}
+                          onChange={setInvitePassword}
+                          placeholder="Kamida 6 belgi"
+                          className="max-w-none pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowInvitePassword((prev) => !prev)
+                          }
+                          className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
+                          aria-label={
+                            showInvitePassword
+                              ? "Parolni yashirish"
+                              : "Parolni ko'rsatish"
+                          }
+                        >
+                          {showInvitePassword ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
                     </FieldRow>
                     <FieldRow label="Роль">
                       <StyledSelect
@@ -803,15 +837,35 @@ export default function settings() {
                                 placeholder="Email"
                                 className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                               />
-                              <input
-                                type="password"
-                                value={editPassword}
-                                onChange={(e) =>
-                                  setEditPassword(e.target.value)
-                                }
-                                placeholder="Yangi parol (ixtiyoriy)"
-                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
-                              />
+                              <div className="relative">
+                                <input
+                                  type={showEditPassword ? "text" : "password"}
+                                  value={editPassword}
+                                  onChange={(e) =>
+                                    setEditPassword(e.target.value)
+                                  }
+                                  placeholder="Yangi parol (ixtiyoriy)"
+                                  className="w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 pr-9 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setShowEditPassword((prev) => !prev)
+                                  }
+                                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
+                                  aria-label={
+                                    showEditPassword
+                                      ? "Parolni yashirish"
+                                      : "Parolni ko'rsatish"
+                                  }
+                                >
+                                  {showEditPassword ? (
+                                    <EyeOff size={15} />
+                                  ) : (
+                                    <Eye size={15} />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <>

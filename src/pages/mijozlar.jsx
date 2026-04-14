@@ -40,6 +40,7 @@ import { VoiceVisualizer, useVoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+const TRASH_DROPPABLE_ID = "__lead_trash__";
 
 const maxBirthDate = (() => {
   const d = new Date();
@@ -89,6 +90,17 @@ async function extractApiMessage(res, fallback) {
     } catch {
       return text.trim() || fallback;
     }
+  } catch {
+    return fallback;
+  }
+}
+
+async function parseJsonSafeResponse(res, fallback = null) {
+  if (!res) return fallback;
+  try {
+    const text = await res.text();
+    if (!text) return fallback;
+    return JSON.parse(text);
   } catch {
     return fallback;
   }
@@ -612,8 +624,14 @@ export default function Pipeline() {
   const [statusMeta, setStatusMeta] = useState({});
   const [operatorsList, setOperatorsList] = useState([]);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
+  const [trashVisible, setTrashVisible] = useState(false);
+  const [trashActive, setTrashActive] = useState(false);
+  const [pendingDeleteLead, setPendingDeleteLead] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingLead, setDeletingLead] = useState(false);
   const role = getCurrentRole();
   const canManageStatuses = MANAGEMENT_ROLES.includes(role);
+  const canDeleteLeads = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
   const showToast = (message, type = "error") =>
     type === "success" ? toast.success(message) : toast.error(message);
 
@@ -883,12 +901,25 @@ export default function Pipeline() {
               apiFetch(`${API}/status/all/${savedId}`),
             ]);
           if (!projectsRes || !statusesRes) return;
+          if (!projectsRes.ok || !statusesRes.ok) {
+            const msg = await extractApiMessage(
+              !projectsRes.ok ? projectsRes : statusesRes,
+              "Ma'lumotlar yuklanmadi",
+            );
+            showToast(msg, "error");
+            setAppState("no-project");
+            return;
+          }
           const [projectsData, statusesData, sourcesData, totalsData] =
             await Promise.all([
-              projectsRes.json(),
-              statusesRes.json(),
-              sourcesRes?.json().catch(() => []),
-              totalsRes?.json().catch(() => null),
+              parseJsonSafeResponse(projectsRes, []),
+              parseJsonSafeResponse(statusesRes, []),
+              sourcesRes?.ok
+                ? parseJsonSafeResponse(sourcesRes, [])
+                : Promise.resolve([]),
+              totalsRes?.ok
+                ? parseJsonSafeResponse(totalsRes, null)
+                : Promise.resolve(null),
             ]);
           const fallbackStatuses = Array.isArray(statusesData)
             ? statusesData
@@ -921,7 +952,13 @@ export default function Pipeline() {
         } else {
           const res = await apiFetch(`${API}/projects`);
           if (!res) return;
-          const data = await res.json();
+          if (!res.ok) {
+            const msg = await extractApiMessage(res, "Loyihalar yuklanmadi");
+            showToast(msg, "error");
+            setAppState("no-project");
+            return;
+          }
+          const data = await parseJsonSafeResponse(res, []);
           const list = Array.isArray(data) ? data : [];
           setProjects(list);
           if (list.length === 1) await loadProject(list[0]);
@@ -948,10 +985,23 @@ export default function Pipeline() {
         apiFetch(`${API}/status/all/${project.id}`),
       ]);
       if (!statusesRes) return;
+      if (!statusesRes.ok) {
+        const msg = await extractApiMessage(
+          statusesRes,
+          "Statuslar yuklanmadi",
+        );
+        showToast(msg, "error");
+        setAppState("no-project");
+        return;
+      }
       const [statusesData, sourcesData, totalsData] = await Promise.all([
-        statusesRes.json(),
-        sourcesRes?.json().catch(() => []),
-        totalsRes?.json().catch(() => null),
+        parseJsonSafeResponse(statusesRes, []),
+        sourcesRes?.ok
+          ? parseJsonSafeResponse(sourcesRes, [])
+          : Promise.resolve([]),
+        totalsRes?.ok
+          ? parseJsonSafeResponse(totalsRes, null)
+          : Promise.resolve(null),
       ]);
       const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
       const { payloadStatuses, order } = applyStatusTotals(
@@ -1126,15 +1176,111 @@ export default function Pipeline() {
     };
   }, []);
 
+  const findLeadById = (leadId) =>
+    statuses.flatMap((status) => status.leads || []).find(
+      (lead) => Number(lead.id) === Number(leadId),
+    );
+
+  const handleDeleteLeadConfirm = async () => {
+    if (!pendingDeleteLead?.id) return;
+    if (!canDeleteLeads) {
+      showToast("Sizda lead o'chirish huquqi yo'q", "error");
+      return;
+    }
+
+    setDeletingLead(true);
+    try {
+      const res = await apiFetch(`${API}/leeds/${pendingDeleteLead.id}`, {
+        method: "DELETE",
+      });
+      if (!res) throw new Error("Serverga ulanishda xatolik");
+      if (!res.ok) {
+        const message = await extractApiMessage(res, "Mijozni o'chirib bo'lmadi");
+        throw new Error(message);
+      }
+
+      setStatuses((prev) =>
+        prev.map((status) => ({
+          ...status,
+          leads: (status.leads || []).filter(
+            (lead) => Number(lead.id) !== Number(pendingDeleteLead.id),
+          ),
+        })),
+      );
+
+      setStatusTotals((prev) => {
+        const deletedStatusId = Number(pendingDeleteLead.statusId);
+        const deletedBudget = Number(pendingDeleteLead.budjet || 0);
+        const currentMetrics = prev?.metrics || {};
+
+        return {
+          ...prev,
+          totalLeads: Math.max(0, Number(prev?.totalLeads || 0) - 1),
+          totalSum: Math.max(0, Number(prev?.totalSum || 0) - deletedBudget),
+          metrics: Object.fromEntries(
+            Object.entries(currentMetrics).map(([statusId, metric]) => {
+              if (Number(statusId) !== deletedStatusId) {
+                return [statusId, metric];
+              }
+              return [
+                statusId,
+                {
+                  ...metric,
+                  leadCount: Math.max(0, Number(metric?.leadCount || 0) - 1),
+                  leadBudjet: Math.max(
+                    0,
+                    Number(metric?.leadBudjet || 0) - deletedBudget,
+                  ),
+                },
+              ];
+            }),
+          ),
+        };
+      });
+
+      setDeleteDialogOpen(false);
+      setPendingDeleteLead(null);
+      showToast("Mijoz muvaffaqiyatli o'chirildi", "success");
+    } catch (err) {
+      showToast(err?.message || "O'chirishda xatolik yuz berdi", "error");
+    } finally {
+      setDeletingLead(false);
+    }
+  };
+
   const onDragStart = () => {
     isDragging.current = true;
+    if (canDeleteLeads) setTrashVisible(true);
+    setTrashActive(false);
     startAutoScroll();
+  };
+
+  const onDragUpdate = (update) => {
+    if (!canDeleteLeads) return;
+    const overTrash = update?.destination?.droppableId === TRASH_DROPPABLE_ID;
+    setTrashActive(overTrash);
   };
 
   const onDragEnd = async (result) => {
     stopAutoScroll();
+    setTrashVisible(false);
+    setTrashActive(false);
     const { source, destination, draggableId } = result;
     if (!destination) return;
+    if (destination.droppableId === TRASH_DROPPABLE_ID) {
+      if (!canDeleteLeads) {
+        showToast("Sizda lead o'chirish huquqi yo'q", "error");
+        return;
+      }
+      const selectedLead = findLeadById(draggableId);
+      if (!selectedLead) {
+        showToast("O'chiriladigan mijoz topilmadi", "error");
+        return;
+      }
+      setPendingDeleteLead(selectedLead);
+      setDeleteDialogOpen(true);
+      return;
+    }
     if (
       source.droppableId === destination.droppableId &&
       source.index === destination.index
@@ -2175,7 +2321,11 @@ export default function Pipeline() {
       </div>
 
       {/* ── Board ── */}
-      <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <DragDropContext
+        onDragStart={onDragStart}
+        onDragUpdate={onDragUpdate}
+        onDragEnd={onDragEnd}
+      >
         <div
           ref={boardRef}
           className="flex flex-1 gap-4 overflow-x-auto overflow-y-hidden p-6"
@@ -2238,7 +2388,11 @@ export default function Pipeline() {
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className="rounded-lg border border-blue-400/50 bg-[#1a3552] p-3 text-sm text-white shadow-2xl ring-2 ring-blue-500/30"
+                      className={`rounded-lg p-3 text-sm text-white shadow-2xl ring-2 ${
+                        trashActive
+                          ? "border border-red-400/80 bg-red-900/70 ring-red-500/40"
+                          : "border border-blue-400/50 bg-[#1a3552] ring-blue-500/30"
+                      }`}
                       style={{
                         ...provided.draggableProps.style,
                         opacity: 1,
@@ -2298,9 +2452,11 @@ export default function Pipeline() {
                                     handleLeadOpen(lead.id, snapshot.isDragging)
                                   }
                                   className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
-                                    snapshot.isDragging
-                                      ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
-                                      : ""
+                                    snapshot.isDragging && trashActive
+                                      ? "scale-[1.03] rotate-1 border-red-400/80 bg-red-900/70 shadow-xl ring-2 shadow-black/40 ring-red-500/40"
+                                      : snapshot.isDragging
+                                        ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
+                                        : ""
                                   }`}
                                   style={{
                                     ...provided.draggableProps.style,
@@ -2388,7 +2544,92 @@ export default function Pipeline() {
             </div>
           ))}
         </div>
+
+        {canDeleteLeads && (
+          <Droppable droppableId={TRASH_DROPPABLE_ID}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`fixed bottom-5 left-1/2 z-[120] -translate-x-1/2 ${
+                  trashVisible ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <div
+                  className={`flex h-16 w-24 items-center justify-center rounded-2xl border shadow-2xl backdrop-blur-md ${
+                    snapshot.isDraggingOver || trashActive
+                      ? "border-red-400/80 bg-red-950/70 text-red-100"
+                      : "border-red-400/30 bg-[#11263a]/95 text-red-200"
+                  }`}
+                >
+                  <div className="relative h-9 w-9">
+                    <div
+                      className="absolute top-[2px] left-1/2 h-[6px] w-7 rounded-sm border border-current bg-current/15 transition-transform duration-200"
+                      style={
+                        snapshot.isDraggingOver || trashActive
+                          ? {
+                              transform: "translateX(-50%) rotate(-22deg)",
+                              transformOrigin: "50% 100%",
+                            }
+                          : {
+                              transform: "translateX(-50%) rotate(0deg)",
+                              transformOrigin: "50% 100%",
+                            }
+                      }
+                    />
+                    <div className="absolute top-[8px] left-1/2 h-7 w-6 -translate-x-1/2 rounded-[6px] border-2 border-current bg-current/10" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] -translate-x-[7px] rounded bg-current/50" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] -translate-x-[1px] rounded bg-current/50" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] translate-x-[5px] rounded bg-current/50" />
+                  </div>
+                </div>
+                <div className="sr-only">{provided.placeholder}</div>
+              </div>
+            )}
+          </Droppable>
+        )}
       </DragDropContext>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (deletingLead) return;
+          setDeleteDialogOpen(open);
+          if (!open) setPendingDeleteLead(null);
+        }}
+      >
+        <DialogContent className="border border-[#2a4868] bg-[#0b1b29] text-white">
+          <DialogHeader>
+            <DialogTitle>Leadni o'chirish</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              {`${`${pendingDeleteLead?.firstName || ""} ${pendingDeleteLead?.lastName || ""}`.trim() || "Ushbu"} mijozini o'chirasizmi?`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#2a4868] bg-[#11263a] text-white hover:bg-[#1a3552]"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setPendingDeleteLead(null);
+              }}
+              disabled={deletingLead}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="!border-red-500 !bg-red-600 !text-white hover:!bg-red-700"
+              onClick={handleDeleteLeadConfirm}
+              disabled={deletingLead}
+            >
+              {deletingLead ? "O'chirilmoqda..." : "O'chirish"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <HorizontalScrollDock targetRef={boardRef} />
     </div>
   );
