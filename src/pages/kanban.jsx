@@ -9,7 +9,6 @@ import {
   KanbanOverlay,
 } from "@/components/reui/kanban";
 import { useEffect, useState } from "react";
-import { apiUrl } from "@/lib/api";
 
 const STATUS_COLORS = [
   {
@@ -120,7 +119,7 @@ export default function KanbanPage() {
   useEffect(() => {
     const token = localStorage.getItem("user");
     const projectId = localStorage.getItem("projectId");
-    fetch(apiUrl(`status/${projectId}`), {
+    fetch(`${import.meta.env.VITE_VITE_API_KEY_PROHOME}/status/${projectId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -140,7 +139,7 @@ export default function KanbanPage() {
     Promise.all(
       rColumns.map((column) =>
         fetch(
-          apiUrl(`leeds/by/${column?.id}`),
+          `${import.meta.env.VITE_VITE_API_KEY_PROHOME}/leeds/by/${column?.id}`,
           {
             method: "GET",
             headers: {

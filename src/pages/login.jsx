@@ -1,17 +1,166 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import Lottie from "lottie-react";
+import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { emitAuthChange } from "@/hooks/useNotification";
-import LeftSlider from "@/components/login/LeftSlider";
-import LoginBackButton from "@/components/login/LoginBackButton";
-import LoginBrand from "@/components/login/LoginBrand";
-import LoginCardHeader from "@/components/login/LoginCardHeader";
-import LoginEmailField from "@/components/login/LoginEmailField";
-import LoginInfoGrid from "@/components/login/LoginInfoGrid";
-import LoginPasswordField from "@/components/login/LoginPasswordField";
-import { API_BASE, apiUrl } from "@/lib/api";
+
+const slides = [
+  {
+    animationPath: "/ai_agent.json",
+    src: "/ai_agent.json",
+    title: "AI yordamchi ish ritmini ushlab turadi",
+    desc: "Takroriy jarayonlarni tezlashtirib, jamoaning kundalik ishini bir markazdan boshqarishga yordam beradi.",
+    stat: "24/7 avtomatlashtirish",
+  },
+  {
+    animationPath: "/login.json",
+    src: "/login.json",
+    title: "Leadlar yo'qolib ketmaydi",
+    desc: "Har bir mijoz, status va keyingi qadam bitta pipeline ichida aniq ko'rinadi.",
+    stat: "Leadlar nazorati",
+  },
+  {
+    animationPath: "/analitic.json",
+    src: "/analitic.json",
+    title: "Raqamlar qarorni tezlashtiradi",
+    desc: "Real vaqt analitikasi bilan savdo jarayonidagi o'sish nuqtalarini darhol ko'rasiz.",
+    stat: "Jonli hisobotlar!.",
+  },
+];
+
+function LeftSlider() {
+  const [current, setCurrent] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const [animationData, setAnimationData] = useState(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      const timeout = setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % slides.length);
+        setVisible(true);
+      }, 280);
+      return () => clearTimeout(timeout);
+    }, 4200);
+    return () => clearInterval(interval);
+  }, []);
+
+  const slide = slides[current];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch(slide.animationPath);
+        const data = await response.json();
+        if (!cancelled) setAnimationData(data);
+      } catch {
+        if (!cancelled) setAnimationData(null);
+      }
+    };
+
+    loadAnimation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slide.animationPath]);
+
+  return (
+    <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-white/[0.06] bg-[#080c14] px-12 py-10 xl:flex">
+      {/* subtle top-left glow */}
+      <div className="pointer-events-none absolute -top-40 -left-40 h-[480px] w-[480px] rounded-full bg-sky-500/[0.07] blur-[96px]" />
+
+      {/* Brand */}
+      <div className="relative z-10 flex flex-col items-center gap-1 text-center">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-xl"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+            border: "1px solid rgba(255,255,255,.82)",
+            boxShadow:
+              "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
+          }}
+        >
+          <img src="/logo.png" alt="Kotibam" className="h-5 w-5" />
+        </div>
+        <span className="text-[11px] font-semibold tracking-[0.26em] text-white/60 uppercase">
+          Kotibam
+        </span>
+      </div>
+
+      {/* Slide content */}
+      <div
+        className="relative z-10 flex flex-1 flex-col items-center justify-center text-center"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(12px)",
+          transition: "opacity 0.42s ease, transform 0.42s ease",
+        }}
+      >
+        {/* Badge */}
+        <div className="mb-8 inline-flex w-fit items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 py-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+          <span className="text-[11px] font-medium tracking-[0.18em] text-sky-400/90 uppercase">
+            {slide.stat}
+          </span>
+        </div>
+
+        {/* Lottie */}
+        <div className="mb-10 flex w-full justify-center">
+          <div className="rounded-[28px] border border-white/[0.07] bg-white/[0.03] p-5">
+            {animationData ? (
+              <Lottie
+                key={current}
+                animationData={animationData}
+                loop
+                autoplay
+                style={{ width: 260, height: 260 }}
+              />
+            ) : (
+              <div style={{ width: 260, height: 260 }} />
+            )}
+          </div>
+        </div>
+
+        {/* Title + desc */}
+        <h3 className="mb-4 max-w-sm text-[28px] leading-[1.25] font-semibold tracking-[-0.02em] text-white">
+          {slide.title}
+        </h3>
+        <p className="max-w-xs text-sm leading-7 text-white/38">{slide.desc}</p>
+      </div>
+
+      {/* Dots */}
+      <div className="relative z-10 flex items-center justify-center gap-2">
+        {slides.map((item, index) => (
+          <button
+            key={item.title}
+            type="button"
+            onClick={() => {
+              setVisible(false);
+              setTimeout(() => {
+                setCurrent(index);
+                setVisible(true);
+              }, 280);
+            }}
+            className={`h-[3px] rounded-full transition-all duration-300 ${
+              index === current
+                ? "w-8 bg-sky-400"
+                : "w-3 bg-white/15 hover:bg-white/30"
+            }`}
+            aria-label={`${index + 1}-slayd`}
+          />
+        ))}
+      </div>
+    </aside>
+  );
+}
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -55,6 +204,11 @@ const getLoginRequestError = (response, payload) => {
     return "Serverda xatolik yuz berdi. Keyinroq qayta urinib ko'ring";
   return message || "Kirishda xatolik yuz berdi";
 };
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return <p className="mt-2 text-[11px] text-rose-400/90">{message}</p>;
+}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -101,11 +255,12 @@ export default function Login() {
 
     setLoading(true);
     const loginRequest = async () => {
-      if (!API_BASE) throw new Error("API manzili sozlanmagan");
+      const apiBase = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+      if (!apiBase) throw new Error("API manzili sozlanmagan");
 
       let response;
       try {
-        response = await fetch(apiUrl("auth/login"), {
+        response = await fetch(`${apiBase}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: normalizedEmail, password }),
@@ -144,7 +299,7 @@ export default function Login() {
       emitAuthChange();
 
       try {
-        const projectsRes = await fetch(apiUrl("projects"), {
+        const projectsRes = await fetch(`${apiBase}/projects`, {
           headers: { Authorization: `Bearer ${data.accessToken}` },
         });
         if (projectsRes.ok) {
@@ -190,43 +345,156 @@ export default function Login() {
         <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
           <div className="w-full max-w-[420px]">
             {/* Mobile brand */}
-            <LoginBrand className="mb-8 flex items-center gap-3 xl:hidden" />
+            <div className="mb-8 flex items-center gap-3 xl:hidden">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+                  border: "1px solid rgba(255,255,255,.82)",
+                  boxShadow:
+                    "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
+                }}
+              >
+                <img src="/logo.png" alt="Kotibam" className="h-5 w-5" />
+              </div>
+              <span className="text-[11px] font-semibold tracking-[0.26em] text-white/60 uppercase">
+                Kotibam
+              </span>
+            </div>
             <div className="mb-4 flex xl:hidden">
-              <LoginBackButton
+              <button
+                type="button"
                 onClick={() => navigate("/")}
                 className="inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs"
-              />
+              >
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <span aria-hidden="true">←</span>
+                  <span>Orqaga</span>
+                </span>
+              </button>
             </div>
 
             {/* Card */}
             <div className="rounded-[28px] border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm sm:p-8">
               {/* Header */}
-              <LoginCardHeader navigate={navigate} />
+              <div className="mb-8 flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold tracking-[0.28em] text-sky-400/80 uppercase">
+                    Tizimga kirish
+                  </p>
+                  <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.02em] text-white">
+                    Hisobingizga kiring!
+                  </h1>
+                  <p className="mt-3 text-sm leading-6 text-white/38">
+                    Email va parolingizni kiriting.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="hidden xl:inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs"
+                >
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span aria-hidden="true">←</span>
+                    <span>Orqaga</span>
+                  </span>
+                </button>
+              </div>
 
               {/* Form */}
               <form onSubmit={handleSubmit} noValidate className="space-y-4">
                 {/* Email */}
-                <LoginEmailField
-                  email={email}
-                  handleChange={handleChange}
-                  handleBlur={handleBlur}
-                  emailHasError={emailHasError}
-                  errors={errors}
-                />
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-medium tracking-[0.12em] text-white/40 uppercase"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="example@mail.com"
+                    value={email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    onBlur={() => handleBlur("email")}
+                    aria-invalid={emailHasError ? "true" : "false"}
+                    className={`h-11 rounded-xl border bg-white/[0.04] px-4 text-sm text-white transition-colors placeholder:text-white/20 focus:ring-0 focus-visible:ring-0 ${
+                      emailHasError
+                        ? "border-rose-500/50 bg-rose-500/[0.06]"
+                        : "border-white/[0.08] focus:border-sky-500/50"
+                    }`}
+                  />
+                  <FieldError message={emailHasError ? errors.email : ""} />
+                </div>
 
                 {/* Password */}
-                <LoginPasswordField
-                  showPassword={showPassword}
-                  setShowPassword={setShowPassword}
-                  password={password}
-                  handleChange={handleChange}
-                  handleBlur={handleBlur}
-                  passwordHasError={passwordHasError}
-                  errors={errors}
-                />
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="mb-2 flex items-center gap-2 text-[11px] font-medium tracking-[0.12em] text-white/40 uppercase"
+                  >
+                    <LockKeyhole className="h-3.5 w-3.5" />
+                    Parol
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Parolingizni kiriting"
+                      value={password}
+                      onChange={(e) => handleChange("password", e.target.value)}
+                      onBlur={() => handleBlur("password")}
+                      aria-invalid={passwordHasError ? "true" : "false"}
+                      className={`h-11 rounded-xl border bg-white/[0.04] px-4 pr-11 text-sm text-white transition-colors placeholder:text-white/20 focus:ring-0 focus-visible:ring-0 ${
+                        passwordHasError
+                          ? "border-rose-500/50 bg-rose-500/[0.06]"
+                          : "border-white/[0.08] focus:border-sky-500/50"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute top-1/2 right-3.5 -translate-y-1/2 text-white/25 transition-colors hover:text-white/60"
+                      aria-label={
+                        showPassword
+                          ? "Parolni yashirish"
+                          : "Parolni ko'rsatish"
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <FieldError
+                    message={passwordHasError ? errors.password : ""}
+                  />
+                </div>
 
                 {/* Info grid */}
-                <LoginInfoGrid />
+                <div className="grid gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold tracking-[0.2em] text-white/25 uppercase">
+                      Xavfsizlik
+                    </p>
+                    <p className="text-xs leading-5 text-white/35">
+                      Sessiya rol va token asosida saqlanadi.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold tracking-[0.2em] text-white/25 uppercase">
+                      Yo&apos;naltirish
+                    </p>
+                    <p className="text-xs leading-5 text-white/35">
+                      Kirgandan keyin loyiha avtomatik tanlanadi.
+                    </p>
+                  </div>
+                </div>
 
                 {/* Submit */}
                 <Button
