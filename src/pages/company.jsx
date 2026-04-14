@@ -1,32 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
-  Pencil,
-  Trash2,
-  X,
-  Upload,
-  Loader2,
   Building2,
-  Hash,
-  Check,
-  AlertTriangle,
-  Phone,
-  Briefcase,
-  Users,
   Search,
   ChevronLeft,
   ChevronRight,
-  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   canDeleteData,
   getCurrentRole,
   isSuperAdminLikeRole,
 } from "@/lib/rbac";
 import { useNavigate } from "react-router-dom";
+import CardSkeleton from "@/components/company/CardSkeleton";
+import CompanyCard from "@/components/company/CompanyCard";
+import CompanyDetailModal from "@/components/company/CompanyDetailModal";
+import CompanyDrawer from "@/components/company/CompanyDrawer";
+import ConfirmDialog from "@/components/company/ConfirmDialog";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME.replace(/\/+$/, "");
 const PER_PAGE = 10;
@@ -437,370 +428,6 @@ async function updateCompany({
   }
 }
 
-// ─── UI Components ─────────────────────────────────────────────────────────────
-
-function FormField({ label, required = false, icon: Icon, error, children }) {
-  return (
-    <div>
-      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium tracking-wider text-gray-500 uppercase">
-        {Icon ? <Icon size={11} className="text-gray-600" /> : null}
-        {label} {required ? <span className="text-red-400">*</span> : null}
-      </label>
-      {children}
-      {error ? <p className="mt-1 text-[11px] text-red-400">{error}</p> : null}
-    </div>
-  );
-}
-
-function TInput({ value, onChange, placeholder, type = "text", maxLength, ...rest }) {
-  return (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      {...rest}
-      className="w-full rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]"
-    />
-  );
-}
-
-function ImageDropZone({ fileName, preview, onChange, error }) {
-  const inputRef = useRef(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handleFile = (file) => { if (file) onChange(file); };
-
-  return (
-    <div>
-      <p className="mb-1.5 text-xs font-medium tracking-wider text-gray-500 uppercase">Logo</p>
-      <div
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-        onDragLeave={() => setIsDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
-        className={`relative flex h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-all ${
-          isDragOver
-            ? "border-blue-500 bg-[rgba(59,130,246,0.06)]"
-            : preview
-              ? "border-blue-500/25 bg-[rgba(59,130,246,0.03)]"
-              : "border-white/[0.08] bg-white/[0.02]"
-        }`}
-      >
-        {preview ? (
-          <>
-            <img src={preview} alt="Logo preview" className="h-full w-full rounded-xl object-cover" />
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-              <p className="text-xs font-medium text-white">O'zgartirish</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
-              <Upload size={16} className="text-gray-500" />
-            </div>
-            <p className="text-xs text-gray-600">Logo yuklang yoki tashlang</p>
-            <p className="text-[10px] text-gray-700">PNG, JPG, WEBP (2MB)</p>
-          </>
-        )}
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
-          className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-      </div>
-      {fileName ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-green-400">
-          <Check size={11} /> {fileName}
-        </p>
-      ) : null}
-      {error ? <p className="mt-1 text-[11px] text-red-400">{error}</p> : null}
-    </div>
-  );
-}
-
-function ConfirmDialog({ company, onConfirm, onCancel, deleting = false }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-[4px]">
-      <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0f2030] p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10">
-            <AlertTriangle size={18} className="text-red-400" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Kompaniyani o'chirish</p>
-            <p className="text-xs text-gray-500">Bu amalni qaytarib bo'lmaydi</p>
-          </div>
-        </div>
-        <p className="mb-5 text-sm text-gray-400">
-          <span className="font-semibold text-white">&quot;{company?.name || "Noma'lum"}&quot;</span>{" "}
-          kompaniyasini o'chirmoqchimisiz?
-        </p>
-        <div className="flex gap-2">
-          <button type="button" onClick={onCancel} disabled={deleting}
-            className="flex-1 rounded-xl border border-white/[0.08] py-2 text-sm font-medium text-gray-400 transition-colors hover:text-white disabled:opacity-50">
-            Bekor
-          </button>
-          <button type="button" onClick={onConfirm} disabled={deleting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50">
-            {deleting ? <Loader2 size={14} className="animate-spin" /> : "O'chirish"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
-      <Skeleton className="h-36 w-full rounded-none" />
-      <div className="space-y-2 p-4">
-        <Skeleton className="h-4 w-2/3 rounded-lg" />
-        <Skeleton className="h-3 w-1/2 rounded-lg" />
-        <Skeleton className="mt-3 h-6 w-32 rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
-function CompanyCard({ company, onEdit, onDelete, onView, lockDelete = false }) {
-  const [imageError, setImageError] = useState(false);
-  const logoUrl = useMemo(() => getImgUrl(company?.logo), [company?.logo]);
-  const showLogo = Boolean(logoUrl && !imageError);
-  const telHref = toTelHref(company?.phoneNumber);
-  const isActive = getCompanyStatus(company, false);
-
-  return (
-    <div
-      onClick={() => onView(company)}
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/6 bg-[linear-gradient(145deg,#0f2438_0%,#0a1929_100%)] transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 hover:-translate-y-0.5 hover:border-white/12"
-    >
-      <div className="relative h-36 w-full overflow-hidden bg-[#0a1929]">
-        {showLogo ? (
-          <img src={logoUrl} alt={company?.name || "Company logo"}
-            onError={() => setImageError(true)}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-600/20 bg-blue-600/[0.15] text-xl font-bold text-blue-300">
-              {initials(company?.name || "")}
-            </div>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(7,24,40,0.95)_0%,transparent_55%)]" />
-
-        <div className="absolute top-3 left-3">
-          <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#071828]/80 px-2 py-0.5 backdrop-blur-sm">
-            <Hash size={9} className="text-blue-400" />
-            <span className="text-[10px] font-bold text-white">{company?.id}</span>
-          </div>
-        </div>
-
-        <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onView(company); }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-white" aria-label="Ko'rish">
-            <Eye size={12} />
-          </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(company); }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-blue-400" aria-label="Tahrirlash">
-            <Pencil size={12} />
-          </button>
-          <button type="button"
-            onClick={(e) => { e.stopPropagation(); if (!lockDelete) onDelete(company); }}
-            disabled={lockDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40" aria-label="O'chirish">
-            <Trash2 size={12} />
-          </button>
-        </div>
-
-        <div className="absolute right-3 bottom-3 left-3">
-          <p className="truncate text-sm font-semibold text-white">{company?.name}</p>
-          {company?.managerName ? (
-            <p className="truncate text-[11px] text-gray-300">{company.managerName}</p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="p-4">
-        {company?.description ? (
-          <p className="mb-3 line-clamp-2 text-[11px] leading-relaxed text-gray-700">
-            {company.description}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-1.5">
-          {telHref ? (
-            <a href={telHref} onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1 transition-colors hover:border-green-500/20 hover:bg-green-500/5">
-              <Phone size={9} className="text-green-400" />
-              <span className="text-[10px] text-gray-500">{company.phoneNumber}</span>
-            </a>
-          ) : null}
-          {company?.permissions?.length ? (
-            <div className="flex flex-wrap gap-1">
-              {company.permissions.map((p) => (
-                <span key={`${company.id}-${p}`}
-                  className="rounded-md border border-blue-600/20 bg-blue-600/[0.12] px-2 py-0.5 text-[10px] font-medium text-blue-300">
-                  {permissionLabel(p)}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div onClick={(e) => e.stopPropagation()}
-          className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-2">
-          <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`} />
-          <span className={`text-[11px] font-medium ${isActive ? "text-emerald-300" : "text-gray-400"}`}>
-            {isActive ? "Aktiv" : "Nofaol"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CompanyDetailModal({ company, onClose, onEdit }) {
-  const [imageError, setImageError] = useState(false);
-  const logoUrl = useMemo(() => getImgUrl(company?.logo), [company?.logo]);
-  const showLogo = Boolean(logoUrl && !imageError);
-  const telHref = toTelHref(company?.phoneNumber);
-  const isActive = getCompanyStatus(company, false);
-
-  if (!company) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.72)] p-4 backdrop-blur-[5px]">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-2xl animate-in fade-in zoom-in-95 overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(145deg,#0f2438_0%,#071828_100%)] shadow-2xl duration-200">
-        <div className="relative h-64 w-full overflow-hidden bg-[#0a1929]">
-          {showLogo ? (
-            <img src={logoUrl} alt={company?.name || "Company logo"}
-              onError={() => setImageError(true)} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-blue-600/20 bg-blue-600/[0.15] text-3xl font-bold text-blue-300">
-                {initials(company?.name || "")}
-              </div>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(7,24,40,0.98)_0%,rgba(7,24,40,0.4)_40%,transparent_100%)]" />
-
-          <div className="absolute top-5 left-5 flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#071828]/80 px-2.5 py-1 backdrop-blur-sm">
-              <Hash size={10} className="text-blue-400" />
-              <span className="text-xs font-bold text-white">{company.id}</span>
-            </div>
-            {company?.permissions?.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {company.permissions.map((p) => (
-                  <span key={`${company.id}-${p}`}
-                    className="rounded-lg border border-blue-400/20 bg-blue-500/[0.15] px-2 py-1 text-[10px] font-semibold text-blue-200">
-                    {permissionLabel(p)}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="absolute top-5 right-5 flex items-center gap-2">
-            <button type="button" onClick={() => onEdit(company)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-blue-400" aria-label="Tahrirlash">
-              <Pencil size={15} />
-            </button>
-            <button type="button" onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-white" aria-label="Yopish">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="absolute right-5 bottom-5 left-5">
-            <h2 className="text-2xl font-bold text-white">{company?.name || "Noma'lum kompaniya"}</h2>
-            <p className="mt-1 text-sm text-gray-300">{company?.managerName || "Manager ko'rsatilmagan"}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-5 p-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Users size={16} className="text-blue-400" />
-              <p className="text-sm font-semibold text-white">Asosiy ma'lumotlar</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-gray-500">Kompaniya nomi</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.name || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Manager</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.managerName || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Telefon</p>
-                {telHref ? (
-                  <a href={telHref} className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-green-400 hover:text-green-300">
-                    <Phone size={14} /> {company.phoneNumber}
-                  </a>
-                ) : (
-                  <p className="mt-1 text-sm font-medium text-white">-</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">ID</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.id}</p>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`} />
-                  <p className={`text-xs font-semibold ${isActive ? "text-emerald-300" : "text-gray-400"}`}>
-                    {isActive ? "Aktiv" : "Nofaol"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Briefcase size={16} className="text-blue-400" />
-              <p className="text-sm font-semibold text-white">Qo'shimcha ma'lumot</p>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-gray-500">Tavsif</p>
-                <p className="mt-1 text-sm leading-6 text-white">{company?.description || "Tavsif mavjud emas"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Ruxsatlar</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {company?.permissions?.length ? (
-                    company.permissions.map((p) => (
-                      <span key={`p-${company.id}-${p}`}
-                        className="rounded-lg border border-blue-400/20 bg-blue-500/[0.12] px-2.5 py-1 text-xs font-medium text-blue-300">
-                        {permissionLabel(p)}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500">Ruxsatlar mavjud emas</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] px-6 py-4">
-          <button type="button" onClick={onClose}
-            className="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-white">
-            Yopish
-          </button>
-          <button type="button" onClick={() => onEdit(company)}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white">
-            <Pencil size={14} /> Tahrirlash
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Drawer ────────────────────────────────────────────────────────────────────
 
 function getInitialForm(company) {
@@ -815,244 +442,6 @@ function getInitialForm(company) {
     status: getCompanyStatus(company, true),
     logo: null,
   };
-}
-
-function CompanyDrawer({ company, onClose, onSaved }) {
-  const isEdit = Boolean(company);
-  const [form, setForm] = useState(() => getInitialForm(company));
-  const [preview, setPreview] = useState(() =>
-    company?.logo ? getImgUrl(company.logo) : null,
-  );
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const objectUrlRef = useRef(null);
-
-  useEffect(() => {
-    setForm(getInitialForm(company));
-    setPreview(company?.logo ? getImgUrl(company.logo) : null);
-    setErrors({});
-  }, [company]);
-
-  useEffect(() => {
-    return () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); };
-  }, []);
-
-  const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
-
-  const togglePermission = (permission) => {
-    setForm((prev) => {
-      const next = prev.permissions.includes(permission)
-        ? prev.permissions.filter((item) => item !== permission)
-        : [...prev.permissions, permission];
-      return { ...prev, permissions: normalizePermissions(next) };
-    });
-  };
-
-  const handleImage = (file) => {
-    const validation = validateLogoFile(file);
-    if (!validation.ok) {
-      setErrors((prev) => ({ ...prev, logo: validation.message }));
-      toast.error(validation.message);
-      return;
-    }
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
-    setErrors((prev) => ({ ...prev, logo: undefined }));
-    setForm((prev) => ({ ...prev, logo: file }));
-    setPreview(url);
-  };
-
-  const validate = () => {
-    const nextErrors = {};
-    const name = sanitizeText(form.name, 120);
-    const managerName = sanitizeText(form.managerName, 120);
-    const description = sanitizeDescription(form.description, 600);
-    const phoneNumber = cleanPhone(form.phoneNumber);
-    const email = sanitizeEmail(form.email);
-    const password = String(form.password || "");
-    const permissions = normalizePermissions(form.permissions);
-
-    if (!name) nextErrors.name = "Nom majburiy";
-    if (!managerName) nextErrors.managerName = "Menejer ismi majburiy";
-    if (!phoneNumber) nextErrors.phoneNumber = "Telefon majburiy";
-    else if (!isValidUzPhone(phoneNumber))
-      nextErrors.phoneNumber = "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
-    if (description.length > 600)
-      nextErrors.description = "Tavsif 600 belgidan oshmasligi kerak";
-    if (!isEdit) {
-      if (!email) nextErrors.email = "Email majburiy";
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = "Email noto'g'ri";
-      if (!password.trim()) nextErrors.password = "Parol majburiy";
-    }
-    if (!permissions.length) nextErrors.permissions = "Kamida bitta ruxsat tanlanishi kerak";
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return null;
-    return { name, managerName, description, phoneNumber, email, password, permissions };
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    const normalized = validate();
-    if (!normalized || submitting) return;
-
-    setSubmitting(true);
-    try {
-      if (isEdit) {
-        await updateCompany({
-          companyId: company.id,
-          name: normalized.name,
-          phoneNumber: normalized.phoneNumber,
-          permissions: normalized.permissions,
-          managerName: normalized.managerName,
-          description: normalized.description,
-          logoFile: form.logo instanceof File ? form.logo : null,
-          status: Boolean(form.status),
-          previousStatus: getCompanyStatus(company, true),
-        });
-      } else {
-        await createCompany({
-          name: normalized.name,
-          phoneNumber: normalized.phoneNumber,
-          email: normalized.email,
-          password: normalized.password,
-          permissions: normalized.permissions,
-          managerName: normalized.managerName,
-          description: normalized.description,
-          logoFile: form.logo instanceof File ? form.logo : null,
-          status: Boolean(form.status),
-        });
-      }
-
-      toast.success(isEdit ? "Kompaniya yangilandi" : "Kompaniya qo'shildi");
-      onSaved();
-      onClose();
-    } catch (error) {
-      toast.error(error?.message || "Xatolik yuz berdi");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-[4px]">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-md animate-in slide-in-from-right flex-col border-l border-white/6 bg-[#071828] shadow-2xl duration-200">
-        <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-white">
-              {isEdit ? "Kompaniyani tahrirlash" : "Yangi kompaniya"}
-            </h2>
-            <p className="mt-0.5 text-xs text-gray-600">
-              {isEdit ? `#${company.id}` : "Ma'lumotlarni to'ldiring"}
-            </p>
-          </div>
-          <button type="button" onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.06] text-gray-500 transition-colors hover:text-white" aria-label="Yopish">
-            <X size={15} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <FormField label="Nomi" required icon={Building2} error={errors.name}>
-              <TInput value={form.name} onChange={setField("name")}
-                placeholder="Kompaniya nomi" maxLength={120} />
-            </FormField>
-
-            <FormField label="Menejer ismi" required icon={Users} error={errors.managerName}>
-              <TInput value={form.managerName} onChange={setField("managerName")}
-                placeholder="To'liq ism sharif" maxLength={120} />
-            </FormField>
-
-            <FormField label="Telefon raqam" required icon={Phone} error={errors.phoneNumber}>
-              <TInput value={form.phoneNumber} onChange={setField("phoneNumber")}
-                placeholder="+998 90 000 00 00" type="tel" maxLength={17} />
-            </FormField>
-
-            {!isEdit ? (
-              <FormField label="Email" required error={errors.email}>
-                <TInput value={form.email} onChange={setField("email")}
-                  placeholder="company@mail.com" type="email" maxLength={254} />
-              </FormField>
-            ) : null}
-
-            {!isEdit ? (
-              <FormField label="Parol" required error={errors.password}>
-                <TInput value={form.password} onChange={setField("password")}
-                  placeholder="Parol kiriting" type="password" maxLength={128} />
-              </FormField>
-            ) : null}
-
-            <FormField label="Tavsif" icon={Briefcase} error={errors.description}>
-              <textarea value={form.description}
-                onChange={(e) => setField("description")(e.target.value)}
-                placeholder="Kompaniya haqida qisqacha..." rows={3} maxLength={600}
-                className="w-full resize-none rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]" />
-            </FormField>
-
-            <div>
-              <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Ruxsatlar
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_PERMISSIONS.map((permission) => {
-                  const isActive = form.permissions.includes(permission);
-                  return (
-                    <button key={permission} type="button" onClick={() => togglePermission(permission)}
-                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                        isActive
-                          ? "border-blue-500/40 bg-blue-600/[0.15] text-blue-300"
-                          : "border-white/10 text-gray-500"
-                      }`}>
-                      <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${
-                        isActive ? "border-blue-500 bg-blue-500" : "border-gray-500 bg-transparent"
-                      }`}>
-                        {isActive ? <Check size={9} className="text-white" /> : null}
-                      </div>
-                      {permissionLabel(permission)}
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.permissions ? (
-                <p className="mt-1 text-[11px] text-red-400">{errors.permissions}</p>
-              ) : null}
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0a1929] px-3 py-2.5">
-              <div>
-                <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">Status</p>
-                <p className={`mt-1 text-xs font-semibold ${form.status ? "text-emerald-300" : "text-gray-400"}`}>
-                  {form.status ? "Aktiv" : "Nofaol"}
-                </p>
-              </div>
-              <Switch checked={Boolean(form.status)} onCheckedChange={(v) => setField("status")(v)} />
-            </div>
-
-            <ImageDropZone fileName={form.logo?.name} preview={preview}
-              onChange={handleImage} error={errors.logo} />
-          </div>
-
-          <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
-            <button type="button" onClick={onClose}
-              className="flex-1 rounded-xl border border-white/[0.08] py-2.5 text-sm font-medium text-gray-400 transition-colors hover:text-white">
-              Bekor
-            </button>
-            <button type="submit" disabled={submitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50">
-              {submitting ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <><Check size={15} /> {isEdit ? "Saqlash" : "Qo'shish"}</>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 }
 
 // ─── List helpers ──────────────────────────────────────────────────────────────
@@ -1257,37 +646,44 @@ function CompaniesContent() {
                   onView={(item) => setSelectedCompany(item)}
                   onEdit={(item) => { setSelectedCompany(null); setDrawer(item); }}
                   onDelete={(item) => setDeleteTarget(item)}
-                  lockDelete={!canDeleteCompanies} />
+                  lockDelete={!canDeleteCompanies}
+                  getImgUrl={getImgUrl}
+                  initials={initials}
+                  toTelHref={toTelHref}
+                  getCompanyStatus={getCompanyStatus}
+                  permissionLabel={permissionLabel} />
               ))}
             </div>
 
             {totalPages > 1 ? (
-              <div className="mt-8 flex animate-in fade-in slide-in-from-bottom-3 items-center justify-center gap-2 duration-300">
-                <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={page === 1}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
-                  <ChevronLeft size={16} />
-                </button>
-                {pageNumbers.map((item, index) =>
-                  item === "..." ? (
-                    <span key={`dots-${index}`} className="text-sm text-gray-600">...</span>
-                  ) : (
-                    <button key={`page-${item}`} type="button" onClick={() => setPage(item)}
-                      className={`h-9 min-w-[36px] rounded-xl border px-3 text-sm font-medium transition-all ${
-                        item === page
-                          ? "border-blue-600 bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white"
-                          : "border-white/[0.08] text-gray-400"
-                      }`}>
-                      {item}
-                    </button>
-                  ),
-                )}
-                <button type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
-                  <ChevronRight size={16} />
-                </button>
+              <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-300">
+                <div className="mx-auto flex max-w-6xl items-center justify-center gap-2">
+                  <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    disabled={page === 1}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
+                    <ChevronLeft size={16} />
+                  </button>
+                  {pageNumbers.map((item, index) =>
+                    item === "..." ? (
+                      <span key={`dots-${index}`} className="text-sm text-gray-600">...</span>
+                    ) : (
+                      <button key={`page-${item}`} type="button" onClick={() => setPage(item)}
+                        className={`h-9 min-w-[36px] rounded-xl border px-3 text-sm font-medium transition-all ${
+                          item === page
+                            ? "border-blue-600 bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white"
+                            : "border-white/[0.08] text-gray-400"
+                        }`}>
+                        {item}
+                      </button>
+                    ),
+                  )}
+                  <button type="button"
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={page === totalPages}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
             ) : null}
           </>
@@ -1299,6 +695,20 @@ function CompaniesContent() {
           company={drawer === "add" ? null : drawer}
           onClose={() => setDrawer(null)}
           onSaved={() => fetchCompanies({ pageToLoad: page })}
+          getInitialForm={getInitialForm}
+          getImgUrl={getImgUrl}
+          validateLogoFile={validateLogoFile}
+          sanitizeText={sanitizeText}
+          sanitizeDescription={sanitizeDescription}
+          cleanPhone={cleanPhone}
+          sanitizeEmail={sanitizeEmail}
+          normalizePermissions={normalizePermissions}
+          isValidUzPhone={isValidUzPhone}
+          permissionLabel={permissionLabel}
+          ALL_PERMISSIONS={ALL_PERMISSIONS}
+          getCompanyStatus={getCompanyStatus}
+          updateCompany={updateCompany}
+          createCompany={createCompany}
         />
       ) : null}
 
@@ -1310,7 +720,12 @@ function CompaniesContent() {
       {selectedCompany ? (
         <CompanyDetailModal company={selectedCompany}
           onClose={() => setSelectedCompany(null)}
-          onEdit={(item) => { setSelectedCompany(null); setDrawer(item); }} />
+          onEdit={(item) => { setSelectedCompany(null); setDrawer(item); }}
+          getImgUrl={getImgUrl}
+          initials={initials}
+          toTelHref={toTelHref}
+          getCompanyStatus={getCompanyStatus}
+          permissionLabel={permissionLabel} />
       ) : null}
     </div>
   );

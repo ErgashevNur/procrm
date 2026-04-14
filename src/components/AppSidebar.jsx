@@ -10,15 +10,12 @@ import {
   isSuperAdminLikeRole,
   isSupportedRole,
 } from "@/lib/rbac";
+import { imageUrl } from "@/lib/api";
 import { useNotification } from "@/hooks/useNotification";
 import { NotificationBell } from "./NotificationBell";
 
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-
 function getImageUrl(imgName) {
-  if (!imgName) return null;
-  if (imgName.startsWith("blob:") || imgName.startsWith("http")) return imgName;
-  return `${API_BASE}/image/${imgName}`;
+  return imageUrl(imgName);
 }
 
 const SETTINGS_ROLES = MANAGEMENT_ROLES;

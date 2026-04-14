@@ -7,7 +7,6 @@ import {
   Clock,
   Copy,
   FileText,
-  Filter,
   Loader2,
   MessageSquare,
   PenSquare,
@@ -40,10 +39,10 @@ import {
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
-
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { apiUrl } from "@/lib/api";
 const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
 const TEMPLATE_TOKENS = ["{{fullname}}", "{{firstName}}", "{{lastName}}"];
+const SMS_HISTORY_STORAGE_KEY = "sms_history_by_project";
 
 function getToken() {
   return localStorage.getItem("user") || "";
@@ -89,6 +88,15 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
+const ENDPOINTS = {
+  statuses: (projectId) => apiUrl(`status/${projectId}`),
+  leadsSearch: (projectId) => apiUrl(`leeds/all/search?projectId=${projectId}`),
+  leadsByStatus: (statusId, page = 1, limit = 100) =>
+    apiUrl(`leeds/by/${statusId}?page=${page}&limit=${limit}`),
+  templates: () => apiUrl("sms-template"),
+  send: () => apiUrl("sms/send"),
+};
+
 function pickList(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -119,6 +127,89 @@ function pickLeads(payload) {
   }
 
   return [];
+}
+
+async function parseJson(response, fallback = null) {
+  if (!response) return fallback;
+  return response.json().catch(() => fallback);
+}
+
+async function fetchLeadsForSms(projectId) {
+  const searchResponse = await apiFetch(ENDPOINTS.leadsSearch(projectId), {
+    headers: hdr(false),
+  });
+
+  if (searchResponse?.ok) {
+    const searchPayload = await parseJson(searchResponse, null);
+    return pickLeads(searchPayload);
+  }
+
+  // Sabab: backend bu loyihada `leads` emas, asosan `leeds/...` endpointlarini ishlatadi.
+  // Oldingi kod mavjud bo'lmagan `leads?projectId=...` URL larni taxmin qilib 404 olayotgan edi.
+  const statusesResponse = await apiFetch(ENDPOINTS.statuses(projectId), {
+    headers: hdr(false),
+  });
+
+  if (!statusesResponse?.ok) {
+    const message = await extractApiMessage(
+      statusesResponse,
+      "Statuslar yuklanmadi",
+    );
+    throw new Error(message);
+  }
+
+  const statusesPayload = await parseJson(statusesResponse, []);
+  const statuses = pickList(statusesPayload);
+
+  const leadResponses = await Promise.all(
+    statuses.map((status) =>
+      apiFetch(ENDPOINTS.leadsByStatus(status?.id), { headers: hdr(false) }),
+    ),
+  );
+
+  const leadPayloads = await Promise.all(
+    leadResponses.map((response) => parseJson(response, [])),
+  );
+
+  const seen = new Set();
+  return leadPayloads
+    .flatMap((payload) => pickLeads(payload))
+    .filter((lead) => {
+      const id = Number(lead?.id);
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+}
+
+function readLocalSmsHistory(projectId) {
+  try {
+    const raw = localStorage.getItem(SMS_HISTORY_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return Array.isArray(parsed?.[projectId]) ? parsed[projectId] : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalSmsHistory(projectId, list) {
+  try {
+    const raw = localStorage.getItem(SMS_HISTORY_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    parsed[projectId] = Array.isArray(list) ? list : [];
+    localStorage.setItem(SMS_HISTORY_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    // Local history fallback ishlamasa ham sahifa ishlashda davom etadi.
+  }
+}
+
+function buildSmsStats(list) {
+  return {
+    total: list.length,
+    sent: list.filter((item) => ["SENT", "SUCCESS"].includes(item?.status)).length,
+    pending: list.filter((item) => item?.status === "PENDING").length,
+    failed: list.filter((item) => item?.status === "FAILED").length,
+  };
 }
 
 function pickItem(payload) {
@@ -272,9 +363,7 @@ function HistoryRow({ item }) {
   return (
     <div className="rounded-xl border border-white/10 bg-[#0b1220] p-4">
       <div className="flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111827]"
-        >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111827]">
           <Icon size={16} style={{ color: cfg.color }} />
         </div>
         <div className="min-w-0 flex-1">
@@ -419,7 +508,9 @@ function TemplateDialog({
                 <button
                   key={token}
                   type="button"
-                  onClick={() => onChange("content", `${form.content}${form.content ? " " : ""}${token}`)}
+                  onClick={() =>
+                    onChange("content", `${form.content}${form.content ? " " : ""}${token}`)
+                  }
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-cyan-300 transition-colors hover:border-cyan-400/40"
                 >
                   {token}
@@ -481,34 +572,20 @@ export default function SmsRassilka() {
     else setLoading(true);
 
     try {
-      const [leadRes, historyRes, templateRes] = await Promise.all([
-        apiFetch(`${API}/leeds?projectId=${projectId}`, { headers: hdr(false) }),
-        apiFetch(`${API}/sms/history?projectId=${projectId}`, { headers: hdr(false) }),
-        apiFetch(`${API}/sms-template`, { headers: hdr(false) }),
+      const [leadsData, templateRes] = await Promise.all([
+        fetchLeadsForSms(projectId),
+        apiFetch(ENDPOINTS.templates(), { headers: hdr(false) }),
       ]);
-
-      if (leadRes?.ok) {
-        const data = await leadRes.json();
-        setLeads(pickLeads(data));
-      }
-
-      if (historyRes?.ok) {
-        const data = await historyRes.json();
-        const list = pickList(data);
-        setHistory(list);
-        setStats({
-          total: list.length,
-          sent: list.filter((item) => ["SENT", "SUCCESS"].includes(item?.status)).length,
-          pending: list.filter((item) => item?.status === "PENDING").length,
-          failed: list.filter((item) => item?.status === "FAILED").length,
-        });
-      } else {
-        setHistory([]);
-        setStats({ total: 0, sent: 0, pending: 0, failed: 0 });
-      }
+      setLeads(leadsData);
+      // Sabab: backendda tasdiqlangan SMS history endpoint topilmadi, mavjud bo'lmagan
+      // route'larni urish 404 spam berayotgan edi. Shu sabab history vaqtincha lokal
+      // persistent fallback orqali ko'rsatiladi.
+      const localHistory = readLocalSmsHistory(projectId);
+      setHistory(localHistory);
+      setStats(buildSmsStats(localHistory));
 
       if (templateRes?.ok) {
-        const data = await templateRes.json();
+        const data = await templateRes.json().catch(() => null);
         const list = pickList(data).filter((item) => {
           if (!companyId) return true;
           return !item?.companyId || Number(item.companyId) === Number(companyId);
@@ -661,7 +738,9 @@ export default function SmsRassilka() {
     setSavingTemplate(true);
     try {
       const isEdit = templateMode === "edit" && templateForm.id;
-      const url = isEdit ? `${API}/sms-template/${templateForm.id}` : `${API}/sms-template`;
+      const url = isEdit
+        ? apiUrl(`sms-template/${templateForm.id}`)
+        : apiUrl("sms-template");
       const payload = {
         companyId: Number(companyId),
         name: templateForm.name.trim(),
@@ -716,7 +795,7 @@ export default function SmsRassilka() {
 
     setDeletingTemplateId(template.id);
     try {
-      const response = await apiFetch(`${API}/sms-template/${template.id}`, {
+      const response = await apiFetch(apiUrl(`sms-template/${template.id}`), {
         method: "DELETE",
         headers: hdr(false),
       });
@@ -752,7 +831,7 @@ export default function SmsRassilka() {
 
     setSending(true);
     try {
-      const response = await apiFetch(`${API}/sms/send`, {
+      const response = await apiFetch(ENDPOINTS.send(), {
         method: "POST",
         body: JSON.stringify({
           projectId: Number(projectId),
@@ -762,14 +841,27 @@ export default function SmsRassilka() {
       });
 
       if (!response?.ok) {
-        const message =
+        const errorMessage =
           response?.status === 403
             ? "Sizda SMS yuborish uchun ruxsat yo'q"
             : await extractApiMessage(response, "SMS yuborishda xato yuz berdi");
-        throw new Error(message);
+        throw new Error(errorMessage);
       }
 
       toast.success(`${selected.size} ta mijozga SMS yuborildi`);
+      const recipients = leads.filter((lead) => selected.has(lead.id));
+      const historyEntry = {
+        id: `local-${Date.now()}`,
+        status: "SUCCESS",
+        message: message.trim(),
+        recipientCount: recipients.length,
+        leads: recipients,
+        createdAt: new Date().toISOString(),
+      };
+      const nextHistory = [historyEntry, ...readLocalSmsHistory(projectId)];
+      writeLocalSmsHistory(projectId, nextHistory);
+      setHistory(nextHistory);
+      setStats(buildSmsStats(nextHistory));
       setMessage("");
       setSelected(new Set());
       setSelectAll(false);
@@ -811,7 +903,7 @@ export default function SmsRassilka() {
       />
 
       <div className="relative z-10 p-4 md:p-6">
-        <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a1b2d] px-5 py-4">
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/8 bg-[#0a1b2d] px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2563eb] shadow-[0_8px_24px_rgba(37,99,235,0.35)]">
               <MessageSquare size={18} />
@@ -821,7 +913,7 @@ export default function SmsRassilka() {
               <p className="text-xs text-white/40">{leads.length} ta mijoz mavjud</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {canManageTemplates ? (
               <Button size="sm" variant="outline" onClick={openCreateTemplate}>
                 <Plus />
@@ -835,7 +927,7 @@ export default function SmsRassilka() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#0a1b2d]">
             <div className="flex border-b border-white/6">
               {[
@@ -858,9 +950,9 @@ export default function SmsRassilka() {
             </div>
 
             {tab === "compose" ? (
-              <div className="flex h-[calc(100vh-180px)] flex-col">
+              <div className="flex min-h-[560px] flex-col xl:h-[calc(100vh-180px)]">
                 <div className="border-b border-white/6 p-4">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
                       Xabar matni
                     </p>
@@ -903,7 +995,7 @@ export default function SmsRassilka() {
                 </div>
 
                 <div className="border-b border-white/6 px-4 py-3">
-                  <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <label className="flex items-center gap-2 text-xs text-white/55">
                       <input
                         type="checkbox"
@@ -913,14 +1005,14 @@ export default function SmsRassilka() {
                       />
                       Barchasi
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <span className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">
                         {selectionCount} ta
                       </span>
                       <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/55 outline-none"
+                        className="w-full rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/55 outline-none sm:w-auto"
                       >
                         <option value="all">Barcha status</option>
                         {uniqueStatuses.map((status) => (
@@ -980,7 +1072,7 @@ export default function SmsRassilka() {
                 </div>
               </div>
             ) : (
-              <div className="h-[calc(100vh-180px)] overflow-y-auto p-4">
+              <div className="min-h-[560px] overflow-y-auto p-4 xl:h-[calc(100vh-180px)]">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-white">Yuborish tarixi</p>
@@ -1004,11 +1096,11 @@ export default function SmsRassilka() {
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/8 bg-[#0a1b2d] p-5">
+            <div className="rounded-2xl border border-white/8 bg-[#0a1b2d] p-4 sm:p-5">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
                 Statistika
               </p>
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard icon={Send} label="Jami" value={stats?.total ?? 0} color="#3b82f6" />
                 <StatCard icon={CheckCheck} label="Yuborildi" value={stats?.sent ?? 0} color="#10b981" />
                 <StatCard icon={Clock} label="Kutilmoqda" value={stats?.pending ?? 0} color="#f59e0b" />
@@ -1016,9 +1108,9 @@ export default function SmsRassilka() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[1fr_320px]">
-              <div className="rounded-2xl border border-white/8 bg-[#0a1b2d] p-5">
-                <div className="mb-4 flex items-center justify-between">
+            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0 rounded-2xl border border-white/8 bg-[#0a1b2d] p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
                       Template
@@ -1083,12 +1175,12 @@ export default function SmsRassilka() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-white/8 bg-[#0a1b2d] p-5">
+              <div className="rounded-2xl border border-white/8 bg-[#0a1b2d] p-4 sm:p-5">
                 <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
                   SMS ko'rinishi
                 </p>
 
-                <div className="mx-auto w-[250px] rounded-[34px] border-4 border-white/10 bg-[#081726] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+                <div className="mx-auto w-full max-w-[250px] rounded-[34px] border-4 border-white/10 bg-[#081726] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
                   <div className="mb-4 flex justify-center">
                     <div className="h-1.5 w-20 rounded-full bg-white/10" />
                   </div>
@@ -1154,17 +1246,17 @@ export default function SmsRassilka() {
             </div>
           </div>
         </div>
-      </div>
 
-      <TemplateDialog
-        open={templateDialogOpen}
-        mode={templateMode}
-        form={templateForm}
-        saving={savingTemplate}
-        onOpenChange={setTemplateDialogOpen}
-        onChange={(field, value) => setTemplateForm((prev) => ({ ...prev, [field]: value }))}
-        onSubmit={saveTemplate}
-      />
+        <TemplateDialog
+          open={templateDialogOpen}
+          mode={templateMode}
+          form={templateForm}
+          saving={savingTemplate}
+          onOpenChange={setTemplateDialogOpen}
+          onChange={(field, value) => setTemplateForm((prev) => ({ ...prev, [field]: value }))}
+          onSubmit={saveTemplate}
+        />
+      </div>
     </div>
   );
 }

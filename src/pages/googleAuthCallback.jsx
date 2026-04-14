@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getDefaultRouteByRole } from "@/lib/rbac";
 import { extractAuthPayloadFromUrl, persistAuthSession } from "@/lib/auth";
-
-const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+import { API_BASE, apiUrl } from "@/lib/api";
 
 async function parseJsonSafe(response) {
   const text = await response.text();
@@ -45,7 +44,7 @@ export default function GoogleAuthCallback() {
       const code = currentUrl.searchParams.get("code");
       if (code && API_BASE) {
         const response = await fetch(
-          `${API_BASE}/auth/google/callback${currentUrl.search}`,
+          apiUrl(`auth/google/callback${currentUrl.search}`),
           { credentials: "include" },
         );
         const payload = await parseJsonSafe(response);

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFacebook,
   faGoogle,
@@ -13,13 +12,18 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import {
   CheckCircle2,
-  Ellipsis,
   Link2,
   Package,
-  Search,
   Wallet,
   XCircle,
 } from "lucide-react";
+import IntCard from "@/components/pro-market/IntCard";
+import Slider from "@/components/pro-market/Slider";
+import Section from "@/components/pro-market/Section";
+import WebhookModal from "@/components/pro-market/WebhookModal";
+import Toast from "@/components/pro-market/Toast";
+import ProMarketHeader from "@/components/pro-market/ProMarketHeader";
+import ProMarketTabs from "@/components/pro-market/ProMarketTabs";
 
 const C = {
   pageBg: "#1A2235",
@@ -36,8 +40,34 @@ const C = {
   red: "#E74C3C",
 };
 
-const brandLogo = (domain) =>
-  `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+const brandLogo = (domain) => {
+  const label = String(domain || "")
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .trim();
+
+  const text = (label[0] || "?").toUpperCase();
+  const colors = [
+    ["#244C7A", "#4D8EF5"],
+    ["#2A3E2A", "#27AE60"],
+    ["#5A2D2D", "#E67E22"],
+    ["#3F2A56", "#9B59B6"],
+    ["#2B4558", "#3AA6D0"],
+  ];
+
+  const hash = [...label].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const [bg, fg] = colors[hash % colors.length];
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+      <rect width="128" height="128" rx="28" fill="${bg}"/>
+      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+        fill="${fg}" font-family="Arial, sans-serif" font-size="64" font-weight="700">${text}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
 
 const INTEGRATIONS = {
   chats: [
@@ -364,35 +394,6 @@ const INTEGRATIONS = {
 
 const ALL_ITEMS = Object.values(INTEGRATIONS).flat();
 
-function BrandIcon({ item, size = 24 }) {
-  if (item.faIcon) {
-    return (
-      <FontAwesomeIcon
-        icon={item.faIcon}
-        style={{
-          fontSize: size,
-          color: item.iconColor || "#fff",
-          display: "block",
-        }}
-      />
-    );
-  }
-
-  return (
-    <img
-      src={item.logo}
-      alt={`${item.name} logo`}
-      style={{
-        width: size,
-        height: size,
-        objectFit: "contain",
-        display: "block",
-        borderRadius: Math.max(4, Math.floor(size / 4)),
-      }}
-    />
-  );
-}
-
 const TABS = [
   { key: "installed", label: "Установленные" },
   { key: "all", label: "Выбор Kotibam CRM" },
@@ -433,777 +434,6 @@ const SLIDES = [
   },
 ];
 
-/* ── Badge ── */
-function Badge({ type }) {
-  const m = {
-    free: {
-      bg: "#0D3320",
-      color: "#27AE60",
-      border: "#1A5C3A",
-      text: "Бесплатно",
-    },
-    new: {
-      bg: "#0D1F40",
-      color: "#4D8EF5",
-      border: "#1A3A6E",
-      text: "Новинка",
-    },
-    paid: {
-      bg: "#2A1A00",
-      color: "#F59E0B",
-      border: "#5C3A00",
-      text: "Платное",
-    },
-  };
-  const s = m[type] || m.free;
-  return (
-    <span
-      style={{
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.border}`,
-        borderRadius: 20,
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "2px 8px",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {s.text}
-    </span>
-  );
-}
-
-/* ── IntCard ── */
-function IntCard({ item, onToggle }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background: hov ? "#243650" : C.cardBg,
-        border: `1px solid ${hov ? "#2E4A6A" : C.cardBorder}`,
-        borderRadius: 10,
-        padding: 16,
-        cursor: "pointer",
-        transition: "all 0.2s",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        position: "relative",
-      }}
-    >
-      {item.installed && (
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            width: 7,
-            height: 7,
-            background: C.green,
-            borderRadius: "50%",
-          }}
-        />
-      )}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
-        <div
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 10,
-            background: item.bg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <BrandIcon item={item} size={24} />
-        </div>
-        <Badge type={item.badge} />
-      </div>
-      <div>
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: 13,
-            color: C.text,
-            marginBottom: 4,
-          }}
-        >
-          {item.name}
-        </div>
-        <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
-          {item.desc}
-        </div>
-      </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(item.id);
-        }}
-        style={{
-          width: "100%",
-          borderRadius: 7,
-          padding: "7px 0",
-          fontSize: 11,
-          fontWeight: 700,
-          cursor: "pointer",
-          marginTop: "auto",
-          border: `1.5px solid ${item.installed ? C.green : C.blue}`,
-          background: "transparent",
-          color: item.installed ? C.green : C.blue,
-          transition: "all 0.18s",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = item.installed ? C.green : C.blue;
-          e.currentTarget.style.color = "#fff";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = item.installed ? C.green : C.blue;
-        }}
-      >
-        {item.installed ? "✓ Установлено" : "Установить бесплатно"}
-      </button>
-    </div>
-  );
-}
-
-/* ── Slider ── */
-function Slider() {
-  const [cur, setCur] = useState(1);
-  const prev = () => setCur((c) => (c - 1 + SLIDES.length) % SLIDES.length);
-  const next = () => setCur((c) => (c + 1) % SLIDES.length);
-  const left = SLIDES[(cur - 1 + SLIDES.length) % SLIDES.length];
-  const center = SLIDES[cur];
-  const right = SLIDES[(cur + 1) % SLIDES.length];
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "28px 0 36px",
-        background: C.pageBg,
-        overflow: "hidden",
-      }}
-    >
-      {/* Left ghost */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          width: "20%",
-          height: 260,
-          background: left.bg,
-          borderRadius: "0 14px 14px 0",
-          opacity: 0.5,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          padding: "20px 18px",
-        }}
-      >
-        <div
-          style={{
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 13,
-            fontWeight: 700,
-            lineHeight: 1.4,
-          }}
-        >
-          {(left.title || left.label || "").split("\n")[0]}
-        </div>
-      </div>
-
-      {/* Left arrow */}
-      <button
-        onClick={prev}
-        style={{
-          position: "absolute",
-          left: "20%",
-          zIndex: 10,
-          width: 34,
-          height: 34,
-          borderRadius: "50%",
-          background: "rgba(15,25,40,0.9)",
-          border: `1px solid ${C.border}`,
-          color: "#fff",
-          fontSize: 18,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-        }}
-      >
-        ‹
-      </button>
-
-      {/* Center */}
-      <div
-        style={{
-          width: "56%",
-          maxWidth: 800,
-          minHeight: 260,
-          background: center.bg,
-          borderRadius: 14,
-          position: "relative",
-          overflow: "hidden",
-          zIndex: 5,
-          boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
-        }}
-      >
-        {center.maobot ? (
-          <MaoBotSlide slide={center} />
-        ) : (
-          <GenericSlide slide={center} />
-        )}
-      </div>
-
-      {/* Right arrow */}
-      <button
-        onClick={next}
-        style={{
-          position: "absolute",
-          right: "20%",
-          zIndex: 10,
-          width: 34,
-          height: 34,
-          borderRadius: "50%",
-          background: "rgba(15,25,40,0.9)",
-          border: `1px solid ${C.border}`,
-          color: "#fff",
-          fontSize: 18,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-        }}
-      >
-        ›
-      </button>
-
-      {/* Right ghost */}
-      <div
-        style={{
-          position: "absolute",
-          right: 0,
-          width: "20%",
-          height: 260,
-          background: right.bg,
-          borderRadius: "14px 0 0 14px",
-          opacity: 0.5,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          padding: "20px 18px",
-        }}
-      >
-        <div
-          style={{
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 13,
-            fontWeight: 700,
-            lineHeight: 1.4,
-          }}
-        >
-          {(right.title || right.label || "").split("\n")[0]}
-        </div>
-      </div>
-
-      {/* Dots */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 14,
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: 6,
-        }}
-      >
-        {SLIDES.map((_, i) => (
-          <div
-            key={i}
-            onClick={() => setCur(i)}
-            style={{
-              width: i === cur ? 22 : 6,
-              height: 6,
-              borderRadius: 3,
-              background: i === cur ? "#fff" : "rgba(255,255,255,0.3)",
-              cursor: "pointer",
-              transition: "all 0.3s",
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MaoBotSlide({ slide }) {
-  return (
-    <div
-      style={{
-        padding: "28px 32px 60px",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        minHeight: 260,
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-            }}
-          >
-            🤖
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "#fff" }}>
-              {slide.label}
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>
-              {slide.sublabel}
-            </div>
-          </div>
-        </div>
-        <div
-          style={{
-            fontWeight: 900,
-            fontSize: 24,
-            color: "#fff",
-            lineHeight: 1.3,
-            marginBottom: 16,
-          }}
-        >
-          Продавайте в Telegram, Max,
-          <br />
-          WhatsApp, Avito без переплат
-        </div>
-        {[
-          {
-            bold: "Пишите первыми без лимитов",
-            rest: "на сообщения и ограничений на диалоги",
-          },
-          {
-            bold: "Нейропродавец",
-            tag: "NEW",
-            rest: "вернет упущенную прибыль",
-          },
-        ].map((f, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <div
-              style={{
-                width: 5,
-                height: 5,
-                background: "#90CAF9",
-                borderRadius: "50%",
-                marginTop: 5,
-                flexShrink: 0,
-              }}
-            />
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
-              <strong style={{ color: "#fff" }}>{f.bold}</strong>
-              {f.tag && (
-                <span
-                  style={{
-                    background: C.red,
-                    color: "#fff",
-                    fontSize: 9,
-                    fontWeight: 800,
-                    padding: "1px 5px",
-                    borderRadius: 4,
-                    marginLeft: 5,
-                    marginRight: 3,
-                  }}
-                >
-                  {f.tag}
-                </span>
-              )}{" "}
-              {f.rest}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginLeft: 24, flexShrink: 0 }}>
-        <div
-          style={{
-            background: "rgba(255,255,255,0.12)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 12,
-            padding: "10px 20px",
-            textAlign: "center",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>от</div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>
-            1650₽ / мес
-          </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
-            за 2 мессенджера
-          </div>
-        </div>
-      </div>
-      {/* CTA bottom */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "rgba(41,121,255,0.88)",
-          borderRadius: "0 0 14px 14px",
-          padding: "13px",
-          textAlign: "center",
-          cursor: "pointer",
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 14,
-        }}
-      >
-        Подключить тестовый период на 3 дня
-      </div>
-    </div>
-  );
-}
-
-function GenericSlide({ slide }) {
-  return (
-    <div
-      style={{
-        padding: "28px 32px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        minHeight: 260,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.12)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-            }}
-          >
-            🏦
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 13, color: "#fff" }}>
-              {slide.label}
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
-              {slide.sublabel}
-            </div>
-          </div>
-        </div>
-        <div
-          style={{
-            fontWeight: 900,
-            fontSize: 20,
-            color: "rgba(255,255,255,0.7)",
-            lineHeight: 1.3,
-            marginBottom: 10,
-          }}
-        >
-          {(slide.title || "").split("\n").map((l, i) => (
-            <div key={i}>{l}</div>
-          ))}
-        </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: "rgba(255,255,255,0.5)",
-            lineHeight: 1.6,
-            maxWidth: 400,
-          }}
-        >
-          {slide.body}
-        </div>
-      </div>
-      {slide.cta && (
-        <button
-          style={{
-            marginTop: 18,
-            background: slide.ctaOutline ? "rgba(255,255,255,0.12)" : "#4D8EF5",
-            border: slide.ctaOutline
-              ? "1px solid rgba(255,255,255,0.25)"
-              : "none",
-            color: "#fff",
-            borderRadius: 9,
-            padding: "10px 22px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-            alignSelf: "flex-start",
-          }}
-        >
-          {slide.cta}
-        </button>
-      )}
-    </div>
-  );
-}
-
-/* ── Section ── */
-function Section({ title, count, items, onToggle, onSeeAll }) {
-  return (
-    <div style={{ marginBottom: 36 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <span style={{ fontWeight: 700, fontSize: 16, color: C.text }}>
-          {title}
-        </span>
-        <span
-          onClick={onSeeAll}
-          style={{
-            color: C.blue,
-            fontSize: 12,
-            cursor: "pointer",
-            fontWeight: 500,
-          }}
-        >
-          Смотреть все ({count})
-        </span>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
-          gap: 14,
-        }}
-      >
-        {items.map((i) => (
-          <IntCard key={i.id} item={i} onToggle={onToggle} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── Webhook Modal ── */
-function WebhookModal({ onClose }) {
-  const [url, setUrl] = useState("");
-  const [ev, setEv] = useState("Создание сделки");
-  const inp = {
-    width: "100%",
-    background: "#1A2840",
-    border: `1px solid ${C.border}`,
-    borderRadius: 8,
-    padding: "9px 12px",
-    fontSize: 13,
-    outline: "none",
-    color: C.text,
-    fontFamily: "inherit",
-    boxSizing: "border-box",
-  };
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#1A2840",
-          borderRadius: 16,
-          padding: 28,
-          width: 440,
-          border: `1px solid ${C.border}`,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-        }}
-      >
-        <div
-          style={{
-            fontWeight: 800,
-            fontSize: 18,
-            color: C.text,
-            marginBottom: 6,
-          }}
-        >
-          Добавить Web Hook
-        </div>
-        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>
-          Настройте уведомления при событиях в CRM
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.textMuted,
-              marginBottom: 5,
-            }}
-          >
-            URL назначения
-          </div>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://your-server.com/webhook"
-            style={inp}
-          />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.textMuted,
-              marginBottom: 5,
-            }}
-          >
-            Событие
-          </div>
-          <select
-            value={ev}
-            onChange={(e) => setEv(e.target.value)}
-            style={inp}
-          >
-            {[
-              "Создание сделки",
-              "Изменение сделки",
-              "Удаление сделки",
-              "Создание контакта",
-              "Входящий звонок",
-            ].map((x) => (
-              <option key={x}>{x}</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: "#243449",
-              color: C.textMuted,
-              border: "none",
-              borderRadius: 9,
-              padding: "10px 18px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Отмена
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1,
-              background: C.blue,
-              color: "#fff",
-              border: "none",
-              borderRadius: 9,
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Сохранить хук
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Toast ── */
-function Toast({ icon, msg }) {
-  const Icon = icon;
-  return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        background: "#0F1922",
-        color: "#fff",
-        padding: "12px 18px",
-        borderRadius: 10,
-        fontSize: 13,
-        fontWeight: 500,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        border: `1px solid ${C.border}`,
-        boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
-        zIndex: 2000,
-      }}
-    >
-      <Icon size={18} color="#fff" strokeWidth={2.2} />
-      {msg}
-    </div>
-  );
-}
-
 /* ── MAIN ── */
 export default function ProMarket() {
   const [tab, setTab] = useState("all");
@@ -1242,7 +472,7 @@ export default function ProMarket() {
     if (tab === "installed") {
       const inst = Object.values(items).filter((i) => i.installed);
       return (
-        <div style={{ padding: "0 24px" }}>
+        <div style={{ padding: "0 16px" }}>
           <div
             style={{
               fontWeight: 700,
@@ -1260,12 +490,12 @@ export default function ProMarket() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
+                gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))",
                 gap: 14,
               }}
             >
               {inst.map((i) => (
-                <IntCard key={i.id} item={i} onToggle={toggleInstall} />
+                <IntCard key={i.id} item={i} onToggle={toggleInstall} C={C} />
               ))}
             </div>
           ) : (
@@ -1300,14 +530,15 @@ export default function ProMarket() {
     if (tab === "all")
       return (
         <>
-          <Slider />
-          <div style={{ padding: "0 24px" }}>
+          <Slider SLIDES={SLIDES} C={C} />
+          <div style={{ padding: "0 16px" }}>
             <Section
               title="Чаты и мессенджеры"
               count={330}
               items={catItems("chats")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("chats")}
+              C={C}
             />
             <Section
               title="Телефония"
@@ -1315,6 +546,7 @@ export default function ProMarket() {
               items={catItems("telephony")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("telephony")}
+              C={C}
             />
             <Section
               title="Email и SMS рассылки"
@@ -1322,6 +554,7 @@ export default function ProMarket() {
               items={catItems("email")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("email")}
+              C={C}
             />
             <Section
               title="Аналитика"
@@ -1329,6 +562,7 @@ export default function ProMarket() {
               items={catItems("analytics")}
               onToggle={toggleInstall}
               onSeeAll={() => setTab("analytics")}
+              C={C}
             />
           </div>
         </>
@@ -1344,7 +578,7 @@ export default function ProMarket() {
     }[tab] || { title: tab, count: 0 };
     const ci = catItems(tab);
     return (
-      <div style={{ padding: "0 24px" }}>
+      <div style={{ padding: "0 16px" }}>
         <div
           style={{
             fontWeight: 700,
@@ -1361,13 +595,13 @@ export default function ProMarket() {
         {ci.length ? (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
+            display: "grid",
+              gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))",
               gap: 14,
             }}
           >
             {ci.map((i) => (
-              <IntCard key={i.id} item={i} onToggle={toggleInstall} />
+              <IntCard key={i.id} item={i} onToggle={toggleInstall} C={C} />
             ))}
           </div>
         ) : (
@@ -1402,206 +636,18 @@ export default function ProMarket() {
         color: C.text,
       }}
     >
-      {/* HEADER */}
-      <div
-        style={{
-          background: C.headerBg,
-          borderBottom: `1px solid ${C.border}`,
-          padding: "0 24px",
-          height: 52,
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontWeight: 900,
-            fontSize: 16,
-            color: C.text,
-            letterSpacing: 0.3,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Kotibam <span style={{ color: C.blue }}>МАРКЕТ</span>
-        </span>
-        <div style={{ position: "relative", maxWidth: 320, width: "100%" }}>
-          <span
-            style={{
-              position: "absolute",
-              left: 10,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: C.textDim,
-              fontSize: 14,
-            }}
-          >
-            <Search size={14} color={C.textDim} strokeWidth={2.2} />
-          </span>
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setSrOpen(true);
-            }}
-            onFocus={() => setSrOpen(true)}
-            onBlur={() => setTimeout(() => setSrOpen(false), 150)}
-            placeholder="Поиск"
-            style={{
-              width: "100%",
-              background: "rgba(255,255,255,0.05)",
-              border: `1px solid ${C.border}`,
-              borderRadius: 8,
-              padding: "7px 10px 7px 32px",
-              color: C.text,
-              fontSize: 13,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-          {srOpen && searchRes.length > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                top: "calc(100% + 4px)",
-                left: 0,
-                width: "100%",
-                background: "#0F1922",
-                border: `1px solid ${C.border}`,
-                borderRadius: 10,
-                overflow: "hidden",
-                zIndex: 500,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-              }}
-            >
-              {searchRes.map((i) => (
-                <div
-                  key={i.id}
-                  onMouseDown={() => {
-                    setTab("all");
-                    setSearch("");
-                    setSrOpen(false);
-                  }}
-                  style={{
-                    padding: "9px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background =
-                      "rgba(255,255,255,0.05)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <span
-                    style={{
-                      width: 18,
-                      height: 18,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <BrandIcon item={i} size={18} />
-                  </span>
-                  <div>
-                    <div
-                      style={{ fontWeight: 600, fontSize: 13, color: C.text }}
-                    >
-                      {i.name}
-                    </div>
-                    <div style={{ fontSize: 10, color: C.textMuted }}>
-                      {i.badge === "free"
-                        ? "Бесплатно"
-                        : i.badge === "paid"
-                          ? "Платное"
-                          : "Новинка"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ flex: 1 }} />
-        <span
-          style={{
-            color: C.textMuted,
-            cursor: "pointer",
-            fontSize: 18,
-            letterSpacing: 2,
-            padding: "2px 8px",
-          }}
-        >
-          <Ellipsis size={18} color={C.textMuted} />
-        </span>
-        <button
-          onClick={() => setWebhook(true)}
-          style={{
-            background: "transparent",
-            color: C.text,
-            border: `1px solid ${C.border}`,
-            borderRadius: 8,
-            padding: "7px 14px",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.blue)}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
-        >
-          + WEB HOOKS
-        </button>
-      </div>
+      <ProMarketHeader
+        C={C}
+        search={search}
+        setSearch={setSearch}
+        setSrOpen={setSrOpen}
+        srOpen={srOpen}
+        searchRes={searchRes}
+        setTab={setTab}
+        setWebhook={setWebhook}
+      />
 
-      {/* NAV TABS */}
-      <div
-        style={{
-          background: C.navBg,
-          borderBottom: `1px solid ${C.border}`,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 24px",
-          overflowX: "auto",
-          flexShrink: 0,
-          scrollbarWidth: "none",
-        }}
-      >
-        {TABS.map((t) => (
-          <div
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: "13px 14px",
-              fontSize: 13,
-              whiteSpace: "nowrap",
-              cursor: "pointer",
-              fontWeight: tab === t.key ? 700 : 400,
-              color: tab === t.key ? C.blue : C.textMuted,
-              borderBottom: `2px solid ${tab === t.key ? C.blue : "transparent"}`,
-              transition: "color 0.15s",
-            }}
-          >
-            {t.label}
-          </div>
-        ))}
-        <div
-          style={{
-            padding: "13px 10px",
-            fontSize: 16,
-            color: C.textMuted,
-            cursor: "pointer",
-          }}
-        >
-          <Ellipsis size={16} color={C.textMuted} />
-        </div>
-      </div>
+      <ProMarketTabs C={C} TABS={TABS} tab={tab} setTab={setTab} />
 
       {/* CONTENT */}
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: 32 }}>
@@ -1610,13 +656,14 @@ export default function ProMarket() {
 
       {webhook && (
         <WebhookModal
+          C={C}
           onClose={() => {
             setWebhook(false);
             showToast(Link2, "Хук сохранён!");
           }}
         />
       )}
-      {toast && <Toast icon={toast.icon} msg={toast.msg} />}
+      {toast && <Toast icon={toast.icon} msg={toast.msg} C={C} />}
     </div>
   );
 }

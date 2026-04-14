@@ -7,7 +7,7 @@ function ChartContainer({ className, children, config: _config, ...props }) {
   return (
     <div
       data-slot="chart-container"
-      className={cn("w-full", className)}
+      className={cn("min-w-0 min-h-[1px] w-full", className)}
       {...props}
     >
       <ResponsiveContainer width="100%" height="100%">

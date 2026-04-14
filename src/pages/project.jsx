@@ -8,7 +8,6 @@ import {
   Loader2,
   FolderOpen,
   Building2,
-  Hash,
   ImageIcon,
   Check,
   AlertTriangle,
@@ -16,21 +15,12 @@ import {
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
+import { apiUrl, imageUrl } from "@/lib/api";
 
-const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-// const IMG_API = "https://back.prohome.uz/api/v1/image";
-
-// "image/filename.jpg" → "https://back.prohome.uz/api/v1/image/filename.jpg"
 const getImgUrl = (raw) => {
-  if (!raw) return null;
-  const clean = raw.replace(/^image\//, "");
-
-  console.log(clean);
-
-  return `${API}/image/${clean}`;
+  return imageUrl(raw);
 };
 
-// ── API helper ────────────────────────────────────────────────────────────────
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
   const res = await fetch(url, {
@@ -48,16 +38,6 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
-// ── Empty form ────────────────────────────────────────────────────────────────
-const EMPTY = {
-  name: "",
-  address: "",
-  companyId: "",
-  otherId: "",
-  image3d: null, // File object
-};
-
-// ── Confirm dialog ────────────────────────────────────────────────────────────
 function ConfirmDialog({ project, onConfirm, onCancel }) {
   return (
     <div
@@ -76,9 +56,7 @@ function ConfirmDialog({ project, onConfirm, onCancel }) {
             <p className="text-sm font-semibold text-white">
               Loyihani o'chirish
             </p>
-            <p className="text-xs text-gray-500">
-              Bu amalni qaytarib bo'lmaydi
-            </p>
+            <p className="text-xs text-gray-500">Bu amalni qaytarib bo'lmaydi</p>
           </div>
         </div>
         <p className="mb-5 text-sm text-gray-400">
@@ -104,7 +82,6 @@ function ConfirmDialog({ project, onConfirm, onCancel }) {
   );
 }
 
-// ── Image Drop Zone ───────────────────────────────────────────────────────────
 function ImageDropZone({ file, preview, onChange }) {
   const inputRef = useRef();
   const [drag, setDrag] = useState(false);
@@ -133,25 +110,13 @@ function ImageDropZone({ file, preview, onChange }) {
         }}
         className="relative flex h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-all"
         style={{
-          borderColor: drag
-            ? "#3b82f6"
-            : preview
-              ? "#3b82f640"
-              : "rgba(255,255,255,0.08)",
-          background: drag
-            ? "rgba(59,130,246,0.06)"
-            : preview
-              ? "rgba(59,130,246,0.03)"
-              : "rgba(255,255,255,0.02)",
+          borderColor: drag ? "#3b82f6" : preview ? "#3b82f640" : "rgba(255,255,255,0.08)",
+          background: drag ? "rgba(59,130,246,0.06)" : preview ? "rgba(59,130,246,0.03)" : "rgba(255,255,255,0.02)",
         }}
       >
         {preview ? (
           <>
-            <img
-              src={preview}
-              alt="preview"
-              className="h-full w-full rounded-xl object-cover"
-            />
+            <img src={preview} alt="preview" className="h-full w-full rounded-xl object-cover" />
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 transition-opacity hover:opacity-100">
               <p className="text-xs font-medium text-white">O'zgartirish</p>
             </div>
@@ -161,9 +126,7 @@ function ImageDropZone({ file, preview, onChange }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
               <Upload size={16} className="text-gray-500" />
             </div>
-            <p className="text-xs text-gray-600">
-              Rasm yuklang yoki shu yerga tashlang
-            </p>
+            <p className="text-xs text-gray-600">Rasm yuklang yoki shu yerga tashlang</p>
             <p className="text-[10px] text-gray-700">PNG, JPG, WEBP</p>
           </>
         )}
@@ -184,7 +147,6 @@ function ImageDropZone({ file, preview, onChange }) {
   );
 }
 
-// ── Field component ───────────────────────────────────────────────────────────
 function FormField({ label, required, icon: Icon, error, children }) {
   return (
     <div>
@@ -214,11 +176,9 @@ function TInput({ value, onChange, placeholder, type = "text", ...rest }) {
   );
 }
 
-// ── Drawer (add/edit) ─────────────────────────────────────────────────────────
 function ProjectDrawer({ project, onClose, onSaved }) {
   const isEdit = !!project;
 
-  // companyId — localStorage dan avtomatik
   const companyId = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -231,7 +191,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
     name: project?.name ?? "",
     address: project?.address ?? "",
     companyId: project?.companyId ?? companyId,
-    otherId: project?.otherId ?? "",
     img: null,
   });
   const [preview, setPreview] = useState(
@@ -266,10 +225,9 @@ function ProjectDrawer({ project, onClose, onSaved }) {
       fd.append("name", form.name.trim());
       fd.append("address", form.address.trim());
       fd.append("companyId", Number(form.companyId));
-      if (form.otherId) fd.append("otherId", Number(form.otherId));
       if (form.image3d) fd.append("image3d", form.image3d);
 
-      const url = isEdit ? `${API}/projects/${project.id}` : `${API}/projects`;
+      const url = isEdit ? apiUrl(`projects/${project.id}`) : apiUrl("projects");
       const method = isEdit ? "PATCH" : "POST";
 
       const res = await apiFetch(url, { method, body: fd });
@@ -298,7 +256,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
         className="relative flex h-full w-full max-w-md flex-col border-l border-white/6 shadow-2xl"
         style={{ background: "#071828", animation: "slideIn .25s ease" }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-white">
@@ -316,61 +273,21 @@ function ProjectDrawer({ project, onClose, onSaved }) {
           </button>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col overflow-hidden"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <FormField
-              label="Nom"
-              required
-              icon={FolderOpen}
-              error={errors.name}
-            >
-              <TInput
-                value={form.name}
-                onChange={set("name")}
-                placeholder="Loyiha nomi"
-              />
+            <FormField label="Nom" required icon={FolderOpen} error={errors.name}>
+              <TInput value={form.name} onChange={set("name")} placeholder="Loyiha nomi" />
             </FormField>
 
-            <FormField
-              label="Manzil"
-              required
-              icon={Building2}
-              error={errors.address}
-            >
-              <TInput
-                value={form.address}
-                onChange={set("address")}
-                placeholder="To'liq manzil"
-              />
+            <FormField label="Manzil" required icon={Building2} error={errors.address}>
+              <TInput value={form.address} onChange={set("address")} placeholder="To'liq manzil" />
             </FormField>
 
-            <FormField label="Other ID" icon={Hash} error={errors.otherId}>
-              <TInput
-                type="number"
-                value={form.otherId}
-                onChange={set("otherId")}
-                placeholder="ixtiyoriy"
-              />
-            </FormField>
-
-            <FormField
-              label="3D Rasm"
-              required={!isEdit}
-              error={errors.image3d}
-            >
-              <ImageDropZone
-                file={form.image3d}
-                preview={preview}
-                onChange={handleImage}
-              />
+            <FormField label="3D Rasm" required={!isEdit} error={errors.image3d}>
+              <ImageDropZone file={form.image3d} preview={preview} onChange={handleImage} />
             </FormField>
           </div>
 
-          {/* Footer */}
           <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
             <button
               type="button"
@@ -407,7 +324,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
   );
 }
 
-// ── Project Card ──────────────────────────────────────────────────────────────
 function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
   return (
     <div
@@ -417,7 +333,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
         animation: `fadeUp .4s ease ${index * 0.05}s both`,
       }}
     >
-      {/* 3D Image */}
       <div className="relative h-44 w-full overflow-hidden bg-[#0a1929]">
         {project.img ? (
           <img
@@ -430,16 +345,10 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
             <ImageIcon size={32} className="text-gray-700" />
           </div>
         )}
-        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to top, rgba(7,24,40,0.9) 0%, transparent 60%)",
-          }}
+          style={{ background: "linear-gradient(to top, rgba(7,24,40,0.9) 0%, transparent 60%)" }}
         />
-
-        {/* Action buttons */}
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={() => onEdit(project)}
@@ -447,49 +356,32 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
           >
             <Pencil size={12} />
           </button>
-          {canDelete ? (
+          {canDelete && (
             <button
               onClick={() => onDelete(project)}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400"
             >
               <Trash2 size={12} />
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
-      {/* Info */}
       <div className="p-4">
-        <h3 className="mb-1 truncate text-sm font-semibold text-white">
-          {project.name}
-        </h3>
+        <h3 className="mb-1 truncate text-sm font-semibold text-white">{project.name}</h3>
         <p className="mb-3 truncate text-xs text-gray-600">{project.address}</p>
-
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1">
             <Building2 size={10} className="text-blue-400" />
-            <span className="text-[10px] font-medium text-gray-500">
-              Kompaniya
-            </span>
-            <span className="text-[10px] font-bold text-white">
-              {project.companyId}
-            </span>
+            <span className="text-[10px] font-medium text-gray-500">Kompaniya</span>
+            <span className="text-[10px] font-bold text-white">{project.companyId}</span>
           </div>
-          {project.otherId && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1">
-              <Hash size={10} className="text-purple-400" />
-              <span className="text-[10px] font-bold text-white">
-                {project.otherId}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
@@ -503,19 +395,18 @@ function CardSkeleton() {
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Projects() {
   const role = getCurrentRole();
   const canDeleteProjects = canDeleteData(role);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [drawer, setDrawer] = useState(null); // null | "add" | project obj
-  const [delTarget, setDelTarget] = useState(null); // project to delete
+  const [drawer, setDrawer] = useState(null);
+  const [delTarget, setDelTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchProjects = async () => {
     try {
-      const res = await apiFetch(`${API}/projects`);
+      const res = await apiFetch(apiUrl("projects"));
       if (!res) return;
       const data = await res.json();
       setProjects(Array.isArray(data) ? data : []);
@@ -540,7 +431,7 @@ export default function Projects() {
     }
     setDeleting(true);
     try {
-      const res = await apiFetch(`${API}/projects/${delTarget.id}`, {
+      const res = await apiFetch(apiUrl(`projects/${delTarget.id}`), {
         method: "DELETE",
       });
       if (!res || !res.ok) throw new Error();
@@ -555,21 +446,15 @@ export default function Projects() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-[#071828]"
-      style={{ fontFamily: "'Segoe UI', sans-serif" }}
-    >
-      {/* Grid bg */}
+    <div className="min-h-screen bg-[#071828]" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.015]"
         style={{
-          backgroundImage:
-            "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
+          backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
           backgroundSize: "44px 44px",
         }}
       />
 
-      {/* Header */}
       <div
         className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur"
         style={{ animation: "fadeUp .3s ease both" }}
@@ -595,15 +480,10 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mx-auto max-w-6xl px-6 py-6">
         {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array(8)
-              .fill(0)
-              .map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
+            {Array(8).fill(0).map((_, i) => <CardSkeleton key={i} />)}
           </div>
         ) : projects.length === 0 ? (
           <div
@@ -613,12 +493,8 @@ export default function Projects() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
               <FolderOpen size={28} className="text-gray-700" />
             </div>
-            <p className="text-base font-semibold text-white">
-              Hech qanday loyiha yo'q
-            </p>
-            <p className="text-sm text-gray-600">
-              Birinchi loyihangizni qo'shing
-            </p>
+            <p className="text-base font-semibold text-white">Hech qanday loyiha yo'q</p>
+            <p className="text-sm text-gray-600">Birinchi loyihangizni qo'shing</p>
             <button
               onClick={() => setDrawer("add")}
               className="mt-2 flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
@@ -643,7 +519,6 @@ export default function Projects() {
         )}
       </div>
 
-      {/* Drawer */}
       {drawer && (
         <ProjectDrawer
           project={drawer === "add" ? null : drawer}
@@ -652,7 +527,6 @@ export default function Projects() {
         />
       )}
 
-      {/* Delete confirm */}
       {delTarget && (
         <ConfirmDialog
           project={delTarget}
