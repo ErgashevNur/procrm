@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { apiUrl } from "@/lib/api";
+import FormPageError from "@/components/form-page/FormPageError";
+import FormPageField from "@/components/form-page/FormPageField";
+import FormPageHeader from "@/components/form-page/FormPageHeader";
+import FormPageLoading from "@/components/form-page/FormPageLoading";
+import FormPageSuccess from "@/components/form-page/FormPageSuccess";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_STREAM_BASE = "https://backend-b2b-dev.prohome.uz/api/v1/image";
 
 function getImageSource(rawValue) {
   const raw = String(rawValue || "").trim();
@@ -28,7 +33,7 @@ function getImageSource(rawValue) {
       .pop() || "";
 
   if (!fileName) return null;
-  return `${IMAGE_STREAM_BASE}/${encodeURIComponent(fileName)}`;
+  return `${API}/image/${encodeURIComponent(fileName)}`;
 }
 
 function normalizeFieldType(field) {

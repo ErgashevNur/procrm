@@ -12,6 +12,7 @@ import {
   Upload,
   Download,
   MoreHorizontal,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "../components/ui/skeleton";
@@ -46,6 +47,7 @@ import PipelineNoProject from "@/components/mijozlar/PipelineNoProject";
 import PipelineHeader from "@/components/mijozlar/PipelineHeader";
 import PipelineBoard from "@/components/mijozlar/PipelineBoard";
 import IconBtn from "@/components/mijozlar/IconBtn";
+import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 
 
 
@@ -565,6 +567,7 @@ export default function Pipeline() {
   const [currentProject, setCurrentProject] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
   const [aiListening, setAiListening] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
   const [aiTranscript, setAiTranscript] = useState("");
@@ -1883,6 +1886,13 @@ export default function Pipeline() {
           )}
 
           <IconBtn
+            icon={FileSpreadsheet}
+            label="Google Sheets"
+            onClick={() => setSheetDialogOpen(true)}
+            className="bg-transparent hover:bg-white/[0.04] active:bg-transparent focus-visible:outline-none focus-visible:ring-0"
+          />
+
+          <IconBtn
             icon={Plus}
             label="Yangi mijoz"
             onClick={handleOpenLeadFromAi}
@@ -2112,6 +2122,12 @@ export default function Pipeline() {
               </div>
             </DialogContent>
           </Dialog>
+          <LeadSyncDialog
+            open={sheetDialogOpen}
+            onOpenChange={setSheetDialogOpen}
+            projectId={currentProject?.id}
+            onImportDone={loadProject}
+          />
         </div>
       </div>
 

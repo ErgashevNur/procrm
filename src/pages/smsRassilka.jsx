@@ -40,7 +40,7 @@ import {
   getCurrentRole,
 } from "@/lib/rbac";
 import { apiUrl } from "@/lib/api";
-const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
+const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TEMPLATE_TOKENS = ["{{fullname}}", "{{firstName}}", "{{lastName}}"];
 const SMS_HISTORY_STORAGE_KEY = "sms_history_by_project";
 
@@ -242,7 +242,7 @@ async function extractApiMessage(response, fallback) {
 function imgUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${API}/image/${src}`;
 }
 
 function formatDate(value) {

@@ -30,7 +30,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { canDeleteData, getCurrentRole } from "@/lib/rbac";
+import {
+  canDeleteData,
+  getCurrentRole,
+  isSuperAdminLikeRole,
+} from "@/lib/rbac";
 import { apiUrl } from "@/lib/api";
 
 async function apiFetch(url, options = {}) {
@@ -94,22 +98,6 @@ function StyledInput({ value, onChange, placeholder, type = "text" }) {
       placeholder={placeholder}
       className="w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50"
     />
-  );
-}
-
-function StyledSelect({ value, onChange, options }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="scheme:dark w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white transition-colors outline-none focus:border-blue-500/50"
-    >
-      {options.map(([v, l]) => (
-        <option key={v} value={v}>
-          {l}
-        </option>
-      ))}
-    </select>
   );
 }
 
@@ -218,7 +206,6 @@ export default function settings() {
   const [inviteFullName, setInviteFullName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState("SALESMANAGER");
   const [inviting, setInviting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [editUserId, setEditUserId] = useState(null);
@@ -288,17 +275,20 @@ export default function settings() {
   const loadUsers = async () => {
     setUsersLoading(true);
     try {
-      const [ropRes, smRes] = await Promise.all([
-        apiFetch(apiUrl("user/all/rop")),
-        apiFetch(apiUrl("user/all/sales-manager")),
-      ]);
+      const salesManagerPromise = apiFetch(apiUrl("user/all/sales-manager"));
+      const ropPromise = isSuperAdminLikeRole(role)
+        ? apiFetch(apiUrl("user/all/rop"))
+        : Promise.resolve(null);
+
+      const [ropRes, smRes] = await Promise.all([ropPromise, salesManagerPromise]);
       const [ropPayload, smPayload] = await Promise.all([
         ropRes?.ok ? ropRes.json() : Promise.resolve([]),
         smRes?.ok ? smRes.json() : Promise.resolve([]),
       ]);
-      const rops = extractUsersFromPayload(ropPayload).map((u) =>
-        normalizeUser(u, "ROP"),
-      );
+
+      const rops = isSuperAdminLikeRole(role)
+        ? extractUsersFromPayload(ropPayload).map((u) => normalizeUser(u, "ROP"))
+        : [];
       const salesManagers = extractUsersFromPayload(smPayload).map((u) =>
         normalizeUser(u, "SALESMANAGER"),
       );
@@ -345,19 +335,9 @@ export default function settings() {
   // ── Invite ────────────────────────────────────────────────────────────
   const handleInvite = async (e) => {
     e.preventDefault();
-    if (
-      !inviteFullName.trim() ||
-      !inviteEmail.trim() ||
-      !invitePassword.trim()
-    ) {
-      toast.error("Ism, email va parol majburiy");
-      return;
-    }
     setInviting(true);
     try {
-      const endpoint =
-        inviteRole === "ROP" ? `${API}/user/rop` : `${API}/user/sales-manager`;
-      const res = await apiFetch(endpoint, {
+      const res = await apiFetch(apiUrl("user/sales-manager"), {
         method: "POST",
         body: JSON.stringify({
           fullName: inviteFullName.trim(),
@@ -367,14 +347,33 @@ export default function settings() {
           permissions: ["CRM", "PROHOME"],
         }),
       });
-      if (!res || !res.ok) throw new Error();
-      toast.success("Foydalanuvchi qo'shildi ✅");
-      setInviteFullName("");
-      setInviteEmail("");
-      setInvitePassword("");
+      if (!res) return;
+
+      let payload = null;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        payload = await res.json().catch(() => null);
+      } else {
+        await res.text().catch(() => "");
+      }
+
+      const requestSucceeded =
+        res.ok ||
+        payload?.success === true ||
+        payload?.status === "success" ||
+        payload?.created === true ||
+        Boolean(payload?.user || payload?.data?.user || payload?.data?.id || payload?.id);
+
+      if (requestSucceeded) {
+        toast.success("Foydalanuvchi qo'shildi ✅");
+        setInviteFullName("");
+        setInviteEmail("");
+        setInvitePassword("");
+      }
+
       await loadUsers();
-    } catch {
-      toast.error("Xatolik ❌");
+    } catch (error) {
+      console.error("Invite user failed:", error);
     } finally {
       setInviting(false);
     }
@@ -429,8 +428,8 @@ export default function settings() {
     try {
       const endpoint =
         user.role === "ROP"
-          ? `${API}/user/update-rop/${user.id}`
-          : `${API}/user/update-sales-manager/${user.id}`;
+          ? apiUrl(`user/update-rop/${user.id}`)
+          : apiUrl(`user/update-sales-manager/${user.id}`);
       const body = {
         fullName: editFullName.trim(),
         email: editEmail.trim(),
@@ -697,7 +696,7 @@ export default function settings() {
                   title="Добавить пользователя"
                   description="Отправьте приглашение сотруднику"
                 >
-                  <form onSubmit={handleInvite}>
+                  <form onSubmit={handleInvite} noValidate>
                     <FieldRow label="ФИО">
                       <StyledInput
                         value={inviteFullName}
@@ -721,25 +720,10 @@ export default function settings() {
                         placeholder="Kamida 6 belgi"
                       />
                     </FieldRow>
-                    <FieldRow label="Роль">
-                      <StyledSelect
-                        value={inviteRole}
-                        onChange={setInviteRole}
-                        options={[
-                          ["SALESMANAGER", "Sales Manager"],
-                          ["ROP", "Direktor (ROP)"],
-                        ]}
-                      />
-                    </FieldRow>
                     <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:px-6 sm:justify-end">
                       <button
                         type="submit"
-                        disabled={
-                          inviting ||
-                          !inviteFullName.trim() ||
-                          !inviteEmail.trim() ||
-                          !invitePassword.trim()
-                        }
+                        disabled={inviting}
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
                       >
                         {inviting ? (

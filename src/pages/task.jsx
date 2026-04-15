@@ -32,7 +32,7 @@ const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 function getImageUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${API}/image/${src}`;
 }
 
 const API_STATUSES = {
