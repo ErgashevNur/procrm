@@ -41,6 +41,7 @@ import {
   useVoiceVisualizer,
   VoiceVisualizer,
 } from "react-voice-visualizer";
+import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 
 
