@@ -35,7 +35,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useExcelWorker } from "../hooks/Useexcelworker";
-import { apiUrl } from "@/lib/api";
 import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
 import {
@@ -53,6 +52,8 @@ import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 
 
 
+const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
+const TRASH_DROPPABLE_ID = "__lead_trash__";
 
 const maxBirthDate = (() => {
   const d = new Date();
@@ -107,6 +108,17 @@ async function extractApiMessage(res, fallback) {
   }
 }
 
+async function parseJsonSafeResponse(res, fallback = null) {
+  if (!res) return fallback;
+  try {
+    const text = await res.text();
+    if (!text) return fallback;
+    return JSON.parse(text);
+  } catch {
+    return fallback;
+  }
+}
+
 function extractUsersFromPayload(payload) {
   const candidates = [
     payload,
@@ -155,7 +167,7 @@ async function fetchProjectOperators(projectId) {
   params.set("page", "1");
   const query = params.toString();
   const res = await apiFetch(
-    apiUrl(`user/all/sales-manager${query ? `?${query}` : ""}`),
+    `${API}/user/all/sales-manager${query ? `?${query}` : ""}`,
   );
   if (!res || !res.ok) return [];
   const payload = await res.json();
@@ -545,6 +557,38 @@ function normalizeLead(raw) {
   };
 }
 
+// ── Icon button — iconOnly: faqat icon, aks holda icon+text ──────────────────
+function IconBtn({
+  icon: Icon,
+  label,
+  onClick,
+  className = "",
+  disabled = false,
+  variant = "default",
+  iconOnly = false,
+  spin = false,
+}) {
+  const colors = {
+    default:
+      "border-[#2a4868] text-gray-300 hover:bg-[#1b3e57] hover:text-white",
+    success:
+      "border-green-700/50 text-green-400 hover:bg-green-900/30 hover:text-green-300",
+    warning:
+      "border-yellow-700/50 text-yellow-400 hover:bg-yellow-900/30 hover:text-yellow-300",
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors duration-150 disabled:opacity-40 ${colors[variant]} ${className}`}
+      style={{ height: "36px" }}
+    >
+      <Icon size={14} className={`shrink-0 ${spin ? "animate-spin" : ""}`} />
+      {!iconOnly && <span className="whitespace-nowrap">{label}</span>}
+    </button>
+  );
+}
+
 export default function Pipeline() {
   const navigate = useNavigate();
   const boardRef = useRef(null);
@@ -594,9 +638,14 @@ export default function Pipeline() {
   const [statusMeta, setStatusMeta] = useState({});
   const [operatorsList, setOperatorsList] = useState([]);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
-  const [isBoardDragging, setIsBoardDragging] = useState(false);
+  const [trashVisible, setTrashVisible] = useState(false);
+  const [trashActive, setTrashActive] = useState(false);
+  const [pendingDeleteLead, setPendingDeleteLead] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingLead, setDeletingLead] = useState(false);
   const role = getCurrentRole();
   const canManageStatuses = MANAGEMENT_ROLES.includes(role);
+  const canDeleteLeads = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
   const showToast = (message, type = "error") =>
     type === "success" ? toast.success(message) : toast.error(message);
 
@@ -679,7 +728,7 @@ export default function Pipeline() {
 
     try {
       const res = await apiFetch(
-        apiUrl(`leeds/by/${statusId}?page=${page}&limit=${PAGE_LIMIT}`),
+        `${API}/leeds/by/${statusId}?page=${page}&limit=${PAGE_LIMIT}`,
       );
       if (!res) return;
       if (!res.ok) {
@@ -750,7 +799,7 @@ export default function Pipeline() {
     // Faqat Sales Manager uchun 403 ni oldindan tutamiz
     if (role === ROLES.SALESMANAGER) {
       try {
-        const res = await apiFetch(apiUrl(`leeds/${leadId}`));
+        const res = await apiFetch(`${API}/leeds/${leadId}`);
         if (!res) return;
         if (res.status === 403) {
           const msg = await extractApiMessage(
@@ -785,7 +834,7 @@ export default function Pipeline() {
         formData.append("file", file);
         formData.append("projectId", String(currentProject.id));
 
-        const res = await apiFetch(apiUrl("leeds/import-excel"), {
+        const res = await apiFetch(`${API}/leeds/import-excel`, {
           method: "POST",
           body: formData,
         });
@@ -858,23 +907,33 @@ export default function Pipeline() {
     const init = async () => {
       try {
         if (savedId) {
-          // Leadlar chiqmayotganining asosiy sababi shu init bosqichida edi:
-          // `apiUrl` import qilinmagani uchun bu yerda ReferenceError bo'lib,
-          // statuslar ham, keyingi `fetchLeadsByStatus(...)` chaqiruvlari ham ishlamay qolayotgan edi.
           const [projectsRes, statusesRes, sourcesRes, totalsRes] =
             await Promise.all([
-              apiFetch(apiUrl("projects")),
-              apiFetch(apiUrl(`status/${savedId}`)),
-              apiFetch(apiUrl(`lead-source/${savedId}`)),
-              apiFetch(apiUrl(`status/all/${savedId}`)),
+              apiFetch(`${API}/projects`),
+              apiFetch(`${API}/status/${savedId}`),
+              apiFetch(`${API}/lead-source/${savedId}`),
+              apiFetch(`${API}/status/all/${savedId}`),
             ]);
           if (!projectsRes || !statusesRes) return;
+          if (!projectsRes.ok || !statusesRes.ok) {
+            const msg = await extractApiMessage(
+              !projectsRes.ok ? projectsRes : statusesRes,
+              "Ma'lumotlar yuklanmadi",
+            );
+            showToast(msg, "error");
+            setAppState("no-project");
+            return;
+          }
           const [projectsData, statusesData, sourcesData, totalsData] =
             await Promise.all([
-              projectsRes.json(),
-              statusesRes.json(),
-              sourcesRes?.json().catch(() => []),
-              totalsRes?.json().catch(() => null),
+              parseJsonSafeResponse(projectsRes, []),
+              parseJsonSafeResponse(statusesRes, []),
+              sourcesRes?.ok
+                ? parseJsonSafeResponse(sourcesRes, [])
+                : Promise.resolve([]),
+              totalsRes?.ok
+                ? parseJsonSafeResponse(totalsRes, null)
+                : Promise.resolve(null),
             ]);
           const fallbackStatuses = Array.isArray(statusesData)
             ? statusesData
@@ -905,9 +964,15 @@ export default function Pipeline() {
             normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
           );
         } else {
-          const res = await apiFetch(apiUrl("projects"));
+          const res = await apiFetch(`${API}/projects`);
           if (!res) return;
-          const data = await res.json();
+          if (!res.ok) {
+            const msg = await extractApiMessage(res, "Loyihalar yuklanmadi");
+            showToast(msg, "error");
+            setAppState("no-project");
+            return;
+          }
+          const data = await parseJsonSafeResponse(res, []);
           const list = Array.isArray(data) ? data : [];
           setProjects(list);
           if (list.length === 1) await loadProject(list[0]);
@@ -929,15 +994,28 @@ export default function Pipeline() {
     setCurrentProject({ id: project.id, name: project.name });
     try {
       const [statusesRes, sourcesRes, totalsRes] = await Promise.all([
-        apiFetch(apiUrl(`status/${project.id}`)),
-        apiFetch(apiUrl(`lead-source/${project.id}`)),
-        apiFetch(apiUrl(`status/all/${project.id}`)),
+        apiFetch(`${API}/status/${project.id}`),
+        apiFetch(`${API}/lead-source/${project.id}`),
+        apiFetch(`${API}/status/all/${project.id}`),
       ]);
       if (!statusesRes) return;
+      if (!statusesRes.ok) {
+        const msg = await extractApiMessage(
+          statusesRes,
+          "Statuslar yuklanmadi",
+        );
+        showToast(msg, "error");
+        setAppState("no-project");
+        return;
+      }
       const [statusesData, sourcesData, totalsData] = await Promise.all([
-        statusesRes.json(),
-        sourcesRes?.json().catch(() => []),
-        totalsRes?.json().catch(() => null),
+        parseJsonSafeResponse(statusesRes, []),
+        sourcesRes?.ok
+          ? parseJsonSafeResponse(sourcesRes, [])
+          : Promise.resolve([]),
+        totalsRes?.ok
+          ? parseJsonSafeResponse(totalsRes, null)
+          : Promise.resolve(null),
       ]);
       const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
       const { payloadStatuses, order } = applyStatusTotals(
@@ -1025,9 +1103,12 @@ export default function Pipeline() {
         setSearchLoading(true);
         const params = buildSearchQuery(searchParams, currentProject.id);
 
-        const res = await apiFetch(apiUrl(`leeds/all/search?${params.toString()}`), {
-          signal: controller.signal,
-        });
+        const res = await apiFetch(
+          `${API}/leeds/all/search?${params.toString()}`,
+          {
+            signal: controller.signal,
+          },
+        );
         if (!res) return;
         if (!res.ok) {
           const msg = await extractApiMessage(res, "Qidiruvda xatolik");
@@ -1109,51 +1190,111 @@ export default function Pipeline() {
     };
   }, []);
 
-  useEffect(() => {
-    const blockedMessages = [
-      "unsupported nested scroll container detected",
-      "A Droppable can only have one scroll parent",
-    ];
+  const findLeadById = (leadId) =>
+    statuses.flatMap((status) => status.leads || []).find(
+      (lead) => Number(lead.id) === Number(leadId),
+    );
 
-    const originalError = console.error;
-    const originalWarn = console.warn;
+  const handleDeleteLeadConfirm = async () => {
+    if (!pendingDeleteLead?.id) return;
+    if (!canDeleteLeads) {
+      showToast("Sizda lead o'chirish huquqi yo'q", "error");
+      return;
+    }
 
-    const shouldBlock = (args) =>
-      args.some((arg) => {
-        const text = typeof arg === "string" ? arg : "";
-        return blockedMessages.some((message) => text.includes(message));
+    setDeletingLead(true);
+    try {
+      const res = await apiFetch(`${API}/leeds/${pendingDeleteLead.id}`, {
+        method: "DELETE",
+      });
+      if (!res) throw new Error("Serverga ulanishda xatolik");
+      if (!res.ok) {
+        const message = await extractApiMessage(res, "Mijozni o'chirib bo'lmadi");
+        throw new Error(message);
+      }
+
+      setStatuses((prev) =>
+        prev.map((status) => ({
+          ...status,
+          leads: (status.leads || []).filter(
+            (lead) => Number(lead.id) !== Number(pendingDeleteLead.id),
+          ),
+        })),
+      );
+
+      setStatusTotals((prev) => {
+        const deletedStatusId = Number(pendingDeleteLead.statusId);
+        const deletedBudget = Number(pendingDeleteLead.budjet || 0);
+        const currentMetrics = prev?.metrics || {};
+
+        return {
+          ...prev,
+          totalLeads: Math.max(0, Number(prev?.totalLeads || 0) - 1),
+          totalSum: Math.max(0, Number(prev?.totalSum || 0) - deletedBudget),
+          metrics: Object.fromEntries(
+            Object.entries(currentMetrics).map(([statusId, metric]) => {
+              if (Number(statusId) !== deletedStatusId) {
+                return [statusId, metric];
+              }
+              return [
+                statusId,
+                {
+                  ...metric,
+                  leadCount: Math.max(0, Number(metric?.leadCount || 0) - 1),
+                  leadBudjet: Math.max(
+                    0,
+                    Number(metric?.leadBudjet || 0) - deletedBudget,
+                  ),
+                },
+              ];
+            }),
+          ),
+        };
       });
 
-    console.error = (...args) => {
-      if (shouldBlock(args)) return;
-      originalError(...args);
-    };
-
-    console.warn = (...args) => {
-      if (shouldBlock(args)) return;
-      originalWarn(...args);
-    };
-
-    return () => {
-      console.error = originalError;
-      console.warn = originalWarn;
-    };
-  }, []);
-
-  const onBeforeCapture = () => {
-    setIsBoardDragging(true);
+      setDeleteDialogOpen(false);
+      setPendingDeleteLead(null);
+      showToast("Mijoz muvaffaqiyatli o'chirildi", "success");
+    } catch (err) {
+      showToast(err?.message || "O'chirishda xatolik yuz berdi", "error");
+    } finally {
+      setDeletingLead(false);
+    }
   };
 
   const onDragStart = () => {
     isDragging.current = true;
+    if (canDeleteLeads) setTrashVisible(true);
+    setTrashActive(false);
     startAutoScroll();
   };
 
+  const onDragUpdate = (update) => {
+    if (!canDeleteLeads) return;
+    const overTrash = update?.destination?.droppableId === TRASH_DROPPABLE_ID;
+    setTrashActive(overTrash);
+  };
+
   const onDragEnd = async (result) => {
-    setIsBoardDragging(false);
     stopAutoScroll();
+    setTrashVisible(false);
+    setTrashActive(false);
     const { source, destination, draggableId } = result;
     if (!destination) return;
+    if (destination.droppableId === TRASH_DROPPABLE_ID) {
+      if (!canDeleteLeads) {
+        showToast("Sizda lead o'chirish huquqi yo'q", "error");
+        return;
+      }
+      const selectedLead = findLeadById(draggableId);
+      if (!selectedLead) {
+        showToast("O'chiriladigan mijoz topilmadi", "error");
+        return;
+      }
+      setPendingDeleteLead(selectedLead);
+      setDeleteDialogOpen(true);
+      return;
+    }
     if (
       source.droppableId === destination.droppableId &&
       source.index === destination.index
@@ -1164,7 +1305,7 @@ export default function Pipeline() {
     const destId = Number(destination.droppableId);
     try {
       const res = await apiFetch(
-        apiUrl(`leeds/status/${draggableId}?statusId=${destId}`),
+        `${API}/leeds/status/${draggableId}?statusId=${destId}`,
         { method: "PATCH" },
       );
       if (res && !res.ok) throw new Error(`PATCH ${res.status}`);
@@ -1402,7 +1543,7 @@ export default function Pipeline() {
       formData.append("file", audioFile);
       formData.append("projectId", String(currentProject.id));
 
-      const res = await apiFetch(apiUrl("leeds/audio"), {
+      const res = await apiFetch(`${API}/leeds/audio`, {
         method: "POST",
         body: formData,
       });
@@ -1533,11 +1674,86 @@ export default function Pipeline() {
   };
 
   if (appState === "loading") {
-    return <PipelineLoading />;
+    return (
+      <div className="flex h-full flex-col bg-[#0d1e35]">
+        <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6">
+          <Skeleton className="h-10 w-64 rounded-lg" />
+        </div>
+        <div className="flex flex-1 gap-4 overflow-x-auto p-6">
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="w-80 shrink-0">
+                <Skeleton className="mb-3 h-10 rounded-lg" />
+                <Skeleton className="h-64 rounded-lg" />
+              </div>
+            ))}
+        </div>
+      </div>
+    );
   }
 
   if (appState === "no-project") {
-    return <PipelineNoProject projects={projects} loadProject={loadProject} />;
+    return (
+      <div className="flex h-full flex-col bg-[#0d1e35]">
+        <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6 text-white">
+          <Select
+            onValueChange={(name) => {
+              const p = projects.find((x) => x.name === name);
+              if (p) loadProject(p);
+            }}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Loyihani tanlang" />
+            </SelectTrigger>
+            <SelectContent className="mt-10">
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.name}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          {projects.length === 0 ? (
+            <>
+              <AlertCircle className="h-12 w-12 text-yellow-400" />
+              <p className="text-lg font-semibold text-white">
+                Loyiha topilmadi
+              </p>
+              <p className="text-sm text-gray-400">
+                Avval loyiha yarating yoki admin bilan bog\'laning.
+              </p>
+              <Link
+                to="/projects"
+                className="rounded-xl border border-blue-400 px-4 py-2 text-blue-400 hover:bg-blue-400 hover:text-white"
+              >
+                Projects
+              </Link>
+            </>
+          ) : (
+            <>
+              <FolderOpen className="h-14 w-14 text-blue-400" />
+              <p className="text-xl font-semibold text-white">
+                Loyihani tanlang
+              </p>
+              <div className="flex w-72 flex-col gap-2">
+                {projects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => loadProject(p)}
+                    className="rounded-lg border border-[#2a4868] bg-[#11263a] px-4 py-3 text-left text-white transition-colors hover:bg-[#1a3552]"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -2132,7 +2348,11 @@ export default function Pipeline() {
       </div>
 
       {/* ── Board ── */}
-      <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <DragDropContext
+        onDragStart={onDragStart}
+        onDragUpdate={onDragUpdate}
+        onDragEnd={onDragEnd}
+      >
         <div
           ref={boardRef}
           className="flex flex-1 gap-4 overflow-x-auto overflow-y-hidden p-6"
@@ -2195,7 +2415,11 @@ export default function Pipeline() {
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className="rounded-lg border border-blue-400/50 bg-[#1a3552] p-3 text-sm text-white shadow-2xl ring-2 ring-blue-500/30"
+                      className={`rounded-lg p-3 text-sm text-white shadow-2xl ring-2 ${
+                        trashActive
+                          ? "border border-red-400/80 bg-red-900/70 ring-red-500/40"
+                          : "border border-blue-400/50 bg-[#1a3552] ring-blue-500/30"
+                      }`}
                       style={{
                         ...provided.draggableProps.style,
                         opacity: 1,
@@ -2255,9 +2479,11 @@ export default function Pipeline() {
                                     handleLeadOpen(lead.id, snapshot.isDragging)
                                   }
                                   className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
-                                    snapshot.isDragging
-                                      ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
-                                      : ""
+                                    snapshot.isDragging && trashActive
+                                      ? "scale-[1.03] rotate-1 border-red-400/80 bg-red-900/70 shadow-xl ring-2 shadow-black/40 ring-red-500/40"
+                                      : snapshot.isDragging
+                                        ? "scale-[1.03] rotate-1 border-blue-400/50 shadow-xl ring-2 shadow-black/40 ring-blue-500/30"
+                                        : ""
                                   }`}
                                   style={{
                                     ...provided.draggableProps.style,
@@ -2345,7 +2571,93 @@ export default function Pipeline() {
             </div>
           ))}
         </div>
+
+        {canDeleteLeads && (
+          <Droppable droppableId={TRASH_DROPPABLE_ID}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`fixed bottom-5 left-1/2 z-[120] -translate-x-1/2 ${
+                  trashVisible ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <div
+                  className={`flex h-16 w-24 items-center justify-center rounded-2xl border shadow-2xl backdrop-blur-md ${
+                    snapshot.isDraggingOver || trashActive
+                      ? "border-red-400/80 bg-red-950/70 text-red-100"
+                      : "border-red-400/30 bg-[#11263a]/95 text-red-200"
+                  }`}
+                >
+                  <div className="relative h-9 w-9">
+                    <div
+                      className="absolute top-[2px] left-1/2 h-[6px] w-7 rounded-sm border border-current bg-current/15 transition-transform duration-200"
+                      style={
+                        snapshot.isDraggingOver || trashActive
+                          ? {
+                              transform: "translateX(-50%) rotate(-22deg)",
+                              transformOrigin: "50% 100%",
+                            }
+                          : {
+                              transform: "translateX(-50%) rotate(0deg)",
+                              transformOrigin: "50% 100%",
+                            }
+                      }
+                    />
+                    <div className="absolute top-[8px] left-1/2 h-7 w-6 -translate-x-1/2 rounded-[6px] border-2 border-current bg-current/10" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] -translate-x-[7px] rounded bg-current/50" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] -translate-x-[1px] rounded bg-current/50" />
+                    <div className="absolute top-[10px] left-1/2 h-5 w-[2px] translate-x-[5px] rounded bg-current/50" />
+                  </div>
+                </div>
+                <div className="sr-only">{provided.placeholder}</div>
+              </div>
+            )}
+          </Droppable>
+        )}
       </DragDropContext>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (deletingLead) return;
+          setDeleteDialogOpen(open);
+          if (!open) setPendingDeleteLead(null);
+        }}
+      >
+        <DialogContent className="border border-[#2a4868] bg-[#0b1b29] text-white">
+          <DialogHeader>
+            <DialogTitle>Leadni o'chirish</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              {`${`${pendingDeleteLead?.firstName || ""} ${pendingDeleteLead?.lastName || ""}`.trim() || "Ushbu"} mijozini o'chirasizmi?`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#2a4868] bg-[#11263a] text-white hover:bg-[#1a3552]"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setPendingDeleteLead(null);
+              }}
+              disabled={deletingLead}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="!border-red-500 !bg-red-600 !text-white hover:!bg-red-700"
+              onClick={handleDeleteLeadConfirm}
+              disabled={deletingLead}
+            >
+              {deletingLead ? "O'chirilmoqda..." : "O'chirish"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <HorizontalScrollDock targetRef={boardRef} />
     </div>
   );
 }

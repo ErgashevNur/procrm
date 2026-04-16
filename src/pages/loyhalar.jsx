@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { apiUrl } from "@/lib/api";
 import {
   Drawer,
   DrawerClose,
@@ -17,7 +16,7 @@ export default function loyhalar() {
   useEffect(() => {
     const token = localStorage.getItem("user");
 
-    fetch(apiUrl("projects"), {
+    fetch("https://prohome-backend.prohome.uz/api/v1/projects", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

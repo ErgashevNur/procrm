@@ -21,6 +21,8 @@ import {
   ExternalLink,
   SendHorizonal,
   ImagePlus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -82,28 +84,34 @@ function Section({ title, description, children }) {
 
 function FieldRow({ label, children }) {
   return (
-    <div className="flex flex-col gap-2 bg-[#0f2030] px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-4">
-      <span className="text-sm text-gray-400 lg:w-52 lg:shrink-0">{label}</span>
+    <div className="flex items-center gap-4 bg-[#0f2030] px-6 py-4">
+      <span className="w-52 shrink-0 text-sm text-gray-400">{label}</span>
       <div className="flex-1">{children}</div>
     </div>
   );
 }
 
-function StyledInput({ value, onChange, placeholder, type = "text" }) {
+function StyledInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  className = "",
+}) {
   return (
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50"
+      className={`w-full max-w-xs rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-blue-500/50 ${className}`}
     />
   );
 }
 
 function ToggleRow({ label, hint, value, onChange }) {
   return (
-    <div className="flex flex-col gap-3 bg-[#0f2030] px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-4">
+    <div className="flex items-center gap-4 bg-[#0f2030] px-6 py-4">
       <div className="flex-1">
         <p className="text-sm text-white">{label}</p>
         {hint && <p className="mt-0.5 text-xs text-gray-600">{hint}</p>}
@@ -212,6 +220,7 @@ export default function settings() {
   const [editFullName, setEditFullName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
 
   // ── Notifications ─────────────────────────────────────────────────────
@@ -391,7 +400,7 @@ export default function settings() {
     }
     setDeletingId(id);
     try {
-      const res = await apiFetch(apiUrl(`user/remove-sales-maneger/${id}`), {
+      const res = await apiFetch(`${API}/user/remove-sales-maneger/${id}`, {
         method: "DELETE",
       });
       if (!res || !res.ok) throw new Error();
@@ -409,6 +418,7 @@ export default function settings() {
     setEditFullName(user.fullName || "");
     setEditEmail(user.email || "");
     setEditPassword("");
+    setShowEditPassword(false);
   };
 
   const cancelEditUser = () => {
@@ -416,6 +426,7 @@ export default function settings() {
     setEditFullName("");
     setEditEmail("");
     setEditPassword("");
+    setShowEditPassword(false);
   };
 
   const handleUpdateUser = async (user) => {
@@ -493,16 +504,16 @@ export default function settings() {
 
   // ─────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen flex-col bg-[#071828]">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#071828]">
       {/* ═══ STICKY HEADER ═══ */}
-      <div className="flex shrink-0 flex-col gap-3 border-b border-[#1a3045] bg-[#071828] px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <div className="flex shrink-0 items-center justify-between border-b border-[#1a3045] bg-[#071828] px-6 py-4">
         <h1 className="text-sm font-bold tracking-widest text-gray-300 uppercase">
           Настройки
         </h1>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 md:w-auto"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
         >
           {saving ? (
             <Loader2 size={14} className="animate-spin" />
@@ -513,14 +524,14 @@ export default function settings() {
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+      <div className="flex flex-1 overflow-hidden">
         {/* ═══ LEFT SIDEBAR ═══ */}
-        <div className="scrollbar-hide flex shrink-0 flex-row overflow-x-auto border-b border-[#1a3045] bg-[#071828] py-2 md:w-56 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:py-3">
+        <div className="flex w-56 shrink-0 flex-col border-r border-[#1a3045] bg-[#071828] py-3">
           {SECTIONS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActive(key)}
-              className="flex shrink-0 items-center gap-3 px-4 py-3 text-sm transition-colors md:w-full md:px-5"
+              className="flex w-full items-center gap-3 px-5 py-3 text-sm transition-colors"
               style={{
                 color: active === key ? "#60a5fa" : "#9ca3af",
                 background:
@@ -538,13 +549,13 @@ export default function settings() {
         </div>
 
         {/* ═══ MAIN CONTENT ═══ */}
-        <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#08192a] p-4 sm:p-6 lg:p-8">
+        <div className="scrollbar-hide flex-1 overflow-y-auto bg-[#08192a] p-8">
           <div className="mx-auto max-w-3xl">
             {/* ════ HISOB VA TO'LOV ════ */}
             {active === "billing" && (
               <>
                 <Section title="Тарифные планы">
-                  <div className="grid gap-4 bg-[#0f2030] p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-4 bg-[#0f2030] p-6">
                     {[
                       {
                         name: "Starter",
@@ -614,7 +625,7 @@ export default function settings() {
                   description="Информация о вашей подписке"
                 >
                   <div className="bg-[#0f2030] p-6">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <InfoCard label="Тариф" value="Pro" color="#3b82f6" />
                       <InfoCard
                         label="Статус"
@@ -669,12 +680,12 @@ export default function settings() {
                   ].map((row) => (
                     <div
                       key={row.invoice}
-                      className="flex flex-col items-start gap-2 bg-[#0f2030] px-4 py-4 sm:px-6 md:flex-row md:items-center md:gap-4"
+                      className="flex items-center gap-4 bg-[#0f2030] px-6 py-4"
                     >
-                      <span className="text-sm text-gray-400 md:w-32">
+                      <span className="w-32 text-sm text-gray-400">
                         {row.date}
                       </span>
-                      <span className="text-sm text-white md:flex-1">
+                      <span className="flex-1 text-sm text-white">
                         {row.invoice}
                       </span>
                       <span className="text-sm font-medium text-white">
@@ -713,12 +724,33 @@ export default function settings() {
                       />
                     </FieldRow>
                     <FieldRow label="Пароль">
-                      <StyledInput
-                        type="password"
-                        value={invitePassword}
-                        onChange={setInvitePassword}
-                        placeholder="Kamida 6 belgi"
-                      />
+                      <div className="relative w-full max-w-xs">
+                        <StyledInput
+                          type={showInvitePassword ? "text" : "password"}
+                          value={invitePassword}
+                          onChange={setInvitePassword}
+                          placeholder="Kamida 6 belgi"
+                          className="max-w-none pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowInvitePassword((prev) => !prev)
+                          }
+                          className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
+                          aria-label={
+                            showInvitePassword
+                              ? "Parolni yashirish"
+                              : "Parolni ko'rsatish"
+                          }
+                        >
+                          {showInvitePassword ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
                     </FieldRow>
                     <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:px-6 sm:justify-end">
                       <button
@@ -756,7 +788,7 @@ export default function settings() {
                     users.map((user) => (
                       <div
                         key={user.id}
-                        className="flex flex-col items-start gap-4 bg-[#0f2030] px-4 py-4 transition-colors hover:bg-[#112636] sm:px-6 lg:flex-row lg:items-center"
+                        className="flex items-center gap-4 bg-[#0f2030] px-6 py-4 transition-colors hover:bg-[#112636]"
                       >
                         <div
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
@@ -786,15 +818,35 @@ export default function settings() {
                                 placeholder="Email"
                                 className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                               />
-                              <input
-                                type="password"
-                                value={editPassword}
-                                onChange={(e) =>
-                                  setEditPassword(e.target.value)
-                                }
-                                placeholder="Yangi parol (ixtiyoriy)"
-                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
-                              />
+                              <div className="relative">
+                                <input
+                                  type={showEditPassword ? "text" : "password"}
+                                  value={editPassword}
+                                  onChange={(e) =>
+                                    setEditPassword(e.target.value)
+                                  }
+                                  placeholder="Yangi parol (ixtiyoriy)"
+                                  className="w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 pr-9 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setShowEditPassword((prev) => !prev)
+                                  }
+                                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
+                                  aria-label={
+                                    showEditPassword
+                                      ? "Parolni yashirish"
+                                      : "Parolni ko'rsatish"
+                                  }
+                                >
+                                  {showEditPassword ? (
+                                    <EyeOff size={15} />
+                                  ) : (
+                                    <Eye size={15} />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <>
@@ -809,16 +861,15 @@ export default function settings() {
                             </>
                           )}
                         </div>
-                        <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto">
-                          <RoleBadge role={user.role} />
-                          <span className="text-xs text-gray-600">
-                            {user.createdAt
-                              ? new Date(user.createdAt).toLocaleDateString(
-                                  "ru-RU",
-                                )
-                              : "—"}
-                          </span>
-                          <div className="flex items-center gap-1 lg:ml-1">
+                        <RoleBadge role={user.role} />
+                        <span className="text-xs text-gray-600">
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString(
+                                "ru-RU",
+                              )
+                            : "—"}
+                        </span>
+                        <div className="ml-1 flex items-center gap-1">
                           {editUserId === user.id ? (
                             <>
                               <button
@@ -869,7 +920,6 @@ export default function settings() {
                               <Trash2 size={15} />
                             )}
                           </button>
-                          </div>
                         </div>
                       </div>
                     ))
@@ -912,7 +962,7 @@ export default function settings() {
                       description={hint}
                     >
                       {it.connected ? (
-                        <div className="flex flex-col items-start justify-between gap-3 bg-[#0f2030] px-4 py-5 sm:px-6 md:flex-row md:items-center">
+                        <div className="flex items-center justify-between bg-[#0f2030] px-6 py-5">
                           <div
                             className="flex items-center gap-2"
                             style={{ color: "#10b981" }}
@@ -948,11 +998,11 @@ export default function settings() {
                               placeholder={`${label} token...`}
                             />
                           </FieldRow>
-                          <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:px-6 sm:justify-end">
+                          <div className="flex justify-end bg-[#0f2030] px-6 py-4">
                             <button
                               onClick={() => connectInteg(key)}
                               disabled={saving || !it.token.trim()}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40 sm:w-auto"
+                              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40"
                               style={{ background: color }}
                             >
                               {saving ? (
@@ -1122,7 +1172,7 @@ export default function settings() {
                   ].map((item) => (
                     <div
                       key={item}
-                      className="flex items-start gap-3 bg-[#0f2030] px-4 py-4 sm:px-6"
+                      className="flex items-center gap-3 bg-[#0f2030] px-6 py-4"
                     >
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">
                         •
@@ -1157,7 +1207,7 @@ export default function settings() {
                         e.preventDefault();
                         toast.info("Knowledge base linki keyin ulanadi");
                       }}
-                      className="flex items-start justify-between gap-3 bg-[#0f2030] px-4 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white sm:px-6"
+                      className="flex items-center justify-between bg-[#0f2030] px-6 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white"
                     >
                       <span>{link.label}</span>
                       <ExternalLink size={14} className="text-gray-500" />
@@ -1260,14 +1310,14 @@ export default function settings() {
               </div>
             </div>
 
-            <div className="flex flex-col items-start gap-3 rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3">
               <p className="text-xs text-gray-500">
                 Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu joy ulanadi.
               </p>
               <button
                 type="submit"
                 disabled={supportSubmitting}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
               >
                 {supportSubmitting ? (
                   <Loader2 size={14} className="animate-spin" />

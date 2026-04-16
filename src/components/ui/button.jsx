@@ -45,11 +45,12 @@ function Button({
   size = "default",
   asChild = false,
   ...props
-}) {
+}, ref) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -58,4 +59,7 @@ function Button({
   );
 }
 
-export { Button, buttonVariants }
+const ForwardedButton = React.forwardRef(Button)
+ForwardedButton.displayName = "Button"
+
+export { ForwardedButton as Button, buttonVariants }

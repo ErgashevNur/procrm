@@ -11,13 +11,16 @@ import {
 } from "lucide-react";
 import { emitAuthChange } from "@/hooks/useNotification";
 import { removeDeviceToken } from "@/services/notificationService";
-import { apiUrl, imageUrl } from "@/lib/api";
+
+const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const LANGUAGES = ["Русский", "O'zbek", "English"];
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function getImageUrl(imgName) {
-  return imageUrl(imgName);
+  if (!imgName) return null;
+  if (imgName.startsWith("blob:") || imgName.startsWith("http")) return imgName;
+  return `${API_BASE}/image/${imgName}`;
 }
 
 function getToken() {
@@ -45,7 +48,7 @@ function updateUserInStorage(updatedFields) {
 }
 
 async function patchProfile(formData) {
-  const res = await fetch(apiUrl("user/update-me"), {
+  const res = await fetch(`${API_BASE}/user/update-me`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${getToken()}` },
     body: formData,
@@ -80,7 +83,7 @@ async function resetPassword(payload) {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(apiUrl("auth/reset-password"), {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -123,7 +126,7 @@ function LangSelect({ value, onChange }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
   return (
-    <div ref={ref} className="relative w-full max-w-[18rem]">
+    <div ref={ref} className="relative w-72">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] transition-colors hover:border-[#3a5570] focus:outline-none"
@@ -158,11 +161,11 @@ function LangSelect({ value, onChange }) {
 
 function Row({ label, children }) {
   return (
-    <div className="mb-2 flex min-h-11 flex-col items-start gap-2 sm:mb-0.5 sm:flex-row sm:gap-0">
-      <div className="w-full shrink-0 pt-0 sm:w-44 sm:pt-2.5">
+    <div className="mb-0.5 flex min-h-11 items-start">
+      <div className="w-44 shrink-0 pt-2.5">
         <span className="text-sm text-[#7a9ab5]">{label}</span>
       </div>
-      <div className="flex w-full items-center pt-0 sm:pt-1.5">{children}</div>
+      <div className="flex items-center pt-1.5">{children}</div>
     </div>
   );
 }
@@ -184,7 +187,7 @@ function TInput({ value, onChange, placeholder, type = "text" }) {
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full max-w-[18rem] rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+      className="w-72 rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
     />
   );
 }
@@ -197,7 +200,7 @@ function PasswordInput({
   onToggleVisibility,
 }) {
   return (
-    <div className="relative w-full max-w-[18rem]">
+    <div className="relative w-72">
       <input
         type={show ? "text" : "password"}
         value={value ?? ""}
@@ -453,14 +456,14 @@ export default function Profile() {
       style={{ fontFamily: "'Segoe UI', Arial, sans-serif" }}
     >
       {/* Header */}
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 border-b border-[#162840] bg-[#0d1e2e] px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-[#162840] bg-[#0d1e2e] px-6 py-3.5">
         <span className="text-[15px] font-medium text-[#c0d8e8]">
           Настройки профиля
         </span>
-        <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center md:w-auto">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 rounded border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/16 hover:text-red-200"
+            className="flex items-center gap-2 rounded border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/16 hover:text-red-200"
           >
             <LogOut size={14} />
             Logout
@@ -478,7 +481,7 @@ export default function Profile() {
 
       {/* Error */}
       {error && (
-        <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-6">
+        <div className="mx-auto max-w-3xl px-6 pt-4">
           <div className="rounded border border-red-800/50 bg-red-900/20 px-4 py-2 text-sm text-red-400">
             {error}
           </div>
@@ -486,11 +489,11 @@ export default function Profile() {
       )}
 
       {/* Body */}
-      <div className="mx-auto max-w-3xl p-4 sm:p-6">
-        <div className="rounded-md border border-[#162840] bg-[#0f2030] p-4 sm:p-7">
-          <div className="flex flex-col gap-6 sm:gap-9 md:flex-row">
+      <div className="mx-auto max-w-3xl p-6">
+        <div className="rounded-md border border-[#162840] bg-[#0f2030] p-7">
+          <div className="flex gap-9">
             {/* Avatar */}
-            <div className="shrink-0 self-center md:self-start">
+            <div className="shrink-0">
               <div className="relative h-24 w-24">
                 {avatarPreview ? (
                   <img
@@ -521,7 +524,7 @@ export default function Profile() {
             </div>
 
             {/* Fields */}
-            <div className="min-w-0 flex-1">
+            <div className="flex-1">
               {/* ── Readonly ── */}
               <Row label="ID">
                 <ReadonlyValue value={info.id} />
@@ -610,7 +613,7 @@ export default function Profile() {
                   }
                 />
               </Row>
-              <div className="mt-3 sm:ml-44">
+              <div className="mt-2 ml-44">
                 <button
                   type="button"
                   onClick={handlePasswordReset}
@@ -622,7 +625,7 @@ export default function Profile() {
                 </button>
               </div>
               {passwordError && (
-                <div className="mt-2 rounded border border-red-800/50 bg-red-900/20 px-3 py-2 text-sm text-red-400 sm:ml-44">
+                <div className="mt-2 ml-44 rounded border border-red-800/50 bg-red-900/20 px-3 py-2 text-sm text-red-400">
                   {passwordError}
                 </div>
               )}

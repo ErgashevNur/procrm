@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import CtaSection from "@/components/landing/CtaSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
-import HeroSection from "@/components/landing/HeroSection";
-import HowSection from "@/components/landing/HowSection";
-import LandingFooter from "@/components/landing/LandingFooter";
-import LandingNav from "@/components/landing/LandingNav";
-import TestimonialsSection from "@/components/landing/TestimonialsSection";
 
 const features = [
   {
@@ -378,42 +371,382 @@ export default function LandingPage() {
         .btn-g:hover { border-color: rgba(255,255,255,.28) !important; color: #fff !important; }
       `}</style>
 
-      <LandingNav
-        isMobile={isMobile}
-        pagePadding={pagePadding}
-        scrolled={scrolled}
-        navigate={navigate}
-      />
+      <nav
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "nowrap",
+          gap: isMobile ? 10 : 16,
+          padding: isMobile ? "0.9rem 1rem" : `1rem ${pagePadding}`,
+          position: "sticky",
+          top: 0,
+          zIndex: 99,
+          background: scrolled ? "rgba(7,11,18,.96)" : "rgba(7,11,18,.5)",
+          borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,.07)" : "transparent"}`,
+          backdropFilter: "blur(20px)",
+          transition: "all .3s",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 10, minWidth: 0, flexShrink: 1 }}>
+          <div
+            style={{
+              width: isMobile ? 32 : 34,
+              height: isMobile ? 32 : 34,
+              borderRadius: 9,
+              background:
+                "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+              border: "1px solid rgba(255,255,255,.82)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              flexShrink: 0,
+              boxShadow:
+                "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
+            }}
+          >
+            <img
+              src="/logo.png"
+              alt="Kotibam"
+              style={{
+                width: isMobile ? 18 : 19,
+                height: isMobile ? 18 : 19,
+                objectFit: "contain",
+              }}
+            />
+          </div>
+          <span
+            style={{
+              fontSize: isMobile ? 14 : 15,
+              fontWeight: 700,
+              color: "#fff",
+              letterSpacing: "-0.01em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Kotibam
+          </span>
+        </div>
 
-      <HeroSection
-        isMobile={isMobile}
-        pagePadding={pagePadding}
-        navigate={navigate}
-      />
 
-      <FeaturesSection
-        isMobile={isMobile}
-        isTablet={isTablet}
-        pagePadding={pagePadding}
-        features={features}
-      />
+        <div style={{ display: "flex", gap: isMobile ? 8 : 10, width: "auto", flexShrink: 0 }}>
+          <button
+            className="btn-g"
+            onClick={() => navigate("/login")}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,.12)",
+              color: "rgba(255,255,255,.65)",
+              padding: isMobile ? "7px 12px" : "7px 18px",
+              borderRadius: 8,
+              fontFamily: "Inter, sans-serif",
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Kirish
+          </button>
+          <button
+            className="btn-s"
+            onClick={() => navigate("/register")}
+            style={{
+              background: "#0ea5e9",
+              border: "none",
+              color: "#fff",
+              padding: isMobile ? "7px 12px" : "7px 18px",
+              borderRadius: 8,
+              fontFamily: "Inter, sans-serif",
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Ro'yxatdan o'tish
+          </button>
+        </div>
+      </nav>
 
-      <HowSection
-        isMobile={isMobile}
-        isTablet={isTablet}
-        pagePadding={pagePadding}
-        steps={steps}
-      />
+      <section style={{ padding: isMobile ? "4.5rem 1rem 3.5rem" : `7rem ${pagePadding} 5rem`, textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -120, left: "50%", transform: "translateX(-50%)", width: isMobile ? 380 : 700, height: isMobile ? 380 : 700, borderRadius: "50%", background: "rgba(14,165,233,.08)", filter: "blur(80px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 180, left: "5%", width: isMobile ? 180 : 300, height: isMobile ? 180 : 300, borderRadius: "50%", background: "rgba(99,102,241,.06)", filter: "blur(60px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 150, right: "5%", width: isMobile ? 160 : 260, height: isMobile ? 160 : 260, borderRadius: "50%", background: "rgba(16,185,129,.05)", filter: "blur(55px)", pointerEvents: "none" }} />
 
-      <TestimonialsSection
-        isMobile={isMobile}
-        pagePadding={pagePadding}
-        testimonials={testimonials}
-      />
+        <div className="fu d1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(14,165,233,.1)", border: "1px solid rgba(14,165,233,.2)", borderRadius: 100, padding: "5px 16px", marginBottom: "1.8rem" }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#38bdf8" }} />
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", color: "rgba(56,189,248,.9)", textTransform: "uppercase" }}>
+            O'zbekistondagi №1 AI CRM
+          </span>
+        </div>
 
-      <CtaSection isMobile={isMobile} pagePadding={pagePadding} />
+        <h1 className="fu d2" style={{ fontSize: "clamp(2.6rem, 6vw, 5rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.05, marginBottom: "1.4rem", color: "#fff" }}>
+          Biznesingizning
+          <br />
+          <span style={{ color: "#0ea5e9" }}>aqlli kotibi</span>
+        </h1>
 
-      <LandingFooter isMobile={isMobile} pagePadding={pagePadding} />
+        <p className="fu d3" style={{ maxWidth: 580, margin: "0 auto 2.8rem", fontSize: isMobile ? "0.96rem" : "1.05rem", lineHeight: isMobile ? 1.7 : 1.78, color: "rgba(255,255,255,.44)", fontWeight: 300 }}>
+          Kotibam — savdo jamoalari uchun yaratilgan  CRM platforma.
+          <br />
+          Leadlar, vazifalar, tahlil va AI kotib — hammasi bitta tizimda.
+        </p>
+
+        <div className="fu d4" style={{ display: "flex", gap: "0.9rem", justifyContent: "center", flexWrap: "wrap" }}>
+          <button
+            className="btn-s"
+            onClick={() => navigate("/register")}
+            style={{ background: "#0ea5e9", border: "none", color: "#fff", padding: "0.85rem 2rem", fontSize: 15, borderRadius: 10, fontFamily: "Inter, sans-serif", fontWeight: 600, cursor: "pointer" }}
+          >
+            Bepul boshlash →
+          </button>
+        </div>
+
+        <div
+          className="fu d5"
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
+            marginTop: "4.5rem",
+            width: "100%",
+            maxWidth: 680,
+            margin: "4.5rem auto 0",
+            border: "1px solid rgba(255,255,255,.07)",
+            borderRadius: 16,
+            overflow: "hidden",
+          }}
+        >
+          {[["500+", "Faol kompaniya"], ["98%", "Mijoz mamnuniyati"], ["3x", "Savdo o'sishi"], ["24/7", "AI ishlaydi"]].map(
+            ([num, label]) => (
+              <div
+                key={label}
+                style={{
+                  minWidth: 120,
+                  padding: isMobile ? "1.2rem 0.8rem" : "1.5rem 1rem",
+                  textAlign: "center",
+                  background: "#0d1220",
+                  borderRight:
+                    !isMobile && label !== "AI ishlaydi"
+                      ? "1px solid rgba(255,255,255,.07)"
+                      : "none",
+                  borderBottom:
+                    isMobile && (label === "Faol kompaniya" || label === "Mijoz mamnuniyati")
+                      ? "1px solid rgba(255,255,255,.07)"
+                      : "none",
+                }}
+              >
+                <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "#0ea5e9", letterSpacing: "-0.02em" }}>{num}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.32)", marginTop: 4 }}>{label}</div>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+
+      <section id="features" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}`, background: "#080d17" }}>
+        <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Imkoniyatlar</div>
+          <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff", marginBottom: 12 }}>
+            Biznesingiz uchun hamma narsa
+          </h2>
+          <p style={{ color: "rgba(255,255,255,.38)", fontSize: 15, maxWidth: 500, margin: "0 auto", fontWeight: 300 }}>
+            Bir platformada — AI kotib, pipeline, tahlil va jamoa boshqaruvi.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : isTablet
+                ? "repeat(2, minmax(0, 1fr))"
+                : "repeat(3, minmax(0, 1fr))",
+            gap: "1px",
+            background: "rgba(255,255,255,.06)",
+            border: "1px solid rgba(255,255,255,.06)",
+            borderRadius: 20,
+            overflow: "hidden",
+          }}
+        >
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="feat-card"
+              style={{ background: "#0b1018", padding: isMobile ? "1.4rem" : "2.2rem", border: "1px solid transparent" }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 11,
+                  background: "rgba(14,165,233,.1)",
+                  border: "1px solid rgba(14,165,233,.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#38bdf8",
+                  marginBottom: "1.2rem",
+                }}
+              >
+                {f.icon}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", marginBottom: 8 }}>{f.title}</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.36)", lineHeight: 1.72, fontWeight: 300 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="how" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}` }}>
+        <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Qanday ishlaydi</div>
+          <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>4 qadamda tayyor</h2>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : isTablet
+                ? "repeat(2, minmax(0, 1fr))"
+                : "repeat(4, minmax(0, 1fr))",
+            gap: "1.5rem",
+            maxWidth: 900,
+            margin: "0 auto",
+          }}
+        >
+          {steps.map((s) => (
+            <div key={s.num}>
+              <div style={{ fontSize: "3.2rem", fontWeight: 800, color: "rgba(14,165,233,.12)", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: "0.8rem" }}>
+                {s.num}
+              </div>
+              <div style={{ width: 30, height: 2, background: "#0ea5e9", borderRadius: 2, marginBottom: "0.9rem" }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", marginBottom: 8 }}>{s.title}</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.36)", lineHeight: 1.7, fontWeight: 300 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="testimonials" style={{ padding: isMobile ? "3.5rem 1rem" : `5rem ${pagePadding}`, background: "#080d17" }}>
+        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(56,189,248,.8)", textTransform: "uppercase", marginBottom: 12 }}>Mijozlar fikri</div>
+          <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>Ular allaqachon o'sdi</h2>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))", gap: "1.2rem" }}>
+          {testimonials.map((t) => (
+            <div
+              key={t.name}
+              className="t-card"
+              style={{ background: "#0b1018", border: "1px solid rgba(255,255,255,.07)", borderRadius: 18, padding: "1.8rem" }}
+            >
+              <div style={{ color: "#f59e0b", fontSize: 13, marginBottom: "1rem", letterSpacing: 2 }}>★★★★★</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.43)", lineHeight: 1.77, fontStyle: "italic", marginBottom: "1.3rem", fontWeight: 300 }}>
+                "{t.text}"
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "50%",
+                    background: t.color + "22",
+                    border: `1px solid ${t.color}44`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: t.color,
+                  }}
+                >
+                  {t.initials}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      
+
+      <section style={{ padding: isMobile ? "0 1rem 3.5rem" : `0 ${pagePadding} 5rem` }}>
+        <div
+          style={{
+            background: "linear-gradient(135deg,#0c1a30 0%,#0a1220 55%,#0d1a20 100%)",
+            border: "1px solid rgba(14,165,233,.14)",
+            borderRadius: 24,
+            padding: isMobile ? "2.2rem 1.2rem" : "4rem 3rem",
+            textAlign: "center",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 50%,rgba(14,165,233,.07),transparent 60%)", pointerEvents: "none" }} />
+          <h2 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", marginBottom: 12, position: "relative" }}>
+            Bugun boshlang — bepul
+          </h2>
+      
+          <button
+            className="btn-s"
+            style={{ background: "#0ea5e9", border: "none", color: "#fff", padding: "0.85rem 2.2rem", fontSize: 15, borderRadius: 10, fontFamily: "Inter, sans-serif", fontWeight: 600, cursor: "pointer", position: "relative" }}
+          >
+            Bepul ro'yxatdan o'tish →
+          </button>
+        </div>
+      </section>
+
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,.06)",
+          padding: isMobile ? "1.2rem 1rem 2rem" : `2rem ${pagePadding}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: isMobile ? "center" : "space-between",
+          flexWrap: "wrap",
+          gap: "1rem",
+          textAlign: isMobile ? "center" : "left",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              background:
+                "radial-gradient(circle at 50% 42%, rgba(255,255,255,.44), rgba(255,255,255,.2) 28%, rgba(255,255,255,.08) 48%, rgba(14,165,233,.18) 72%, rgba(14,165,233,.1) 100%)",
+              border: "1px solid rgba(255,255,255,.82)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              boxShadow:
+                "inset 0 0 10px rgba(255,255,255,.4), inset 0 0 22px rgba(255,255,255,.22), inset 0 0 42px rgba(255,255,255,.12), 0 0 18px rgba(255,255,255,.12)",
+            }}
+          >
+            <img
+              src="/logo.png"
+              alt="Kotibam"
+              style={{ width: 16, height: 16, objectFit: "contain" }}
+            />
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Kotibam</span>
+        </div>
+
+     
+
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.18)" }}>© 2026 Kotibam. Barcha huquqlar himoyalangan.</div>
+      </footer>
 
     </div>
   );

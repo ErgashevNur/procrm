@@ -31,7 +31,7 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-const DialogOverlay = React.forwardRef(function DialogOverlay({
+function DialogOverlay({
   className,
   ...props
 }, ref) {
@@ -45,9 +45,11 @@ const DialogOverlay = React.forwardRef(function DialogOverlay({
       )}
       {...props} />
   );
-});
+}
+const ForwardedDialogOverlay = React.forwardRef(DialogOverlay)
+ForwardedDialogOverlay.displayName = "DialogOverlay"
 
-const DialogContent = React.forwardRef(function DialogContent({
+function DialogContent({
   className,
   children,
   showCloseButton = true,
@@ -55,7 +57,7 @@ const DialogContent = React.forwardRef(function DialogContent({
 }, ref) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <ForwardedDialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
         data-slot="dialog-content"
@@ -76,7 +78,9 @@ const DialogContent = React.forwardRef(function DialogContent({
       </DialogPrimitive.Content>
     </DialogPortal>
   );
-});
+}
+const ForwardedDialogContent = React.forwardRef(DialogContent)
+ForwardedDialogContent.displayName = "DialogContent"
 
 function DialogHeader({
   className,
@@ -111,7 +115,7 @@ function DialogFooter({
   );
 }
 
-const DialogTitle = React.forwardRef(function DialogTitle({
+function DialogTitle({
   className,
   ...props
 }, ref) {
@@ -122,9 +126,11 @@ const DialogTitle = React.forwardRef(function DialogTitle({
       className={cn("text-lg leading-none font-semibold", className)}
       {...props} />
   );
-});
+}
+const ForwardedDialogTitle = React.forwardRef(DialogTitle)
+ForwardedDialogTitle.displayName = "DialogTitle"
 
-const DialogDescription = React.forwardRef(function DialogDescription({
+function DialogDescription({
   className,
   ...props
 }, ref) {
@@ -135,17 +141,19 @@ const DialogDescription = React.forwardRef(function DialogDescription({
       className={cn("text-muted-foreground text-sm", className)}
       {...props} />
   );
-});
+}
+const ForwardedDialogDescription = React.forwardRef(DialogDescription)
+ForwardedDialogDescription.displayName = "DialogDescription"
 
 export {
   Dialog,
   DialogClose,
-  DialogContent,
-  DialogDescription,
+  ForwardedDialogContent as DialogContent,
+  ForwardedDialogDescription as DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
+  ForwardedDialogOverlay as DialogOverlay,
   DialogPortal,
-  DialogTitle,
+  ForwardedDialogTitle as DialogTitle,
   DialogTrigger,
 }

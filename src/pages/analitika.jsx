@@ -10,14 +10,25 @@ import {
   TriangleAlert,
   Wallet,
 } from "lucide-react";
-import AnalyticsHeroSection from "@/components/analytics/AnalyticsHeroSection";
-import EmployeePerformanceSection from "@/components/analytics/EmployeePerformanceSection";
-import InsightsSection from "@/components/analytics/InsightsSection";
-import StatusComparisonSection from "@/components/analytics/StatusComparisonSection";
-import StatusDistributionSection from "@/components/analytics/StatusDistributionSection";
-import TaskStatusSection from "@/components/analytics/TaskStatusSection";
-import TrendSection from "@/components/analytics/TrendSection";
-import { apiUrl } from "@/lib/api";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+
+const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
 const STATUS_COLORS = [
   "#69a7ff",
@@ -201,6 +212,63 @@ function isSuccessStatus(name) {
   return normalized.includes("muvaff") || normalized.includes("success");
 }
 
+function StatCard({ title, value, caption, icon: Icon, tone = "#69a7ff" }) {
+  return (
+    <div className="crm-card crm-hairline relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute -top-10 right-0 h-24 w-24 rounded-full opacity-30 blur-3xl"
+        style={{ background: tone }}
+      />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="crm-kicker">{title}</p>
+            <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
+              {value}
+            </p>
+          </div>
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-2xl"
+            style={{
+              background: `${tone}18`,
+              border: `1px solid ${tone}30`,
+            }}
+          >
+            <Icon size={18} style={{ color: tone }} />
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-[color:var(--crm-muted)]">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ kicker, title, description }) {
+  return (
+    <div className="mb-5">
+      <p className="crm-kicker">{kicker}</p>
+      <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
+        {title}
+      </h2>
+      {description ? (
+        <p className="mt-1.5 text-sm text-[color:var(--crm-muted)]">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return (
+    <div className="flex h-[280px] items-center justify-center rounded-[24px] border border-white/6 bg-white/[0.03] text-sm text-[color:var(--crm-muted)]">
+      {text}
+    </div>
+  );
+}
+
+function SkeletonBlock({ className }) {
+  return <div className={`crm-skeleton ${className}`} />;
+}
+
 function normalizeTaskStatsPayload(json) {
   const source = json?.value || json?.data?.value || json?.data || json || {};
 
@@ -257,15 +325,15 @@ export default function Analitika() {
 
       try {
         const [statusRes, trendRes, employeeRes, tasksRes] = await Promise.all([
-          apiFetch(apiUrl(`analytics/status/${projectId}`)),
+          apiFetch(`${API}/analytics/status/${projectId}`),
           apiFetch(
-            apiUrl(`analytics/analystik/${projectId}?type=${trendType}&from=${trendRange.from}&to=${trendRange.to}`),
+            `${API}/analytics/analystik/${projectId}?type=${trendType}&from=${trendRange.from}&to=${trendRange.to}`,
           ),
           apiFetch(
-            apiUrl(`analytics/employee/statistics/${projectId}?from=${trendRange.from}&to=${trendRange.to}`),
+            `${API}/analytics/employee/statistics/${projectId}?from=${trendRange.from}&to=${trendRange.to}`,
           ),
           apiFetch(
-            apiUrl(`analytics/tasks/${projectId}?type=${trendType}&from=${trendRange.from}&to=${trendRange.to}`),
+            `${API}/analytics/tasks/${projectId}?type=${trendType}&from=${trendRange.from}&to=${trendRange.to}`,
           ),
         ]);
 
@@ -369,19 +437,65 @@ export default function Analitika() {
       </div>
 
       <div className="relative mx-auto max-w-6xl space-y-5">
-        <AnalyticsHeroSection
-          projectName={projectName}
-          trendRange={trendRange}
-          analytics={analytics}
-          formatNumber={formatNumber}
-          formatPercent={formatPercent}
-          formatCompactMoney={formatCompactMoney}
-          formatMoney={formatMoney}
-          Activity={Activity}
-          BriefcaseBusiness={BriefcaseBusiness}
-          Target={Target}
-          Wallet={Wallet}
-        />
+        <section className="crm-card crm-hairline overflow-hidden">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="crm-kicker">Analitika</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white md:text-[2.15rem]">
+                Sotuv va jarayonlar bo'yicha chuqur tahlil
+              </h1>
+              <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+                Dashboard uslubidagi yagona ko'rinish: statuslar, trendlar, tasklar
+                va xodimlar natijasi bir sahifada.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
+                Loyiha: <span className="font-semibold text-white">{projectName || "Tanlanmagan"}</span>
+              </div>
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
+                Oraliq: <span className="font-semibold text-white">{trendRange.from}</span> -{" "}
+                <span className="font-semibold text-white">{trendRange.to}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Jami lead"
+              value={formatNumber(analytics.totalDeals)}
+              caption="Barcha statuslar bo'yicha umumiy son"
+              icon={Activity}
+              tone="#69a7ff"
+            />
+            <StatCard
+              title="Statuslar soni"
+              value={formatNumber(analytics.statusCount)}
+              caption="Analitikaga kirgan jami status bosqichlari"
+              icon={BriefcaseBusiness}
+              tone="#7c92ff"
+            />
+            <StatCard
+              title="Muvaffaqiyatli ulush"
+              value={formatPercent(analytics.closeRate)}
+              caption={
+                analytics.successStatus
+                  ? `${analytics.successStatus.statusName} statusi ulushi`
+                  : "Muvaffaqiyatli status topilmadi"
+              }
+              icon={Target}
+              tone="#34c759"
+            />
+            <StatCard
+              title="Jami budjet"
+              value={formatCompactMoney(analytics.totalAmount)}
+              caption={formatMoney(analytics.totalAmount)}
+              icon={Wallet}
+              tone="#ff9f0a"
+            />
+          </div>
+        </section>
 
         {error ? (
           <div className="rounded-[24px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -390,74 +504,550 @@ export default function Analitika() {
         ) : null}
 
         <section className="space-y-5">
-          <TrendSection
-            loading={loading}
-            chartConfig={chartConfig}
-            TREND_TABS={TREND_TABS}
-            trendType={trendType}
-            setTrendType={setTrendType}
-            trendRange={trendRange}
-            setTrendRange={setTrendRange}
-            trendRows={trendRows}
-            hasTrendBudget={hasTrendBudget}
-            trendLeadTicks={trendLeadTicks}
-            formatCompactMoney={formatCompactMoney}
-            formatMoney={formatMoney}
-            formatNumber={formatNumber}
-          />
+          <div className="crm-card crm-hairline">
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <SectionHeader
+                kicker="Oqim"
+                title="Leadlar dinamikasi"
+                description="Tanlangan davr bo'yicha leadlar oqimi va o'sish sur'ati."
+              />
 
-          <StatusDistributionSection
-            loading={loading}
-            analytics={analytics}
-            rows={rows}
-            chartConfig={chartConfig}
-            formatNumber={formatNumber}
-            formatPercent={formatPercent}
-            formatMoney={formatMoney}
-          />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.04] p-1">
+                  {TREND_TABS.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setTrendType(item.key)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        trendType === item.key
+                          ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                          : "text-[color:var(--crm-muted)] hover:text-white"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={trendRange.from}
+                    onChange={(e) =>
+                      setTrendRange((prev) => ({ ...prev, from: e.target.value }))
+                    }
+                    className="crm-control h-10 rounded-2xl px-3 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={trendRange.to}
+                    onChange={(e) =>
+                      setTrendRange((prev) => ({ ...prev, to: e.target.value }))
+                    }
+                    className="crm-control h-10 rounded-2xl px-3 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <SkeletonBlock className="h-[360px]" />
+            ) : trendRows.length === 0 ? (
+              <EmptyState text="Trend chizmasi uchun ma'lumot topilmadi." />
+            ) : (
+              <ChartContainer className="h-[360px]" config={chartConfig}>
+                <AreaChart data={trendRows}>
+                  <defs>
+                    <linearGradient id="leadsFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="5%" stopColor="#69a7ff" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#69a7ff" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="budgetFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="5%" stopColor="#34c759" stopOpacity={0.24} />
+                      <stop offset="95%" stopColor="#34c759" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    domain={[0, "dataMax"]}
+                    allowDecimals={false}
+                    ticks={trendLeadTicks}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                  />
+                  {hasTrendBudget ? (
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => formatCompactMoney(value)}
+                      tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                    />
+                  ) : null}
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(label, payload) =>
+                          payload?.[0]?.payload?.rawLabel || label
+                        }
+                        formatter={(value, name) =>
+                          name === "Budjet"
+                            ? [formatMoney(value), name]
+                            : [formatNumber(value), name]
+                        }
+                      />
+                    }
+                  />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="leads"
+                    name="Lead soni"
+                    stroke="#69a7ff"
+                    fill="url(#leadsFill)"
+                    strokeWidth={3}
+                    dot={{ r: 4, strokeWidth: 2, fill: "#69a7ff", stroke: "#dbeafe" }}
+                    activeDot={{ r: 6, strokeWidth: 2, fill: "#69a7ff", stroke: "#ffffff" }}
+                  />
+                  {hasTrendBudget ? (
+                    <Area
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="budget"
+                      name="Budjet"
+                      stroke="#34c759"
+                      fill="url(#budgetFill)"
+                      strokeWidth={2.5}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ChartContainer>
+            )}
+          </div>
+
+          <div className="crm-card crm-hairline">
+            <SectionHeader
+              kicker="Statuslar"
+              title="Statuslar bo'yicha taqsimot"
+              description="Har bir status uchun ID, lead soni, ulushi va budjeti bir joyda."
+            />
+
+            {loading ? (
+              <SkeletonBlock className="h-[360px]" />
+            ) : analytics.pie.length === 0 ? (
+              <EmptyState text="Status ulushlari uchun ma'lumot topilmadi." />
+            ) : (
+              <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+                <div className="rounded-[28px] border border-white/6 bg-white/[0.02] p-4">
+                  <ChartContainer className="mx-auto h-[320px] max-w-[360px]" config={chartConfig}>
+                    <PieChart>
+                      <Pie
+                        data={analytics.pie}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={72}
+                        outerRadius={122}
+                        paddingAngle={4}
+                      >
+                        {analytics.pie.map((item) => (
+                          <Cell key={item.name} fill={item.fill} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value) => [formatNumber(value), "Lead"]}
+                          />
+                        }
+                      />
+                    </PieChart>
+                  </ChartContainer>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {rows.map((row) => (
+                    <div
+                      key={row.statusId}
+                      className="rounded-[24px] border border-white/6 bg-white/[0.03] p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: row.color }}
+                            />
+                            <span className="rounded-full border border-white/8 bg-white/[0.05] px-2 py-1 text-[10px] font-semibold tracking-[0.18em] text-[color:var(--crm-muted)] uppercase">
+                              ID {row.statusId}
+                            </span>
+                          </div>
+                          <p className="mt-2 truncate text-sm font-medium text-white">
+                            {row.statusName}
+                          </p>
+                          <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
+                            {formatNumber(row.leadCount)} ta lead
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {formatPercent(row.percent)}
+                          </p>
+                          <p className="mt-1 text-[11px] text-[color:var(--crm-muted)]">
+                            {formatMoney(row.totalBudget)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="h-2 rounded-full bg-white/[0.05]">
+                          <div
+                            className="h-full rounded-full transition-[width] duration-500"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, row.percent))}%`,
+                              backgroundColor: row.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        <TaskStatusSection
-          loading={loading}
-          taskStats={taskStats}
-          taskDonutData={taskDonutData}
-          chartConfig={chartConfig}
-          formatNumber={formatNumber}
-          formatPercent={formatPercent}
-          Activity={Activity}
-          CircleCheckBig={CircleCheckBig}
-          Clock3={Clock3}
-          TriangleAlert={TriangleAlert}
-        />
+        <section className="crm-card crm-hairline">
+          <SectionHeader
+            kicker="Vazifalar"
+            title="Vazifalar holati"
+            description="Jami vazifalar, bajarilganlar, jarayondagi va kechikkan ishlar kesimi."
+          />
+
+          {loading ? (
+            <SkeletonBlock className="h-[320px]" />
+          ) : taskStats.total === 0 ? (
+            <EmptyState text="Task statistikasi topilmadi." />
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-[0.75fr_1.25fr] xl:items-center">
+              <div className="rounded-[28px] border border-white/6 bg-white/[0.02] p-4">
+                <ChartContainer className="mx-auto h-[260px] max-w-[280px]" config={chartConfig}>
+                  <PieChart>
+                    <Pie
+                      data={taskDonutData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={102}
+                      paddingAngle={4}
+                    >
+                      {taskDonutData.map((item) => (
+                        <Cell key={item.name} fill={item.fill} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => [formatNumber(value), name]}
+                        />
+                      }
+                    />
+                    <text
+                      x="50%"
+                      y="46%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-white text-3xl font-semibold"
+                    >
+                      {formatNumber(taskStats.total)}
+                    </text>
+                    <text
+                      x="50%"
+                      y="60%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-[#8ca0b6] text-xs"
+                    >
+                      jami task
+                    </text>
+                  </PieChart>
+                </ChartContainer>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  {
+                    label: "Jami task",
+                    value: formatNumber(taskStats.total),
+                    icon: Activity,
+                    color: "#7c92ff",
+                  },
+                  {
+                    label: "Bajarilgan",
+                    value: formatNumber(taskStats.finished),
+                    icon: CircleCheckBig,
+                    color: "#34c759",
+                  },
+                  {
+                    label: "Bajarilgan foiz",
+                    value: formatPercent(taskStats.finishedPercent),
+                    icon: CircleCheckBig,
+                    color: "#34c759",
+                  },
+                  {
+                    label: "Jarayonda",
+                    value: formatNumber(taskStats.started),
+                    icon: Clock3,
+                    color: "#69a7ff",
+                  },
+                  {
+                    label: "Jarayonda foiz",
+                    value: formatPercent(taskStats.startedPercent),
+                    icon: Clock3,
+                    color: "#69a7ff",
+                  },
+                  {
+                    label: "Muddati o'tgan",
+                    value: formatNumber(taskStats.expired),
+                    icon: TriangleAlert,
+                    color: "#ff453a",
+                  },
+                  {
+                    label: "Kechikkan foiz",
+                    value: formatPercent(taskStats.expiredPercent),
+                    icon: TriangleAlert,
+                    color: "#ff453a",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-white/6 bg-white/[0.03] p-3"
+                  >
+                    <item.icon size={15} style={{ color: item.color }} />
+                    <p className="mt-2 text-sm font-medium text-white">{item.label}</p>
+                    <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <EmployeePerformanceSection
-            loading={loading}
-            employeeRows={employeeRows}
-            chartConfig={chartConfig}
-            formatMoney={formatMoney}
-            formatNumber={formatNumber}
-          />
+          <div className="crm-card crm-hairline">
+            <SectionHeader
+              kicker="Xodimlar"
+              title="Xodimlar natijasi"
+              description="Lead soni va tushum bo'yicha faol xodimlar ko'rsatkichi."
+            />
 
-          <InsightsSection
-            analytics={analytics}
-            formatNumber={formatNumber}
-            formatPercent={formatPercent}
-            formatMoney={formatMoney}
-            BriefcaseBusiness={BriefcaseBusiness}
-            TrendingUp={TrendingUp}
-            Wallet={Wallet}
-          />
+            {loading ? (
+              <SkeletonBlock className="h-[340px]" />
+            ) : employeeRows.length === 0 ? (
+              <EmptyState text="Xodimlar bo'yicha ma'lumot topilmadi." />
+            ) : (
+              <>
+                <ChartContainer className="h-[260px]" config={chartConfig}>
+                  <BarChart
+                    data={[...employeeRows]
+                      .sort((a, b) => b.leadCount - a.leadCount)
+                      .slice(0, 6)}
+                    layout="vertical"
+                    margin={{ left: 8, right: 8 }}
+                  >
+                    <CartesianGrid horizontal={false} stroke="rgba(255,255,255,0.08)" />
+                    <XAxis
+                      type="number"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={90}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name, item) =>
+                            name === "Budjet"
+                              ? [formatMoney(value), item.name]
+                              : [formatNumber(value), name]
+                          }
+                        />
+                      }
+                    />
+                    <Bar
+                      dataKey="leadCount"
+                      name="Lead soni"
+                      fill="#69a7ff"
+                      radius={[0, 10, 10, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
+
+                <div className="mt-4 space-y-2">
+                  {employeeRows
+                    .slice()
+                    .sort((a, b) => b.leadCount - a.leadCount)
+                    .slice(0, 5)
+                    .map((employee, index) => (
+                      <div
+                        key={employee.id}
+                        className="flex items-center justify-between rounded-[24px] border border-white/6 bg-white/[0.03] px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-white">
+                            {index + 1}. {employee.name}
+                          </p>
+                          <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
+                            {formatMoney(employee.totalBudget)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold tracking-[-0.03em] text-white">
+                            {formatNumber(employee.leadCount)}
+                          </p>
+                          <p className="text-[11px] text-[color:var(--crm-muted)]">lead</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="crm-card crm-hairline">
+              <SectionHeader
+                kicker="Xulosa"
+                title="Qisqa xulosalar"
+                description="Hozirgi holat bo'yicha asosiy ko'rsatkichlar va muhim nuqtalar."
+              />
+
+              <div className="space-y-3">
+                <div className="rounded-[24px] border border-white/6 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                    <BriefcaseBusiness size={16} className="text-[#69a7ff]" />
+                    Eng faol xodim
+                  </div>
+                  <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+                    {analytics.topEmployee
+                      ? `${analytics.topEmployee.name} ${formatNumber(
+                          analytics.topEmployee.leadCount,
+                        )} ta lead bilan oldinda.`
+                      : "Xodimlar bo'yicha yetarli ma'lumot yo'q."}
+                  </p>
+                </div>
+
+                <div className="rounded-[24px] border border-white/6 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                    <TrendingUp size={16} className="text-[#34c759]" />
+                    Asosiy status
+                  </div>
+                  <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+                    {analytics.topStatus
+                      ? `${analytics.topStatus.statusName} statusi ${formatNumber(
+                          analytics.topStatus.leadCount,
+                        )} ta lead va ${formatPercent(analytics.topStatus.percent)} ulush bilan yetakchi.`
+                      : "Statuslar bo'yicha ma'lumot yo'q."}
+                  </p>
+                </div>
+
+                <div className="rounded-[24px] border border-white/6 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                    <Wallet size={16} className="text-[#ff9f0a]" />
+                    Budjet signali
+                  </div>
+                  <p className="mt-2 text-sm text-[color:var(--crm-muted)]">
+                    Umumiy budjet {formatMoney(analytics.totalAmount)}.
+                    {analytics.topStatus
+                      ? ` Eng katta ulush ${analytics.topStatus.statusName} statusiga tegishli.`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+          </div>
         </section>
 
-        <StatusComparisonSection
-          loading={loading}
-          rows={rows}
-          chartConfig={chartConfig}
-          formatCompactMoney={formatCompactMoney}
-          formatMoney={formatMoney}
-          formatNumber={formatNumber}
-        />
+        <section className="crm-card crm-hairline">
+          <SectionHeader
+            kicker="Taqqoslash"
+            title="Statuslar kesimida lead va budjet"
+            description="Qaysi statuslar son va qiymat bo'yicha asosiy og'irlikni ushlayotganini ko'rsatadi."
+          />
+
+          {loading ? (
+            <SkeletonBlock className="h-[360px]" />
+          ) : rows.length === 0 ? (
+            <EmptyState text="Statuslar bo'yicha taqqoslash uchun ma'lumot topilmadi." />
+          ) : (
+            <ChartContainer className="h-[360px]" config={chartConfig}>
+              <BarChart data={rows} margin={{ left: 0, right: 12 }}>
+                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
+                <XAxis
+                  dataKey="statusName"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => formatCompactMoney(value)}
+                  tick={{ fill: "#8ca0b6", fontSize: 12 }}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) =>
+                        name === "Budjet"
+                          ? [formatMoney(value), name]
+                          : [formatNumber(value), name]
+                      }
+                    />
+                  }
+                />
+                <Bar
+                  yAxisId="left"
+                  dataKey="leadCount"
+                  name="Lead soni"
+                  fill="#69a7ff"
+                  radius={[10, 10, 0, 0]}
+                />
+                <Bar
+                  yAxisId="right"
+                  dataKey="totalBudget"
+                  name="Budjet"
+                  fill="#34c759"
+                  radius={[10, 10, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          )}
+        </section>
       </div>
     </div>
   );
