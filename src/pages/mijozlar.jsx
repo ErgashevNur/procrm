@@ -41,11 +41,6 @@ import {
   useVoiceVisualizer,
   VoiceVisualizer,
 } from "react-voice-visualizer";
-import PipelineLoading from "@/components/mijozlar/PipelineLoading";
-import PipelineNoProject from "@/components/mijozlar/PipelineNoProject";
-import PipelineHeader from "@/components/mijozlar/PipelineHeader";
-import PipelineBoard from "@/components/mijozlar/PipelineBoard";
-import IconBtn from "@/components/mijozlar/IconBtn";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 
 
