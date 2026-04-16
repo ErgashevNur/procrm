@@ -145,8 +145,6 @@ const HEADER_IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
 const HEADER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 const HEADER_IMAGE_MAX_WIDTH = 1600;
 const HEADER_IMAGE_MAX_HEIGHT = 600;
-const IMAGE_STREAM_BASE = "https://backend-b2b-dev.prohome.uz/api/v1/image";
-
 function getImageSource(rawValue) {
   const raw = String(rawValue || "").trim();
   if (!raw) return null;
@@ -170,7 +168,7 @@ function getImageSource(rawValue) {
       .pop() || "";
 
   if (!fileName) return null;
-  return `${IMAGE_STREAM_BASE}/${encodeURIComponent(fileName)}`;
+  return `${API}/image/${encodeURIComponent(fileName)}`;
 }
 
 function readFileAsDataUrl(file) {

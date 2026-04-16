@@ -11,8 +11,8 @@ function saveProject(project) {
 }
 
 export default function ProjectGate({ children }) {
-  const [ready, setReady] = useState(!!localStorage.getItem("projectId"));
-  const [loading, setLoading] = useState(!ready);
+  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const role = getCurrentRole();
   const canManageProjects = MANAGEMENT_ROLES.includes(role);

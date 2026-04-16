@@ -40,9 +40,8 @@ import {
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
-
+import { apiUrl } from "@/lib/api";
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
 const TEMPLATE_TOKENS = ["{{fullname}}", "{{firstName}}", "{{lastName}}"];
 
 function getToken() {
@@ -151,7 +150,7 @@ async function extractApiMessage(response, fallback) {
 function imgUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${API}/image/${src}`;
 }
 
 function formatDate(value) {
