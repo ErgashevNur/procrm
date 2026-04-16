@@ -33,7 +33,7 @@ const IMAGE_BASE = "https://back.prohome.uz/api/v1/image";
 function getImageUrl(src) {
   if (!src) return null;
   if (src.startsWith("http") || src.startsWith("blob:")) return src;
-  return `${IMAGE_BASE}/${src}`;
+  return `${API}/image/${src}`;
 }
 
 const API_STATUSES = {

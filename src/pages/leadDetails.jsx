@@ -15,10 +15,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Pencil,
   X,
-  Check,
-  Trash2,
 } from "lucide-react";
 import {
   Select,
@@ -133,6 +130,32 @@ function normalizeTags(value) {
   return [];
 }
 
+function toNumberOrUndefined(value, { digitsOnly = false } = {}) {
+  if (value === null || value === undefined) return undefined;
+
+  const normalized = digitsOnly
+    ? String(value).replace(/\D/g, "")
+    : String(value).trim();
+
+  if (!normalized) return undefined;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeLeadPhoneForApi(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return undefined;
+  if (digits.startsWith("998")) return digits.slice(0, 12);
+  return `998${digits.slice(0, 9)}`;
+}
+
+function isValidLeadPhone(value) {
+  return /^998(50|90|91|93|94|95|97|98|99|20|77|33|88|70|55|87)\d{7}$/.test(
+    String(value || ""),
+  );
+}
+
 async function extractApiMessage(res, fallback) {
   try {
     const text = await res.text();
@@ -195,22 +218,38 @@ function extractUsersFromPayload(payload) {
   return [];
 }
 
-async function fetchSalesManagers(headers) {
+async function fetchSalesManagers(headers, role, projectId) {
   const limit = 25;
   let page = 1;
   let all = [];
 
   // API response shakli turlicha bo'lishi mumkin, shuning uchun ehtiyotkor parse
   while (page <= 20) {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      page: String(page),
+    });
+    if (role !== ROLES.ROP && projectId) {
+      params.set("projectId", String(projectId));
+    }
+
+    const endpoint =
+      role === ROLES.ROP
+        ? `${API}/user/all/sales-manager?${params.toString()}`
+        : `${API}/users?${params.toString()}`;
+
     const res = await fetch(
-      `${API}/user/all/sales-manager?limit=${limit}&page=${page}`,
+      endpoint,
       { headers },
     );
     if (!res.ok) break;
 
     const payload = await res.json();
     const list = extractUsersFromPayload(payload);
-    const normalized = list.map(normalizeOperator).filter(Boolean);
+    const normalized = list
+      .map(normalizeOperator)
+      .filter(Boolean)
+      .filter((user) => user.role === ROLES.SALESMANAGER);
 
     all = [...all, ...normalized];
 
@@ -1102,7 +1141,7 @@ const LeadDetails = () => {
     if (!canAssignOperator || !token || !projectId) return;
     (async () => {
       try {
-        let salesManagers = await fetchSalesManagers(headers);
+        let salesManagers = await fetchSalesManagers(headers, role, projectId);
 
         // Fallback: ba'zi backendlarda umumiy users endpoint ishlaydi
         if (salesManagers.length === 0) {
@@ -1254,15 +1293,31 @@ const LeadDetails = () => {
   // FIX 2: handleSubmit — tag array yuborish
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const normalizedPhone = normalizeLeadPhoneForApi(dealData.phone);
+    const normalizedExtraPhone = normalizeLeadPhoneForApi(dealData.extraPhone);
+
+    if (!isValidLeadPhone(normalizedPhone)) {
+      toastError("Telefon raqam noto'g'ri. Format: 998901234567");
+      return;
+    }
+
+    if (
+      normalizedExtraPhone !== undefined &&
+      !isValidLeadPhone(normalizedExtraPhone)
+    ) {
+      toastError("Qo'shimcha telefon noto'g'ri. Format: 998901234567");
+      return;
+    }
+
     const body = {
       firstName: dealData.firstName,
       lastName: dealData.lastName,
-      phone: dealData.phone,
-      extraPhone: dealData.extraPhone || undefined,
+      phone: normalizedPhone,
+      extraPhone: normalizedExtraPhone,
       adress: dealData.adress || undefined,
-      budjet: Number(dealData.budjet) || undefined,
-      leadSourceId: Number(dealData.leadSourceId) || undefined,
-      projectId: Number(projectId),
+      budjet: toNumberOrUndefined(dealData.budjet),
+      leadSourceId: toNumberOrUndefined(dealData.leadSourceId),
+      projectId: toNumberOrUndefined(projectId),
       tag: normalizeTags(editTags), // FIX: array
       birthDate: dealData.birthDate
         ? new Date(dealData.birthDate).toISOString().split("T")[0]

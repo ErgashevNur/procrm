@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { apiUrl } from "@/lib/api";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const IMAGE_STREAM_BASE = "https://backend-b2b-dev.prohome.uz/api/v1/image";
 
 function getImageSource(rawValue) {
   const raw = String(rawValue || "").trim();
@@ -38,7 +38,7 @@ function getImageSource(rawValue) {
       .pop() || "";
 
   if (!fileName) return null;
-  return `${IMAGE_STREAM_BASE}/${encodeURIComponent(fileName)}`;
+  return `${API}/image/${encodeURIComponent(fileName)}`;
 }
 
 function normalizeFieldType(field) {
