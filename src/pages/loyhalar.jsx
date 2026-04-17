@@ -11,7 +11,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 
-export default function loyhalar() {
+export default function Loyhalar() {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
