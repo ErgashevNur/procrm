@@ -929,16 +929,21 @@ function InputBar({ onSubmit, sending }) {
     if (t.value !== "tasks") setTaskDate("");
   };
 
+  const TypeIcon = type.icon;
+  const isTask = type.value === "tasks";
+  const canSubmit = Boolean(text.trim()) && !sending && (!isTask || Boolean(taskDate));
+
   const submit = () => {
     if (!text.trim() || sending) return;
+    if (isTask && !taskDate) {
+      toastError("Task uchun muddatni tanlang");
+      return;
+    }
     onSubmit(text.trim(), type.value, taskDate || null);
     setText("");
     setTaskDate("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
-
-  const TypeIcon = type.icon;
-  const isTask = type.value === "tasks";
 
   return (
     <div
@@ -1011,14 +1016,14 @@ function InputBar({ onSubmit, sending }) {
           </div>
           <button
             onClick={submit}
-            disabled={!text.trim() || sending}
+            disabled={!canSubmit}
             className="flex shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
             style={{
-              background: text.trim()
+              background: canSubmit
                 ? `linear-gradient(135deg, ${type.color}, ${type.color}88)`
                 : "rgba(255,255,255,0.04)",
-              border: `1px solid ${text.trim() ? `${type.color}35` : "rgba(255,255,255,0.05)"}`,
-              boxShadow: text.trim() ? `0 4px 16px ${type.color}35` : "none",
+              border: `1px solid ${canSubmit ? `${type.color}35` : "rgba(255,255,255,0.05)"}`,
+              boxShadow: canSubmit ? `0 4px 16px ${type.color}35` : "none",
             }}
           >
             {sending ? (
@@ -1190,6 +1195,11 @@ const LeadDetails = () => {
 
   // Tasks POST: backend `date` key kutadi
   const handlePostDesc = async (text, type, date) => {
+    if (type === "tasks" && !date) {
+      toastError("Task uchun muddatni tanlang");
+      return;
+    }
+
     setSending(true);
     try {
       let shouldPlayTaskSound = false;
