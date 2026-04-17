@@ -12,6 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -329,11 +330,7 @@ export default function FormPage() {
 
   /* ——— Loading ——— */
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020711]">
-        <div className="text-sm text-[#9ab8cc]">Yuklanmoqda...</div>
-      </div>
-    );
+    return <KotibamLoader fullScreen />;
   }
 
   /* ——— Error ——— */

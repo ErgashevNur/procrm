@@ -63,12 +63,20 @@ export default function Register() {
     const nextErrors = {};
 
     if (!form.name.trim()) nextErrors.name = "Kompaniya nomini kiriting";
-    if (!form.phoneNumber.trim()) nextErrors.phoneNumber = "Telefon raqam kiriting";
-    if (form.phoneNumber.trim() && !/^\+998\d{9}$/.test(form.phoneNumber.trim())) {
-      nextErrors.phoneNumber = "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
+    if (!form.phoneNumber.trim())
+      nextErrors.phoneNumber = "Telefon raqam kiriting";
+    if (
+      form.phoneNumber.trim() &&
+      !/^\+998\d{9}$/.test(form.phoneNumber.trim())
+    ) {
+      nextErrors.phoneNumber =
+        "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
     }
     if (!form.email.trim()) nextErrors.email = "Email kiriting";
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    if (
+      form.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+    ) {
       nextErrors.email = "Email noto'g'ri";
     }
     if (!form.password.trim()) nextErrors.password = "Parol kiriting";
@@ -107,12 +115,18 @@ export default function Register() {
 
       if (!response.ok) {
         throw new Error(
-          getResponseMessage(payload, `Ro'yxatdan o'tishda xatolik (HTTP ${response.status})`),
+          getResponseMessage(
+            payload,
+            `Ro'yxatdan o'tishda xatolik (HTTP ${response.status})`,
+          ),
         );
       }
 
       toast.success(
-        getResponseMessage(payload, "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi"),
+        getResponseMessage(
+          payload,
+          "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi",
+        ),
       );
       setForm(initialForm);
       navigate("/login");
@@ -164,8 +178,6 @@ export default function Register() {
       }}
     >
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
-
-
         <div
           style={{
             display: "grid",
@@ -222,8 +234,8 @@ export default function Register() {
                   maxWidth: 520,
                 }}
               >
-                Siz bergan `company/public` endpointiga mos ro'yxatdan o'tish formasi.
-                So'rov faqat kerakli maydonlar bilan yuboriladi.
+                Siz bergan `company/public` endpointiga mos ro'yxatdan o'tish
+                formasi. So'rov faqat kerakli maydonlar bilan yuboriladi.
               </p>
 
               <div style={{ display: "grid", gap: 14 }}>
@@ -343,7 +355,7 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => navigate("/")}
-                className="hidden xl:inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs"
+                className="hidden items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs leading-none font-medium text-white/70 transition-colors hover:border-white/15 hover:text-white sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs xl:inline-flex"
               >
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <span aria-hidden="true">←</span>
@@ -354,7 +366,9 @@ export default function Register() {
 
             <div style={{ display: "grid", gap: 16 }}>
               <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
+                <label
+                  style={{ display: "block", fontSize: 13, marginBottom: 8 }}
+                >
                   Kompaniya nomi *
                 </label>
                 <input
@@ -363,26 +377,36 @@ export default function Register() {
                   placeholder="ABC Group"
                   style={inputStyle("name")}
                 />
-                {errors.name && <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.name}</p>}
+                {errors.name && (
+                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
+                <label
+                  style={{ display: "block", fontSize: 13, marginBottom: 8 }}
+                >
                   Telefon raqam *
                 </label>
                 <input
                   value={form.phoneNumber}
                   onChange={(e) => setField("phoneNumber", e.target.value)}
-                  placeholder="+998901234567"
+                  placeholder="+998 ** *** ** **"
                   style={inputStyle("phoneNumber")}
                 />
                 {errors.phoneNumber && (
-                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.phoneNumber}</p>
+                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>
+                    {errors.phoneNumber}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
+                <label
+                  style={{ display: "block", fontSize: 13, marginBottom: 8 }}
+                >
                   Email *
                 </label>
                 <input
@@ -392,11 +416,17 @@ export default function Register() {
                   placeholder="company@mail.com"
                   style={inputStyle("email")}
                 />
-                {errors.email && <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.email}</p>}
+                {errors.email && (
+                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
+                <label
+                  style={{ display: "block", fontSize: 13, marginBottom: 8 }}
+                >
                   Parol *
                 </label>
                 <div style={{ position: "relative" }}>
@@ -410,7 +440,9 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    aria-label={
+                      showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"
+                    }
                     style={{
                       position: "absolute",
                       right: 10,
@@ -430,21 +462,10 @@ export default function Register() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{errors.password}</p>
+                  <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>
+                    {errors.password}
+                  </p>
                 )}
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gap: 12,
-                  borderRadius: 16,
-                  border: "1px solid rgba(255,255,255,.06)",
-                  background: "rgba(255,255,255,.02)",
-                  padding: 16,
-                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-                }}
-              >
               </div>
 
               <button
