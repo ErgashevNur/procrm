@@ -220,6 +220,7 @@ export default function settings() {
   const [editFullName, setEditFullName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
 
@@ -400,7 +401,7 @@ export default function settings() {
     }
     setDeletingId(id);
     try {
-      const res = await apiFetch(`${API}/user/remove-sales-maneger/${id}`, {
+      const res = await apiFetch(apiUrl(`user/remove-sales-maneger/${id}`), {
         method: "DELETE",
       });
       if (!res || !res.ok) throw new Error();
