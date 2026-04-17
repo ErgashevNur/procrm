@@ -27,14 +27,37 @@ export default function AppErrorFallback() {
               Noma'lum xatolik
             </div>
 
-            <h1 className="text-2xl font-bold text-white">
-              Kutilmagan xatolik yuz berdi
-            </h1>
+            <h1 className="text-2xl font-bold text-white">Xatolik yuz berdi</h1>
             <p className="mt-2 text-sm text-slate-300">
-              Iltimos, sahifani yangilang. Muammo davom etsa CodeNur bilan
+              Iltimos, sahifani yangilang. Muammo davom etsa Operatorlar bilan
               bog'laning:
             </p>
+
             <p className="mt-2 text-sm text-slate-200">
+              Tel raqam:{" "}
+              <a
+                href="tel:+998908444770"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-sky-300 underline underline-offset-2"
+              >
+                +998 90 844 47 70
+              </a>
+            </p>
+
+            <p className="text-sm text-slate-200">
+              Tel raqam:{" "}
+              <a
+                href="tel:+998777775137"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-sky-300 underline underline-offset-2"
+              >
+                +998 77 777 51 37
+              </a>
+            </p>
+
+            <p className="text-sm text-slate-200">
               Telegram:{" "}
               <a
                 href="https://t.me/codenur"
@@ -43,17 +66,6 @@ export default function AppErrorFallback() {
                 className="font-semibold text-sky-300 underline underline-offset-2"
               >
                 @codenur
-              </a>
-            </p>
-            <p className="text-sm text-slate-200">
-              Website:{" "}
-              <a
-                href="https://codenur.uz"
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-sky-300 underline underline-offset-2"
-              >
-                codenur.uz
               </a>
             </p>
 
@@ -69,6 +81,7 @@ export default function AppErrorFallback() {
                 <RefreshCcw size={14} />
                 Qayta yuklash
               </button>
+
               <button
                 onClick={() => window.history.back()}
                 className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-white/10"
