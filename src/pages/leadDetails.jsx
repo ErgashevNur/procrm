@@ -63,7 +63,8 @@ function pad2(value) {
 
 function parseTaskDateValue(value) {
   if (!value) return null;
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (value instanceof Date)
+    return Number.isNaN(value.getTime()) ? null : value;
   if (typeof value !== "string") {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
@@ -86,8 +87,7 @@ function parseTaskDateValue(value) {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const [, year, month, day, hour = "00", minute = "00", second = "00"] =
-    match;
+  const [, year, month, day, hour = "00", minute = "00", second = "00"] = match;
   return new Date(
     Number(year),
     Number(month) - 1,
@@ -120,7 +120,9 @@ function toApiDateTimeValue(value) {
 function normalizeTags(value) {
   if (Array.isArray(value)) {
     return value
-      .map((item) => (typeof item === "string" ? item : item?.name || item?.tag))
+      .map((item) =>
+        typeof item === "string" ? item : item?.name || item?.tag,
+      )
       .map((item) => String(item || "").trim())
       .filter(Boolean);
   }
@@ -241,10 +243,7 @@ async function fetchSalesManagers(headers, role, projectId) {
         ? `${API}/user/all/sales-manager?${params.toString()}`
         : `${API}/users?${params.toString()}`;
 
-    const res = await fetch(
-      endpoint,
-      { headers },
-    );
+    const res = await fetch(endpoint, { headers });
     if (!res.ok) break;
 
     const payload = await res.json();
@@ -1210,10 +1209,10 @@ const LeadDetails = () => {
         const payload = await res.json().catch(() => null);
         shouldPlayTaskSound = Boolean(
           payload?.success === true ||
-            payload?.id ||
-            payload?.task?.id ||
-            payload?.data?.id ||
-            payload?.message,
+          payload?.id ||
+          payload?.task?.id ||
+          payload?.data?.id ||
+          payload?.message,
         );
       } else {
         const res = await fetch(`${API}/Description`, {
@@ -1338,11 +1337,15 @@ const LeadDetails = () => {
       setActiveTab("asosiy");
       return res;
     });
-    toast.promise(updatePromise, {
-      loading: "Saqlanmoqda...",
-      success: "Yangilandi ✅",
-      error: "Xatolik ❌",
-    }, TOAST_STYLE);
+    toast.promise(
+      updatePromise,
+      {
+        loading: "Saqlanmoqda...",
+        success: "Yangilandi ✅",
+        error: "Xatolik ❌",
+      },
+      TOAST_STYLE,
+    );
     try {
       await updatePromise;
       setActiveTab("asosiy");
@@ -1511,7 +1514,9 @@ const LeadDetails = () => {
                       </SelectContent>
                     </Select>
                     {assigningOperator && (
-                      <span className="text-xs text-gray-500">Saqlanmoqda...</span>
+                      <span className="text-xs text-gray-500">
+                        Saqlanmoqda...
+                      </span>
                     )}
                   </div>
                 ) : (
