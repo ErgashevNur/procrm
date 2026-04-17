@@ -19,7 +19,6 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
   canDeleteData,
@@ -27,6 +26,7 @@ import {
   isSuperAdminLikeRole,
 } from "@/lib/rbac";
 import { useNavigate } from "react-router-dom";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME.replace(/\/+$/, "");
 const PER_PAGE = 10;
@@ -64,7 +64,9 @@ function getSuperadminCompanyId() {
 // ─── Permission helpers ────────────────────────────────────────────────────────
 
 function normalizePermission(permission) {
-  const value = String(permission || "").trim().toUpperCase();
+  const value = String(permission || "")
+    .trim()
+    .toUpperCase();
   if (value === "CRM") return "CRM";
   if (value === "PROHOME") return "PROHOME";
   return "";
@@ -105,7 +107,10 @@ function sanitizeImagePath(raw) {
     .replace(/^\/+/, "")
     .replace(/^image\//i, "");
   if (!stripped) return null;
-  const parts = stripped.split("/").map((p) => p.trim()).filter(Boolean);
+  const parts = stripped
+    .split("/")
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (!parts.length) return null;
   if (!parts.every((p) => /^[a-zA-Z0-9._-]+$/.test(p))) return null;
   return parts.join("/");
@@ -121,7 +126,10 @@ function getImgUrl(raw) {
 function validateLogoFile(file) {
   if (!file) return { ok: true };
   if (!ALLOWED_LOGO_TYPES.has(file.type))
-    return { ok: false, message: "Logo faqat PNG, JPG yoki WEBP formatida bo'lishi kerak" };
+    return {
+      ok: false,
+      message: "Logo faqat PNG, JPG yoki WEBP formatida bo'lishi kerak",
+    };
   if (file.size > MAX_LOGO_SIZE_BYTES)
     return { ok: false, message: "Logo hajmi 2MB dan katta bo'lmasligi kerak" };
   return { ok: true };
@@ -130,16 +138,23 @@ function validateLogoFile(file) {
 // ─── Text / phone helpers ──────────────────────────────────────────────────────
 
 function initials(name = "") {
-  return String(name).trim().split(/\s+/).slice(0, 2)
-    .map((w) => w[0] ?? "").join("").toUpperCase();
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
 }
 
 function cleanPhone(phone = "") {
   const digits = String(phone).replace(/\D/g, "");
   if (!digits) return "";
   if (digits.length === 9) return `+998${digits}`;
-  if (digits.length === 10 && digits.startsWith("8")) return `+998${digits.slice(1)}`;
-  if (digits.length >= 12 && digits.startsWith("998")) return `+${digits.slice(0, 12)}`;
+  if (digits.length === 10 && digits.startsWith("8"))
+    return `+998${digits.slice(1)}`;
+  if (digits.length >= 12 && digits.startsWith("998"))
+    return `+${digits.slice(0, 12)}`;
   if (digits.length > 9) return `+998${digits.slice(-9)}`;
   return `+${digits}`;
 }
@@ -157,25 +172,34 @@ function toTelHref(phone = "") {
 function sanitizeText(value, max = 120) {
   return String(value || "")
     .replace(/[\u0000-\u001F\u007F]/g, " ")
-    .replace(/\s+/g, " ").trim().slice(0, max);
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 }
 
 function sanitizeDescription(value, max = 600) {
   return String(value || "")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .trim().slice(0, max);
+    .trim()
+    .slice(0, max);
 }
 
 function sanitizeEmail(value) {
-  return String(value || "").trim().toLowerCase().slice(0, 254);
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .slice(0, 254);
 }
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
 
 function getCompanyStatus(company, fallback = false) {
   const raw =
-    company?.status ?? company?.isActive ?? company?.active ??
-    company?.enabled ?? company?.state;
+    company?.status ??
+    company?.isActive ??
+    company?.active ??
+    company?.enabled ??
+    company?.state;
   if (typeof raw === "boolean") return raw;
   if (typeof raw === "number") return raw === 1;
   if (typeof raw === "string") {
@@ -202,7 +226,10 @@ function redirectToLogin() {
 // Autentifikatsiya talab qiladigan so'rovlar uchun
 async function apiFetch(path, options = {}) {
   const token = getAccessToken();
-  if (!token) { redirectToLogin(); return null; }
+  if (!token) {
+    redirectToLogin();
+    return null;
+  }
 
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", `Bearer ${token}`);
@@ -214,7 +241,10 @@ async function apiFetch(path, options = {}) {
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
   const response = await fetch(toAbsoluteUrl(path), { ...options, headers });
-  if (response.status === 401) { redirectToLogin(); return null; }
+  if (response.status === 401) {
+    redirectToLogin();
+    return null;
+  }
   return response;
 }
 
@@ -233,12 +263,20 @@ async function apiPublicPost(path, body) {
 
 async function readJsonSafely(response) {
   if (!response) return null;
-  try { return await response.json(); } catch { return null; }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 function stringifyApiPayload(payload) {
   if (!payload) return "";
-  try { return JSON.stringify(payload, null, 2); } catch { return String(payload); }
+  try {
+    return JSON.stringify(payload, null, 2);
+  } catch {
+    return String(payload);
+  }
 }
 
 function flattenValidationMessages(input) {
@@ -247,7 +285,11 @@ function flattenValidationMessages(input) {
   if (Array.isArray(input)) return input.flatMap(flattenValidationMessages);
   if (typeof input === "object") {
     const messages = [];
-    if (input.property && input.constraints && typeof input.constraints === "object") {
+    if (
+      input.property &&
+      input.constraints &&
+      typeof input.constraints === "object"
+    ) {
       messages.push(
         ...Object.values(input.constraints)
           .map((v) => String(v || "").trim())
@@ -255,9 +297,12 @@ function flattenValidationMessages(input) {
           .map((m) => `${input.property}: ${m}`),
       );
     }
-    if (input.message) messages.push(...flattenValidationMessages(input.message));
-    if (Array.isArray(input.errors)) messages.push(...flattenValidationMessages(input.errors));
-    if (Array.isArray(input.children)) messages.push(...flattenValidationMessages(input.children));
+    if (input.message)
+      messages.push(...flattenValidationMessages(input.message));
+    if (Array.isArray(input.errors))
+      messages.push(...flattenValidationMessages(input.errors));
+    if (Array.isArray(input.children))
+      messages.push(...flattenValidationMessages(input.children));
     return messages;
   }
   return [];
@@ -267,8 +312,10 @@ function resolveErrorMessage(payload, fallback) {
   if (!payload) return fallback;
   const flat = flattenValidationMessages(payload?.message);
   if (flat.length) return flat.join(", ");
-  if (typeof payload?.message === "string" && payload.message.trim()) return payload.message.trim();
-  if (typeof payload?.error === "string" && payload.error.trim()) return payload.error.trim();
+  if (typeof payload?.message === "string" && payload.message.trim())
+    return payload.message.trim();
+  if (typeof payload?.error === "string" && payload.error.trim())
+    return payload.error.trim();
   return fallback;
 }
 
@@ -332,8 +379,15 @@ function buildPatchOptions(payload, logoFile = null) {
  * 3. PATCH /company/status/:id  (faqat status=false bo'lsa)
  */
 async function createCompany({
-  name, phoneNumber, email, password, permissions,
-  managerName, description, logoFile, status,
+  name,
+  phoneNumber,
+  email,
+  password,
+  permissions,
+  managerName,
+  description,
+  logoFile,
+  status,
 }) {
   // 1. Asosiy yaratish
   const publicPayload = { name, phoneNumber, email, password, permissions };
@@ -341,7 +395,10 @@ async function createCompany({
 
   let responsePayload;
   try {
-    responsePayload = await parseApiResponse(createRes, "Kompaniyani yaratib bo'lmadi");
+    responsePayload = await parseApiResponse(
+      createRes,
+      "Kompaniyani yaratib bo'lmadi",
+    );
   } catch (error) {
     console.error("POST /company/public failed", {
       requestBody: publicPayload,
@@ -354,12 +411,16 @@ async function createCompany({
 
   const companyId = extractCompanyId(responsePayload);
   if (!companyId) {
-    console.warn("Company created but ID not found in response", responsePayload);
+    console.warn(
+      "Company created but ID not found in response",
+      responsePayload,
+    );
     return responsePayload;
   }
 
   // 2. Qo'shimcha ma'lumotlar (best-effort)
-  const hasExtra = Boolean(managerName) || Boolean(description) || logoFile instanceof File;
+  const hasExtra =
+    Boolean(managerName) || Boolean(description) || logoFile instanceof File;
   if (hasExtra) {
     try {
       const detailsPayload = { name, phoneNumber, permissions };
@@ -368,11 +429,20 @@ async function createCompany({
 
       const patchRes = await apiFetch(
         `/company/${companyId}`,
-        buildPatchOptions(detailsPayload, logoFile instanceof File ? logoFile : null),
+        buildPatchOptions(
+          detailsPayload,
+          logoFile instanceof File ? logoFile : null,
+        ),
       );
-      await parseApiResponse(patchRes, "Qo'shimcha ma'lumotlarni saqlashda xatolik");
+      await parseApiResponse(
+        patchRes,
+        "Qo'shimcha ma'lumotlarni saqlashda xatolik",
+      );
     } catch (detailsError) {
-      console.warn("Company extra details update failed (best-effort):", detailsError);
+      console.warn(
+        "Company extra details update failed (best-effort):",
+        detailsError,
+      );
     }
   }
 
@@ -398,8 +468,15 @@ async function createCompany({
  * 2. PATCH /company/status/:id  (faqat status o'zgargan bo'lsa)
  */
 async function updateCompany({
-  companyId, name, phoneNumber, permissions,
-  managerName, description, logoFile, status, previousStatus,
+  companyId,
+  name,
+  phoneNumber,
+  permissions,
+  managerName,
+  description,
+  logoFile,
+  status,
+  previousStatus,
 }) {
   const detailsPayload = { name, phoneNumber, permissions };
   if (managerName) detailsPayload.managerName = managerName;
@@ -407,7 +484,10 @@ async function updateCompany({
 
   const patchRes = await apiFetch(
     `/company/${companyId}`,
-    buildPatchOptions(detailsPayload, logoFile instanceof File ? logoFile : null),
+    buildPatchOptions(
+      detailsPayload,
+      logoFile instanceof File ? logoFile : null,
+    ),
   );
 
   try {
@@ -452,7 +532,14 @@ function FormField({ label, required = false, icon: Icon, error, children }) {
   );
 }
 
-function TInput({ value, onChange, placeholder, type = "text", maxLength, ...rest }) {
+function TInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  maxLength,
+  ...rest
+}) {
   return (
     <input
       type={type}
@@ -470,16 +557,27 @@ function ImageDropZone({ fileName, preview, onChange, error }) {
   const inputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFile = (file) => { if (file) onChange(file); };
+  const handleFile = (file) => {
+    if (file) onChange(file);
+  };
 
   return (
     <div>
-      <p className="mb-1.5 text-xs font-medium tracking-wider text-gray-500 uppercase">Logo</p>
+      <p className="mb-1.5 text-xs font-medium tracking-wider text-gray-500 uppercase">
+        Logo
+      </p>
       <div
         onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
         onDragLeave={() => setIsDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          handleFile(e.dataTransfer.files?.[0]);
+        }}
         className={`relative flex h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-all ${
           isDragOver
             ? "border-blue-500 bg-[rgba(59,130,246,0.06)]"
@@ -490,7 +588,11 @@ function ImageDropZone({ fileName, preview, onChange, error }) {
       >
         {preview ? (
           <>
-            <img src={preview} alt="Logo preview" className="h-full w-full rounded-xl object-cover" />
+            <img
+              src={preview}
+              alt="Logo preview"
+              className="h-full w-full rounded-xl object-cover"
+            />
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 transition-opacity hover:opacity-100">
               <p className="text-xs font-medium text-white">O'zgartirish</p>
             </div>
@@ -504,8 +606,13 @@ function ImageDropZone({ fileName, preview, onChange, error }) {
             <p className="text-[10px] text-gray-700">PNG, JPG, WEBP (2MB)</p>
           </>
         )}
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
-          className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
       </div>
       {fileName ? (
         <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-green-400">
@@ -526,22 +633,40 @@ function ConfirmDialog({ company, onConfirm, onCancel, deleting = false }) {
             <AlertTriangle size={18} className="text-red-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Kompaniyani o'chirish</p>
-            <p className="text-xs text-gray-500">Bu amalni qaytarib bo'lmaydi</p>
+            <p className="text-sm font-semibold text-white">
+              Kompaniyani o'chirish
+            </p>
+            <p className="text-xs text-gray-500">
+              Bu amalni qaytarib bo'lmaydi
+            </p>
           </div>
         </div>
         <p className="mb-5 text-sm text-gray-400">
-          <span className="font-semibold text-white">&quot;{company?.name || "Noma'lum"}&quot;</span>{" "}
+          <span className="font-semibold text-white">
+            &quot;{company?.name || "Noma'lum"}&quot;
+          </span>{" "}
           kompaniyasini o'chirmoqchimisiz?
         </p>
         <div className="flex gap-2">
-          <button type="button" onClick={onCancel} disabled={deleting}
-            className="flex-1 rounded-xl border border-white/[0.08] py-2 text-sm font-medium text-gray-400 transition-colors hover:text-white disabled:opacity-50">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={deleting}
+            className="flex-1 rounded-xl border border-white/[0.08] py-2 text-sm font-medium text-gray-400 transition-colors hover:text-white disabled:opacity-50"
+          >
             Bekor
           </button>
-          <button type="button" onClick={onConfirm} disabled={deleting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50">
-            {deleting ? <Loader2 size={14} className="animate-spin" /> : "O'chirish"}
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+          >
+            {deleting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              "O'chirish"
+            )}
           </button>
         </div>
       </div>
@@ -549,20 +674,13 @@ function ConfirmDialog({ company, onConfirm, onCancel, deleting = false }) {
   );
 }
 
-function CardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
-      <Skeleton className="h-36 w-full rounded-none" />
-      <div className="space-y-2 p-4">
-        <Skeleton className="h-4 w-2/3 rounded-lg" />
-        <Skeleton className="h-3 w-1/2 rounded-lg" />
-        <Skeleton className="mt-3 h-6 w-32 rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
-function CompanyCard({ company, onEdit, onDelete, onView, lockDelete = false }) {
+function CompanyCard({
+  company,
+  onEdit,
+  onDelete,
+  onView,
+  lockDelete = false,
+}) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = useMemo(() => getImgUrl(company?.logo), [company?.logo]);
   const showLogo = Boolean(logoUrl && !imageError);
@@ -572,13 +690,16 @@ function CompanyCard({ company, onEdit, onDelete, onView, lockDelete = false }) 
   return (
     <div
       onClick={() => onView(company)}
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/6 bg-[linear-gradient(145deg,#0f2438_0%,#0a1929_100%)] transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 hover:-translate-y-0.5 hover:border-white/12"
+      className="group animate-in fade-in slide-in-from-bottom-3 relative cursor-pointer overflow-hidden rounded-2xl border border-white/6 bg-[linear-gradient(145deg,#0f2438_0%,#0a1929_100%)] transition-all duration-200 hover:-translate-y-0.5 hover:border-white/12"
     >
       <div className="relative h-36 w-full overflow-hidden bg-[#0a1929]">
         {showLogo ? (
-          <img src={logoUrl} alt={company?.name || "Company logo"}
+          <img
+            src={logoUrl}
+            alt={company?.name || "Company logo"}
             onError={() => setImageError(true)}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-600/20 bg-blue-600/[0.15] text-xl font-bold text-blue-300">
@@ -591,31 +712,57 @@ function CompanyCard({ company, onEdit, onDelete, onView, lockDelete = false }) 
         <div className="absolute top-3 left-3">
           <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#071828]/80 px-2 py-0.5 backdrop-blur-sm">
             <Hash size={9} className="text-blue-400" />
-            <span className="text-[10px] font-bold text-white">{company?.id}</span>
+            <span className="text-[10px] font-bold text-white">
+              {company?.id}
+            </span>
           </div>
         </div>
 
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onView(company); }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-white" aria-label="Ko'rish">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(company);
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-white"
+            aria-label="Ko'rish"
+          >
             <Eye size={12} />
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(company); }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-blue-400" aria-label="Tahrirlash">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(company);
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-blue-400"
+            aria-label="Tahrirlash"
+          >
             <Pencil size={12} />
           </button>
-          <button type="button"
-            onClick={(e) => { e.stopPropagation(); if (!lockDelete) onDelete(company); }}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!lockDelete) onDelete(company);
+            }}
             disabled={lockDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40" aria-label="O'chirish">
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-[#071828]/80 text-gray-400 backdrop-blur-sm transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="O'chirish"
+          >
             <Trash2 size={12} />
           </button>
         </div>
 
         <div className="absolute right-3 bottom-3 left-3">
-          <p className="truncate text-sm font-semibold text-white">{company?.name}</p>
+          <p className="truncate text-sm font-semibold text-white">
+            {company?.name}
+          </p>
           {company?.managerName ? (
-            <p className="truncate text-[11px] text-gray-300">{company.managerName}</p>
+            <p className="truncate text-[11px] text-gray-300">
+              {company.managerName}
+            </p>
           ) : null}
         </div>
       </div>
@@ -628,27 +775,40 @@ function CompanyCard({ company, onEdit, onDelete, onView, lockDelete = false }) 
         ) : null}
         <div className="flex flex-wrap gap-1.5">
           {telHref ? (
-            <a href={telHref} onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1 transition-colors hover:border-green-500/20 hover:bg-green-500/5">
+            <a
+              href={telHref}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1 transition-colors hover:border-green-500/20 hover:bg-green-500/5"
+            >
               <Phone size={9} className="text-green-400" />
-              <span className="text-[10px] text-gray-500">{company.phoneNumber}</span>
+              <span className="text-[10px] text-gray-500">
+                {company.phoneNumber}
+              </span>
             </a>
           ) : null}
           {company?.permissions?.length ? (
             <div className="flex flex-wrap gap-1">
               {company.permissions.map((p) => (
-                <span key={`${company.id}-${p}`}
-                  className="rounded-md border border-blue-600/20 bg-blue-600/[0.12] px-2 py-0.5 text-[10px] font-medium text-blue-300">
+                <span
+                  key={`${company.id}-${p}`}
+                  className="rounded-md border border-blue-600/20 bg-blue-600/[0.12] px-2 py-0.5 text-[10px] font-medium text-blue-300"
+                >
                   {permissionLabel(p)}
                 </span>
               ))}
             </div>
           ) : null}
         </div>
-        <div onClick={(e) => e.stopPropagation()}
-          className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-2">
-          <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`} />
-          <span className={`text-[11px] font-medium ${isActive ? "text-emerald-300" : "text-gray-400"}`}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-2"
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`}
+          />
+          <span
+            className={`text-[11px] font-medium ${isActive ? "text-emerald-300" : "text-gray-400"}`}
+          >
             {isActive ? "Aktiv" : "Nofaol"}
           </span>
         </div>
@@ -669,11 +829,15 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.72)] p-4 backdrop-blur-[5px]">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-2xl animate-in fade-in zoom-in-95 overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(145deg,#0f2438_0%,#071828_100%)] shadow-2xl duration-200">
+      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(145deg,#0f2438_0%,#071828_100%)] shadow-2xl duration-200">
         <div className="relative h-64 w-full overflow-hidden bg-[#0a1929]">
           {showLogo ? (
-            <img src={logoUrl} alt={company?.name || "Company logo"}
-              onError={() => setImageError(true)} className="h-full w-full object-cover" />
+            <img
+              src={logoUrl}
+              alt={company?.name || "Company logo"}
+              onError={() => setImageError(true)}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full items-center justify-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-blue-600/20 bg-blue-600/[0.15] text-3xl font-bold text-blue-300">
@@ -691,8 +855,10 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
             {company?.permissions?.length ? (
               <div className="flex flex-wrap gap-1.5">
                 {company.permissions.map((p) => (
-                  <span key={`${company.id}-${p}`}
-                    className="rounded-lg border border-blue-400/20 bg-blue-500/[0.15] px-2 py-1 text-[10px] font-semibold text-blue-200">
+                  <span
+                    key={`${company.id}-${p}`}
+                    className="rounded-lg border border-blue-400/20 bg-blue-500/[0.15] px-2 py-1 text-[10px] font-semibold text-blue-200"
+                  >
                     {permissionLabel(p)}
                   </span>
                 ))}
@@ -701,19 +867,31 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
           </div>
 
           <div className="absolute top-5 right-5 flex items-center gap-2">
-            <button type="button" onClick={() => onEdit(company)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-blue-400" aria-label="Tahrirlash">
+            <button
+              type="button"
+              onClick={() => onEdit(company)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-blue-400"
+              aria-label="Tahrirlash"
+            >
               <Pencil size={15} />
             </button>
-            <button type="button" onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-white" aria-label="Yopish">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828]/80 text-gray-300 backdrop-blur-sm transition-colors hover:text-white"
+              aria-label="Yopish"
+            >
               <X size={16} />
             </button>
           </div>
 
           <div className="absolute right-5 bottom-5 left-5">
-            <h2 className="text-2xl font-bold text-white">{company?.name || "Noma'lum kompaniya"}</h2>
-            <p className="mt-1 text-sm text-gray-300">{company?.managerName || "Manager ko'rsatilmagan"}</p>
+            <h2 className="text-2xl font-bold text-white">
+              {company?.name || "Noma'lum kompaniya"}
+            </h2>
+            <p className="mt-1 text-sm text-gray-300">
+              {company?.managerName || "Manager ko'rsatilmagan"}
+            </p>
           </div>
         </div>
 
@@ -721,21 +899,30 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="mb-3 flex items-center gap-2">
               <Users size={16} className="text-blue-400" />
-              <p className="text-sm font-semibold text-white">Asosiy ma'lumotlar</p>
+              <p className="text-sm font-semibold text-white">
+                Asosiy ma'lumotlar
+              </p>
             </div>
             <div className="space-y-3">
               <div>
                 <p className="text-xs text-gray-500">Kompaniya nomi</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.name || "-"}</p>
+                <p className="mt-1 text-sm font-medium text-white">
+                  {company?.name || "-"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Manager</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.managerName || "-"}</p>
+                <p className="mt-1 text-sm font-medium text-white">
+                  {company?.managerName || "-"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Telefon</p>
                 {telHref ? (
-                  <a href={telHref} className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-green-400 hover:text-green-300">
+                  <a
+                    href={telHref}
+                    className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-green-400 hover:text-green-300"
+                  >
                     <Phone size={14} /> {company.phoneNumber}
                   </a>
                 ) : (
@@ -744,12 +931,18 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
               </div>
               <div>
                 <p className="text-xs text-gray-500">ID</p>
-                <p className="mt-1 text-sm font-medium text-white">{company?.id}</p>
+                <p className="mt-1 text-sm font-medium text-white">
+                  {company?.id}
+                </p>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`} />
-                  <p className={`text-xs font-semibold ${isActive ? "text-emerald-300" : "text-gray-400"}`}>
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`}
+                  />
+                  <p
+                    className={`text-xs font-semibold ${isActive ? "text-emerald-300" : "text-gray-400"}`}
+                  >
                     {isActive ? "Aktiv" : "Nofaol"}
                   </p>
                 </div>
@@ -760,25 +953,33 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="mb-3 flex items-center gap-2">
               <Briefcase size={16} className="text-blue-400" />
-              <p className="text-sm font-semibold text-white">Qo'shimcha ma'lumot</p>
+              <p className="text-sm font-semibold text-white">
+                Qo'shimcha ma'lumot
+              </p>
             </div>
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-gray-500">Tavsif</p>
-                <p className="mt-1 text-sm leading-6 text-white">{company?.description || "Tavsif mavjud emas"}</p>
+                <p className="mt-1 text-sm leading-6 text-white">
+                  {company?.description || "Tavsif mavjud emas"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Ruxsatlar</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {company?.permissions?.length ? (
                     company.permissions.map((p) => (
-                      <span key={`p-${company.id}-${p}`}
-                        className="rounded-lg border border-blue-400/20 bg-blue-500/[0.12] px-2.5 py-1 text-xs font-medium text-blue-300">
+                      <span
+                        key={`p-${company.id}-${p}`}
+                        className="rounded-lg border border-blue-400/20 bg-blue-500/[0.12] px-2.5 py-1 text-xs font-medium text-blue-300"
+                      >
                         {permissionLabel(p)}
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-gray-500">Ruxsatlar mavjud emas</span>
+                    <span className="text-sm text-gray-500">
+                      Ruxsatlar mavjud emas
+                    </span>
                   )}
                 </div>
               </div>
@@ -787,12 +988,18 @@ function CompanyDetailModal({ company, onClose, onEdit }) {
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] px-6 py-4">
-          <button type="button" onClick={onClose}
-            className="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+          >
             Yopish
           </button>
-          <button type="button" onClick={() => onEdit(company)}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white">
+          <button
+            type="button"
+            onClick={() => onEdit(company)}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white"
+          >
             <Pencil size={14} /> Tahrirlash
           </button>
         </div>
@@ -811,7 +1018,9 @@ function getInitialForm(company) {
     email: "",
     password: "",
     description: sanitizeDescription(company?.description || "", 600),
-    permissions: normalizePermissions(company?.permissions, { fallback: ["CRM"] }),
+    permissions: normalizePermissions(company?.permissions, {
+      fallback: ["CRM"],
+    }),
     status: getCompanyStatus(company, true),
     logo: null,
   };
@@ -834,10 +1043,13 @@ function CompanyDrawer({ company, onClose, onSaved }) {
   }, [company]);
 
   useEffect(() => {
-    return () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); };
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
   }, []);
 
-  const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const setField = (key) => (value) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const togglePermission = (permission) => {
     setForm((prev) => {
@@ -877,19 +1089,30 @@ function CompanyDrawer({ company, onClose, onSaved }) {
     if (!managerName) nextErrors.managerName = "Menejer ismi majburiy";
     if (!phoneNumber) nextErrors.phoneNumber = "Telefon majburiy";
     else if (!isValidUzPhone(phoneNumber))
-      nextErrors.phoneNumber = "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
+      nextErrors.phoneNumber =
+        "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
     if (description.length > 600)
       nextErrors.description = "Tavsif 600 belgidan oshmasligi kerak";
     if (!isEdit) {
       if (!email) nextErrors.email = "Email majburiy";
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = "Email noto'g'ri";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        nextErrors.email = "Email noto'g'ri";
       if (!password.trim()) nextErrors.password = "Parol majburiy";
     }
-    if (!permissions.length) nextErrors.permissions = "Kamida bitta ruxsat tanlanishi kerak";
+    if (!permissions.length)
+      nextErrors.permissions = "Kamida bitta ruxsat tanlanishi kerak";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return null;
-    return { name, managerName, description, phoneNumber, email, password, permissions };
+    return {
+      name,
+      managerName,
+      description,
+      phoneNumber,
+      email,
+      password,
+      permissions,
+    };
   };
 
   const handleSubmit = async (event) => {
@@ -938,7 +1161,7 @@ function CompanyDrawer({ company, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-[4px]">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-md animate-in slide-in-from-right flex-col border-l border-white/6 bg-[#071828] shadow-2xl duration-200">
+      <div className="animate-in slide-in-from-right relative flex h-full w-full max-w-md flex-col border-l border-white/6 bg-[#071828] shadow-2xl duration-200">
         <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-white">
@@ -948,48 +1171,101 @@ function CompanyDrawer({ company, onClose, onSaved }) {
               {isEdit ? `#${company.id}` : "Ma'lumotlarni to'ldiring"}
             </p>
           </div>
-          <button type="button" onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.06] text-gray-500 transition-colors hover:text-white" aria-label="Yopish">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.06] text-gray-500 transition-colors hover:text-white"
+            aria-label="Yopish"
+          >
             <X size={15} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <FormField label="Nomi" required icon={Building2} error={errors.name}>
-              <TInput value={form.name} onChange={setField("name")}
-                placeholder="Kompaniya nomi" maxLength={120} />
+            <FormField
+              label="Nomi"
+              required
+              icon={Building2}
+              error={errors.name}
+            >
+              <TInput
+                value={form.name}
+                onChange={setField("name")}
+                placeholder="Kompaniya nomi"
+                maxLength={120}
+              />
             </FormField>
 
-            <FormField label="Menejer ismi" required icon={Users} error={errors.managerName}>
-              <TInput value={form.managerName} onChange={setField("managerName")}
-                placeholder="To'liq ism sharif" maxLength={120} />
+            <FormField
+              label="Menejer ismi"
+              required
+              icon={Users}
+              error={errors.managerName}
+            >
+              <TInput
+                value={form.managerName}
+                onChange={setField("managerName")}
+                placeholder="To'liq ism sharif"
+                maxLength={120}
+              />
             </FormField>
 
-            <FormField label="Telefon raqam" required icon={Phone} error={errors.phoneNumber}>
-              <TInput value={form.phoneNumber} onChange={setField("phoneNumber")}
-                placeholder="+998 90 000 00 00" type="tel" maxLength={17} />
+            <FormField
+              label="Telefon raqam"
+              required
+              icon={Phone}
+              error={errors.phoneNumber}
+            >
+              <TInput
+                value={form.phoneNumber}
+                onChange={setField("phoneNumber")}
+                placeholder="+998 ** *** ** **"
+                type="tel"
+                maxLength={17}
+              />
             </FormField>
 
             {!isEdit ? (
               <FormField label="Email" required error={errors.email}>
-                <TInput value={form.email} onChange={setField("email")}
-                  placeholder="company@mail.com" type="email" maxLength={254} />
+                <TInput
+                  value={form.email}
+                  onChange={setField("email")}
+                  placeholder="company@mail.com"
+                  type="email"
+                  maxLength={254}
+                />
               </FormField>
             ) : null}
 
             {!isEdit ? (
               <FormField label="Parol" required error={errors.password}>
-                <TInput value={form.password} onChange={setField("password")}
-                  placeholder="Parol kiriting" type="password" maxLength={128} />
+                <TInput
+                  value={form.password}
+                  onChange={setField("password")}
+                  placeholder="Parol kiriting"
+                  type="password"
+                  maxLength={128}
+                />
               </FormField>
             ) : null}
 
-            <FormField label="Tavsif" icon={Briefcase} error={errors.description}>
-              <textarea value={form.description}
+            <FormField
+              label="Tavsif"
+              icon={Briefcase}
+              error={errors.description}
+            >
+              <textarea
+                value={form.description}
                 onChange={(e) => setField("description")(e.target.value)}
-                placeholder="Kompaniya haqida qisqacha..." rows={3} maxLength={600}
-                className="w-full resize-none rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]" />
+                placeholder="Kompaniya haqida qisqacha..."
+                rows={3}
+                maxLength={600}
+                className="w-full resize-none rounded-xl border border-white/[0.07] bg-[#0a1929] px-3 py-2.5 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]"
+              />
             </FormField>
 
             <div>
@@ -1000,16 +1276,26 @@ function CompanyDrawer({ company, onClose, onSaved }) {
                 {ALL_PERMISSIONS.map((permission) => {
                   const isActive = form.permissions.includes(permission);
                   return (
-                    <button key={permission} type="button" onClick={() => togglePermission(permission)}
+                    <button
+                      key={permission}
+                      type="button"
+                      onClick={() => togglePermission(permission)}
                       className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
                         isActive
                           ? "border-blue-500/40 bg-blue-600/[0.15] text-blue-300"
                           : "border-white/10 text-gray-500"
-                      }`}>
-                      <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${
-                        isActive ? "border-blue-500 bg-blue-500" : "border-gray-500 bg-transparent"
-                      }`}>
-                        {isActive ? <Check size={9} className="text-white" /> : null}
+                      }`}
+                    >
+                      <div
+                        className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${
+                          isActive
+                            ? "border-blue-500 bg-blue-500"
+                            : "border-gray-500 bg-transparent"
+                        }`}
+                      >
+                        {isActive ? (
+                          <Check size={9} className="text-white" />
+                        ) : null}
                       </div>
                       {permissionLabel(permission)}
                     </button>
@@ -1017,35 +1303,56 @@ function CompanyDrawer({ company, onClose, onSaved }) {
                 })}
               </div>
               {errors.permissions ? (
-                <p className="mt-1 text-[11px] text-red-400">{errors.permissions}</p>
+                <p className="mt-1 text-[11px] text-red-400">
+                  {errors.permissions}
+                </p>
               ) : null}
             </div>
 
             <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0a1929] px-3 py-2.5">
               <div>
-                <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">Status</p>
-                <p className={`mt-1 text-xs font-semibold ${form.status ? "text-emerald-300" : "text-gray-400"}`}>
+                <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Status
+                </p>
+                <p
+                  className={`mt-1 text-xs font-semibold ${form.status ? "text-emerald-300" : "text-gray-400"}`}
+                >
                   {form.status ? "Aktiv" : "Nofaol"}
                 </p>
               </div>
-              <Switch checked={Boolean(form.status)} onCheckedChange={(v) => setField("status")(v)} />
+              <Switch
+                checked={Boolean(form.status)}
+                onCheckedChange={(v) => setField("status")(v)}
+              />
             </div>
 
-            <ImageDropZone fileName={form.logo?.name} preview={preview}
-              onChange={handleImage} error={errors.logo} />
+            <ImageDropZone
+              fileName={form.logo?.name}
+              preview={preview}
+              onChange={handleImage}
+              error={errors.logo}
+            />
           </div>
 
           <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
-            <button type="button" onClick={onClose}
-              className="flex-1 rounded-xl border border-white/[0.08] py-2.5 text-sm font-medium text-gray-400 transition-colors hover:text-white">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-white/[0.08] py-2.5 text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
               Bekor
             </button>
-            <button type="submit" disabled={submitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50"
+            >
               {submitting ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
-                <><Check size={15} /> {isEdit ? "Saqlash" : "Qo'shish"}</>
+                <>
+                  <Check size={15} /> {isEdit ? "Saqlash" : "Qo'shish"}
+                </>
               )}
             </button>
           </div>
@@ -1068,8 +1375,11 @@ function extractCompanies(payload) {
 
 function extractTotal(payload, fallback) {
   const candidates = [
-    payload?.total, payload?.count,
-    payload?.pagination?.total, payload?.meta?.total, payload?.data?.total,
+    payload?.total,
+    payload?.count,
+    payload?.pagination?.total,
+    payload?.meta?.total,
+    payload?.data?.total,
   ];
   for (const value of candidates) {
     const n = Number(value);
@@ -1113,11 +1423,18 @@ function CompaniesContent() {
           `/company/all?limit=${PER_PAGE}&page=${pageToLoad}`,
           { signal },
         );
-        const payload = await parseApiResponse(response, "Kompaniyalar yuklanmadi");
+        const payload = await parseApiResponse(
+          response,
+          "Kompaniyalar yuklanmadi",
+        );
 
         const rawList = extractCompanies(payload);
         const visibleList = rawList
-          .filter((c) => !superadminCompanyId || String(c?.id) !== String(superadminCompanyId))
+          .filter(
+            (c) =>
+              !superadminCompanyId ||
+              String(c?.id) !== String(superadminCompanyId),
+          )
           .map((c) => ({
             ...c,
             permissions: normalizePermissions(c?.permissions),
@@ -1126,7 +1443,10 @@ function CompaniesContent() {
           }));
 
         const hiddenCount = rawList.length - visibleList.length;
-        const resolvedTotal = Math.max(0, extractTotal(payload, visibleList.length) - hiddenCount);
+        const resolvedTotal = Math.max(
+          0,
+          extractTotal(payload, visibleList.length) - hiddenCount,
+        );
 
         setCompanies(visibleList);
         setTotal(resolvedTotal);
@@ -1149,7 +1469,9 @@ function CompaniesContent() {
 
   useEffect(() => {
     if (!selectedCompany?.id) return;
-    const updated = companies.find((item) => String(item?.id) === String(selectedCompany.id));
+    const updated = companies.find(
+      (item) => String(item?.id) === String(selectedCompany.id),
+    );
     if (updated) setSelectedCompany(updated);
   }, [companies, selectedCompany?.id]);
 
@@ -1165,7 +1487,10 @@ function CompaniesContent() {
   }, [companies, normalizedQuery]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
-  const pageNumbers = useMemo(() => buildPageNumbers(totalPages, page), [totalPages, page]);
+  const pageNumbers = useMemo(
+    () => buildPageNumbers(totalPages, page),
+    [totalPages, page],
+  );
 
   const handleDelete = async () => {
     if (!deleteTarget || deleting) return;
@@ -1174,7 +1499,10 @@ function CompaniesContent() {
       setDeleteTarget(null);
       return;
     }
-    if (superadminCompanyId && String(deleteTarget.id) === String(superadminCompanyId)) {
+    if (
+      superadminCompanyId &&
+      String(deleteTarget.id) === String(superadminCompanyId)
+    ) {
       toast.error("O'zingizning kompaniyangizni o'chirish mumkin emas");
       setDeleteTarget(null);
       return;
@@ -1182,7 +1510,9 @@ function CompaniesContent() {
 
     setDeleting(true);
     try {
-      const response = await apiFetch(`/company/delete/${deleteTarget.id}`, { method: "DELETE" });
+      const response = await apiFetch(`/company/delete/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
       await parseApiResponse(response, "Kompaniyani o'chirishda xatolik");
       toast.success("Kompaniya o'chirildi");
       if (selectedCompany?.id === deleteTarget.id) setSelectedCompany(null);
@@ -1197,27 +1527,39 @@ function CompaniesContent() {
     }
   };
 
+  if (loading) {
+    return <KotibamLoader fullScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-[#071828] font-[Segoe_UI,sans-serif]">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] bg-[size:44px_44px] opacity-[0.015]" />
 
-      <div className="sticky top-0 z-10 animate-in fade-in slide-in-from-top-2 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur duration-300">
+      <div className="animate-in fade-in slide-in-from-top-2 sticky top-0 z-10 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur duration-300">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-bold text-white">Kompaniyalar</h1>
-            <p className="mt-0.5 text-xs text-gray-600">
-              {loading ? "Yuklanmoqda..." : `${total} ta kompaniya`}
-            </p>
+            <p className="mt-0.5 text-xs text-gray-600">{total} ta kompaniya</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative hidden sm:block">
-              <Search size={13} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-600" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Qidirish..." maxLength={120}
-                className="w-48 rounded-xl border border-white/[0.07] bg-[#0a1929] py-2 pr-3 pl-8 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]" />
+              <Search
+                size={13}
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-600"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Qidirish..."
+                maxLength={120}
+                className="w-48 rounded-xl border border-white/[0.07] bg-[#0a1929] py-2 pr-3 pl-8 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-[#3b82f6]"
+              />
             </div>
-            <button type="button" onClick={() => setDrawer("add")}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)] transition-all hover:opacity-90 active:scale-95">
+            <button
+              type="button"
+              onClick={() => setDrawer("add")}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)] transition-all hover:opacity-90 active:scale-95"
+            >
               <Plus size={16} />
               <span className="hidden sm:inline">Yangi kompaniya</span>
               <span className="sm:hidden">Yangi</span>
@@ -1227,24 +1569,27 @@ function CompaniesContent() {
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-6">
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={`sk-${i}`} />)}
-          </div>
-        ) : filteredCompanies.length === 0 ? (
-          <div className="flex animate-in fade-in slide-in-from-bottom-3 flex-col items-center justify-center gap-4 py-24 text-center duration-300">
+        {filteredCompanies.length === 0 ? (
+          <div className="animate-in fade-in slide-in-from-bottom-3 flex flex-col items-center justify-center gap-4 py-24 text-center duration-300">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
               <Building2 size={28} className="text-gray-700" />
             </div>
             <p className="text-base font-semibold text-white">
-              {normalizedQuery ? "Hech narsa topilmadi" : "Hech qanday kompaniya yo'q"}
+              {normalizedQuery
+                ? "Hech narsa topilmadi"
+                : "Hech qanday kompaniya yo'q"}
             </p>
             <p className="text-sm text-gray-600">
-              {normalizedQuery ? "Boshqa so'z bilan qidiring" : "Birinchi kompaniyangizni qo'shing"}
+              {normalizedQuery
+                ? "Boshqa so'z bilan qidiring"
+                : "Birinchi kompaniyangizni qo'shing"}
             </p>
             {!normalizedQuery ? (
-              <button type="button" onClick={() => setDrawer("add")}
-                className="mt-2 flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-2.5 text-sm font-semibold text-white">
+              <button
+                type="button"
+                onClick={() => setDrawer("add")}
+                className="mt-2 flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-2.5 text-sm font-semibold text-white"
+              >
                 <Plus size={15} /> Kompaniya qo'shish
               </button>
             ) : null}
@@ -1253,39 +1598,61 @@ function CompaniesContent() {
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredCompanies.map((company) => (
-                <CompanyCard key={company.id} company={company}
+                <CompanyCard
+                  key={company.id}
+                  company={company}
                   onView={(item) => setSelectedCompany(item)}
-                  onEdit={(item) => { setSelectedCompany(null); setDrawer(item); }}
+                  onEdit={(item) => {
+                    setSelectedCompany(null);
+                    setDrawer(item);
+                  }}
                   onDelete={(item) => setDeleteTarget(item)}
-                  lockDelete={!canDeleteCompanies} />
+                  lockDelete={!canDeleteCompanies}
+                />
               ))}
             </div>
 
             {totalPages > 1 ? (
-              <div className="mt-8 flex animate-in fade-in slide-in-from-bottom-3 items-center justify-center gap-2 duration-300">
-                <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              <div className="animate-in fade-in slide-in-from-bottom-3 mt-8 flex items-center justify-center gap-2 duration-300">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30"
+                >
                   <ChevronLeft size={16} />
                 </button>
                 {pageNumbers.map((item, index) =>
                   item === "..." ? (
-                    <span key={`dots-${index}`} className="text-sm text-gray-600">...</span>
+                    <span
+                      key={`dots-${index}`}
+                      className="text-sm text-gray-600"
+                    >
+                      ...
+                    </span>
                   ) : (
-                    <button key={`page-${item}`} type="button" onClick={() => setPage(item)}
+                    <button
+                      key={`page-${item}`}
+                      type="button"
+                      onClick={() => setPage(item)}
                       className={`h-9 min-w-[36px] rounded-xl border px-3 text-sm font-medium transition-all ${
                         item === page
                           ? "border-blue-600 bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white"
                           : "border-white/[0.08] text-gray-400"
-                      }`}>
+                      }`}
+                    >
                       {item}
                     </button>
                   ),
                 )}
-                <button type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30">
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-gray-400 transition-colors hover:text-white disabled:opacity-30"
+                >
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -1303,14 +1670,23 @@ function CompaniesContent() {
       ) : null}
 
       {deleteTarget ? (
-        <ConfirmDialog company={deleteTarget} onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)} deleting={deleting} />
+        <ConfirmDialog
+          company={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+          deleting={deleting}
+        />
       ) : null}
 
       {selectedCompany ? (
-        <CompanyDetailModal company={selectedCompany}
+        <CompanyDetailModal
+          company={selectedCompany}
           onClose={() => setSelectedCompany(null)}
-          onEdit={(item) => { setSelectedCompany(null); setDrawer(item); }} />
+          onEdit={(item) => {
+            setSelectedCompany(null);
+            setDrawer(item);
+          }}
+        />
       ) : null}
     </div>
   );

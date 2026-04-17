@@ -14,8 +14,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 // const IMG_API = "https://back.prohome.uz/api/v1/image";
@@ -489,20 +489,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function CardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.04] bg-[#0f2438]">
-      <Skeleton className="h-44 w-full rounded-none" />
-      <div className="space-y-2 p-4">
-        <Skeleton className="h-4 w-2/3 rounded-lg" />
-        <Skeleton className="h-3 w-1/2 rounded-lg" />
-        <Skeleton className="mt-3 h-6 w-24 rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Projects() {
   const role = getCurrentRole();
@@ -530,6 +516,10 @@ export default function Projects() {
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  if (loading) {
+    return <KotibamLoader fullScreen />;
+  }
 
   const handleDelete = async () => {
     if (!delTarget || deleting) return;
@@ -577,9 +567,7 @@ export default function Projects() {
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-white">Loyihalar</h1>
-            <p className="mt-0.5 text-xs text-gray-600">
-              {loading ? "Yuklanmoqda..." : `${projects.length} ta loyiha`}
-            </p>
+            <p className="mt-0.5 text-xs text-gray-600">{projects.length} ta loyiha</p>
           </div>
           <button
             onClick={() => setDrawer("add")}
@@ -597,15 +585,7 @@ export default function Projects() {
 
       {/* Content */}
       <div className="mx-auto max-w-6xl px-6 py-6">
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array(8)
-              .fill(0)
-              .map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-          </div>
-        ) : projects.length === 0 ? (
+        {projects.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center gap-4 py-24 text-center"
             style={{ animation: "fadeUp .4s ease both" }}

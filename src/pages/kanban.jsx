@@ -9,6 +9,7 @@ import {
   KanbanOverlay,
 } from "@/components/reui/kanban";
 import { useEffect, useState } from "react";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const STATUS_COLORS = [
   {
@@ -172,24 +173,7 @@ export default function KanbanPage() {
   }, [rColumns]);
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#080a0f]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-2 w-2 animate-bounce rounded-full bg-violet-400"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-          <p className="text-sm tracking-widest text-white/40 uppercase">
-            Loading board
-          </p>
-        </div>
-      </div>
-    );
+    return <KotibamLoader fullScreen />;
   }
 
   return (

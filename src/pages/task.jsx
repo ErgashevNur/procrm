@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
+import KotibamLoader from "@/components/KotibamLoader";
 import {
   Dialog,
   DialogContent,
@@ -403,18 +403,10 @@ export default function Tasks() {
 
   if (loading) {
     return (
-      <div className="flex h-full flex-col bg-[#071828]">
-        <div className="border-b border-white/5 px-6 py-4">
-          <Skeleton className="h-6 w-32 rounded-lg" />
-        </div>
-        <div className="flex flex-col gap-2 p-6">
-          {Array(6)
-            .fill(0)
-            .map((_, i) => (
-              <Skeleton key={i} className="h-12 rounded-xl" />
-            ))}
-        </div>
-      </div>
+      <KotibamLoader
+        minHeight="100%"
+        className="h-full rounded-none border-0 bg-[#071828]"
+      />
     );
   }
 

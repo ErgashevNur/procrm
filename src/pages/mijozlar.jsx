@@ -15,7 +15,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Skeleton } from "../components/ui/skeleton";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   Select,
@@ -37,16 +36,10 @@ import {
 import { useExcelWorker } from "../hooks/Useexcelworker";
 import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "sonner";
-import {
-  useVoiceVisualizer,
-  VoiceVisualizer,
-} from "react-voice-visualizer";
+import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
-
-
-
-
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TRASH_DROPPABLE_ID = "__lead_trash__";
@@ -1187,9 +1180,9 @@ export default function Pipeline() {
   }, []);
 
   const findLeadById = (leadId) =>
-    statuses.flatMap((status) => status.leads || []).find(
-      (lead) => Number(lead.id) === Number(leadId),
-    );
+    statuses
+      .flatMap((status) => status.leads || [])
+      .find((lead) => Number(lead.id) === Number(leadId));
 
   const handleDeleteLeadConfirm = async () => {
     if (!pendingDeleteLead?.id) return;
@@ -1205,7 +1198,10 @@ export default function Pipeline() {
       });
       if (!res) throw new Error("Serverga ulanishda xatolik");
       if (!res.ok) {
-        const message = await extractApiMessage(res, "Mijozni o'chirib bo'lmadi");
+        const message = await extractApiMessage(
+          res,
+          "Mijozni o'chirib bo'lmadi",
+        );
         throw new Error(message);
       }
 
@@ -1625,11 +1621,7 @@ export default function Pipeline() {
   const hasRecordedAudio = Boolean(recordedBlob);
   const aiDraftReady = hasAiDraftData(aiDraft);
   const currentVoiceStep =
-    aiProcessing || isProcessingRecordedAudio
-      ? 2
-      : aiDraftReady
-        ? 3
-        : 1;
+    aiProcessing || isProcessingRecordedAudio ? 2 : aiDraftReady ? 3 : 1;
   const voiceStatusText = aiProcessing
     ? "AI ga yuborilmoqda..."
     : isProcessingRecordedAudio
@@ -1638,18 +1630,19 @@ export default function Pipeline() {
         ? "Audio yozilmoqda"
         : currentVoiceStep === 3
           ? "Maydonlar to'ldirildi"
-        : hasRecordedAudio || isAvailableRecordedAudio
-          ? "Tahlilga yuborishga tayyor"
-          : "Audio kutilmoqda";
-  const voiceStatusClass = aiProcessing || isProcessingRecordedAudio
-    ? "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"
-    : isRecordingInProgress
-      ? "border-red-400/30 bg-red-500/10 text-red-200"
-      : currentVoiceStep === 3
-        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-      : hasRecordedAudio || isAvailableRecordedAudio
-        ? "border-cyan-400/30 bg-cyan-500/10 text-cyan-200"
-        : "border-white/10 bg-white/5 text-gray-300";
+          : hasRecordedAudio || isAvailableRecordedAudio
+            ? "Tahlilga yuborishga tayyor"
+            : "Audio kutilmoqda";
+  const voiceStatusClass =
+    aiProcessing || isProcessingRecordedAudio
+      ? "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"
+      : isRecordingInProgress
+        ? "border-red-400/30 bg-red-500/10 text-red-200"
+        : currentVoiceStep === 3
+          ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+          : hasRecordedAudio || isAvailableRecordedAudio
+            ? "border-cyan-400/30 bg-cyan-500/10 text-cyan-200"
+            : "border-white/10 bg-white/5 text-gray-300";
   const canSendRecordedAudio =
     hasRecordedAudio &&
     !aiProcessing &&
@@ -1671,21 +1664,10 @@ export default function Pipeline() {
 
   if (appState === "loading") {
     return (
-      <div className="flex h-full flex-col bg-[#0d1e35]">
-        <div className="flex shrink-0 items-center gap-4 border-b border-[#284860] bg-[#0f2231] p-6">
-          <Skeleton className="h-10 w-64 rounded-lg" />
-        </div>
-        <div className="flex flex-1 gap-4 overflow-x-auto p-6">
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="w-80 shrink-0">
-                <Skeleton className="mb-3 h-10 rounded-lg" />
-                <Skeleton className="h-64 rounded-lg" />
-              </div>
-            ))}
-        </div>
-      </div>
+      <KotibamLoader
+        minHeight="100%"
+        className="h-full rounded-none border-0 bg-[#0d1e35]"
+      />
     );
   }
 
@@ -2101,7 +2083,7 @@ export default function Pipeline() {
             icon={FileSpreadsheet}
             label="Google Sheets"
             onClick={() => setSheetDialogOpen(true)}
-            className="bg-transparent hover:bg-white/[0.04] active:bg-transparent focus-visible:outline-none focus-visible:ring-0"
+            className="bg-transparent hover:bg-white/[0.04] focus-visible:ring-0 focus-visible:outline-none active:bg-transparent"
           />
 
           <IconBtn
@@ -2122,7 +2104,9 @@ export default function Pipeline() {
           >
             <DialogContent className="!top-4 !right-6 !bottom-4 !left-6 !h-auto !w-auto !max-w-none !translate-x-0 !translate-y-0 overflow-hidden rounded-2xl border border-[#21435b] bg-[#0b1c2d] p-0 text-white">
               <DialogHeader className="border-b border-white/10 bg-[#10273c] px-6 py-4 text-left">
-                <DialogTitle className="text-xl">AI audio yordamchisi</DialogTitle>
+                <DialogTitle className="text-xl">
+                  AI audio yordamchisi
+                </DialogTitle>
                 <DialogDescription className="text-cyan-100/80">
                   Audio yozing, AI tahlil qiladi va o'ng paneldagi maydonlar
                   orqali natijani kuzating.
@@ -2170,17 +2154,22 @@ export default function Pipeline() {
                             <FieldLabel>Telefon</FieldLabel>
                             <Input
                               value={formatPhoneDisplay(aiDraft.phone || "")}
-                              placeholder="+998 90 123 45 67"
+                              placeholder="+998 ** *** ** **"
                               onChange={(e) =>
-                                handleAiDraftFieldChange("phone", e.target.value)
+                                handleAiDraftFieldChange(
+                                  "phone",
+                                  e.target.value,
+                                )
                               }
                             />
                           </Field>
                           <Field>
                             <FieldLabel>Qo'shimcha</FieldLabel>
                             <Input
-                              value={formatPhoneDisplay(aiDraft.extraPhone || "")}
-                              placeholder="+998 90 123 45 67"
+                              value={formatPhoneDisplay(
+                                aiDraft.extraPhone || "",
+                              )}
+                              placeholder="+998 ** *** ** *"
                               onChange={(e) =>
                                 handleAiDraftFieldChange(
                                   "extraPhone",
@@ -2211,7 +2200,10 @@ export default function Pipeline() {
                               value={formatBudgetDisplay(aiDraft.budjet || "")}
                               placeholder="120 000 000"
                               onChange={(e) =>
-                                handleAiDraftFieldChange("budjet", e.target.value)
+                                handleAiDraftFieldChange(
+                                  "budjet",
+                                  e.target.value,
+                                )
                               }
                             />
                           </Field>
@@ -2223,7 +2215,10 @@ export default function Pipeline() {
                               value={aiDraft.adress || ""}
                               placeholder="Manzil"
                               onChange={(e) =>
-                                handleAiDraftFieldChange("adress", e.target.value)
+                                handleAiDraftFieldChange(
+                                  "adress",
+                                  e.target.value,
+                                )
                               }
                             />
                           </Field>
@@ -2233,7 +2228,10 @@ export default function Pipeline() {
                               value={aiDraft.source || ""}
                               placeholder="Tanlang..."
                               onChange={(e) =>
-                                handleAiDraftFieldChange("source", e.target.value)
+                                handleAiDraftFieldChange(
+                                  "source",
+                                  e.target.value,
+                                )
                               }
                             />
                           </Field>
@@ -2247,7 +2245,9 @@ export default function Pipeline() {
                                 : ""
                             }
                             placeholder="VIP, comfort..."
-                            onChange={(e) => handleAiDraftTagsChange(e.target.value)}
+                            onChange={(e) =>
+                              handleAiDraftTagsChange(e.target.value)
+                            }
                           />
                         </Field>
                       </FieldGroup>
@@ -2295,12 +2295,8 @@ export default function Pipeline() {
                         </span>
                       </div>
                       <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
-                        <span className={getVoiceStepClass(1)}>
-                          1. Audio
-                        </span>
-                        <span className={getVoiceStepClass(2)}>
-                          2. Tahlil
-                        </span>
+                        <span className={getVoiceStepClass(1)}>1. Audio</span>
+                        <span className={getVoiceStepClass(2)}>2. Tahlil</span>
                         <span className={getVoiceStepClass(3)}>
                           3. To'ldirish
                         </span>

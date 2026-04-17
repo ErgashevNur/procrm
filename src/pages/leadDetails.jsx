@@ -31,7 +31,6 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "../components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   MANAGEMENT_ROLES,
@@ -39,6 +38,7 @@ import {
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TOAST_STYLE = {
@@ -1355,40 +1355,7 @@ const LeadDetails = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-screen overflow-hidden bg-[#071828] text-gray-200">
-        <div className="flex w-96 shrink-0 flex-col border-r border-white/[0.05] bg-[#0a1929]">
-          <div className="border-b border-white/[0.05] p-5">
-            <div className="mb-3 flex items-center gap-3">
-              <Skeleton className="h-8 w-8 rounded-xl bg-white/5" />
-              <Skeleton className="h-5 w-28 rounded-lg bg-white/5" />
-            </div>
-          </div>
-          <div className="space-y-4 p-5">
-            {Array(6)
-              .fill(0)
-              .map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-9 w-full rounded-xl bg-white/[0.03]"
-                />
-              ))}
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col">
-          <div className="flex-1 space-y-3 p-6">
-            {Array(4)
-              .fill(0)
-              .map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-24 w-full rounded-xl bg-white/[0.03]"
-                />
-              ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <KotibamLoader fullScreen />;
   }
 
   if (!dealData) return null;

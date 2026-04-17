@@ -27,6 +27,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -265,10 +266,6 @@ function EmptyState({ text }) {
   );
 }
 
-function SkeletonBlock({ className }) {
-  return <div className={`crm-skeleton ${className}`} />;
-}
-
 function normalizeTaskStatsPayload(json) {
   const source = json?.value || json?.data?.value || json?.data || json || {};
 
@@ -429,6 +426,10 @@ export default function Analitika() {
     { name: "Muddati o'tgan", value: taskStats.expired, fill: "#ff453a" },
   ];
 
+  if (loading) {
+    return <KotibamLoader fullScreen />;
+  }
+
   return (
     <div className="crm-page">
       <div className="pointer-events-none absolute inset-0 opacity-[0.05]">
@@ -551,9 +552,7 @@ export default function Analitika() {
               </div>
             </div>
 
-            {loading ? (
-              <SkeletonBlock className="h-[360px]" />
-            ) : trendRows.length === 0 ? (
+            {trendRows.length === 0 ? (
               <EmptyState text="Trend chizmasi uchun ma'lumot topilmadi." />
             ) : (
               <ChartContainer className="h-[360px]" config={chartConfig}>
@@ -642,9 +641,7 @@ export default function Analitika() {
               description="Har bir status uchun ID, lead soni, ulushi va budjeti bir joyda."
             />
 
-            {loading ? (
-              <SkeletonBlock className="h-[360px]" />
-            ) : analytics.pie.length === 0 ? (
+            {analytics.pie.length === 0 ? (
               <EmptyState text="Status ulushlari uchun ma'lumot topilmadi." />
             ) : (
               <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
@@ -733,9 +730,7 @@ export default function Analitika() {
             description="Jami vazifalar, bajarilganlar, jarayondagi va kechikkan ishlar kesimi."
           />
 
-          {loading ? (
-            <SkeletonBlock className="h-[320px]" />
-          ) : taskStats.total === 0 ? (
+          {taskStats.total === 0 ? (
             <EmptyState text="Task statistikasi topilmadi." />
           ) : (
             <div className="grid gap-4 xl:grid-cols-[0.75fr_1.25fr] xl:items-center">
@@ -852,9 +847,7 @@ export default function Analitika() {
               description="Lead soni va tushum bo'yicha faol xodimlar ko'rsatkichi."
             />
 
-            {loading ? (
-              <SkeletonBlock className="h-[340px]" />
-            ) : employeeRows.length === 0 ? (
+            {employeeRows.length === 0 ? (
               <EmptyState text="Xodimlar bo'yicha ma'lumot topilmadi." />
             ) : (
               <>
@@ -991,9 +984,7 @@ export default function Analitika() {
             description="Qaysi statuslar son va qiymat bo'yicha asosiy og'irlikni ushlayotganini ko'rsatadi."
           />
 
-          {loading ? (
-            <SkeletonBlock className="h-[360px]" />
-          ) : rows.length === 0 ? (
+          {rows.length === 0 ? (
             <EmptyState text="Statuslar bo'yicha taqqoslash uchun ma'lumot topilmadi." />
           ) : (
             <ChartContainer className="h-[360px]" config={chartConfig}>

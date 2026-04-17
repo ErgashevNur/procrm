@@ -42,7 +42,6 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "../components/ui/skeleton";
 import { ROLES, canDeleteData, getCurrentRole } from "@/lib/rbac";
 import {
   Dialog,
@@ -54,6 +53,7 @@ import {
 import { Button } from "../components/ui/button";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import { getProjectSlugFromStorage, getPublicFormUrl } from "@/lib/formLinks";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -1881,18 +1881,7 @@ export default function AddStatus() {
   const googleForms = formTemplates;
 
   if (loading) {
-    return (
-      <div className="flex gap-0 overflow-x-auto bg-[#0a1929] p-6">
-        {Array(5)
-          .fill(0)
-          .map((_, i) => (
-            <div key={i} className="w-72 shrink-0">
-              <Skeleton className="mb-3 h-12 w-full rounded-lg bg-[#1c2b3a]" />
-              <Skeleton className="h-48 w-full rounded-lg bg-[#1c2b3a]" />
-            </div>
-          ))}
-      </div>
-    );
+    return <KotibamLoader fullScreen />;
   }
 
   if (!projectId) {
