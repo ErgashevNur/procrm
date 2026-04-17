@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
-import { getGoogleAuthUrl } from "@/lib/auth";
+import { getGoogleAuthUrl, persistAuthSession } from "@/lib/auth";
+import { getDefaultRouteByRole } from "@/lib/rbac";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const DEFAULT_PERMISSIONS = ["CRM"];
@@ -33,6 +34,15 @@ function getResponseMessage(payload, fallback) {
     return payload.error;
   }
   return fallback;
+}
+
+function hasAccessToken(payload) {
+  const source =
+    payload?.data && typeof payload.data === "object" ? payload.data : payload;
+  if (!source || typeof source !== "object") return false;
+  return Boolean(
+    source.accessToken || source.access_token || source.token || source.jwt,
+  );
 }
 
 export default function Register() {
@@ -128,8 +138,16 @@ export default function Register() {
           "Ro'yxatdan o'tish muvaffaqiyatli yakunlandi",
         ),
       );
+
+      if (hasAccessToken(payload)) {
+        const authData = await persistAuthSession(payload, API_BASE);
+        setForm(initialForm);
+        navigate(getDefaultRouteByRole(authData.user.role), { replace: true });
+        return;
+      }
+
       setForm(initialForm);
-      navigate("/login");
+      navigate("/login", { replace: true });
     } catch (error) {
       toast.error(error?.message || "Ro'yxatdan o'tishda xatolik");
     } finally {
