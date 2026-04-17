@@ -8,7 +8,6 @@ import {
   Loader2,
   FolderOpen,
   Building2,
-  Hash,
   ImageIcon,
   Check,
   AlertTriangle,
@@ -53,7 +52,6 @@ const EMPTY = {
   name: "",
   address: "",
   companyId: "",
-  otherId: "",
   image3d: null, // File object
 };
 
@@ -231,7 +229,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
     name: project?.name ?? "",
     address: project?.address ?? "",
     companyId: project?.companyId ?? companyId,
-    otherId: project?.otherId ?? "",
     img: null,
   });
   const [preview, setPreview] = useState(
@@ -266,7 +263,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
       fd.append("name", form.name.trim());
       fd.append("address", form.address.trim());
       fd.append("companyId", Number(form.companyId));
-      if (form.otherId) fd.append("otherId", Number(form.otherId));
       if (form.image3d) fd.append("image3d", form.image3d);
 
       const url = isEdit ? `${API}/projects/${project.id}` : `${API}/projects`;
@@ -345,15 +341,6 @@ function ProjectDrawer({ project, onClose, onSaved }) {
                 value={form.address}
                 onChange={set("address")}
                 placeholder="To'liq manzil"
-              />
-            </FormField>
-
-            <FormField label="Other ID" icon={Hash} error={errors.otherId}>
-              <TInput
-                type="number"
-                value={form.otherId}
-                onChange={set("otherId")}
-                placeholder="ixtiyoriy"
               />
             </FormField>
 
@@ -475,14 +462,6 @@ function ProjectCard({ project, onEdit, onDelete, index, canDelete = true }) {
               {project.companyId}
             </span>
           </div>
-          {project.otherId && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1">
-              <Hash size={10} className="text-purple-400" />
-              <span className="text-[10px] font-bold text-white">
-                {project.otherId}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
