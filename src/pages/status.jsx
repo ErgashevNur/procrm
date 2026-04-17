@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, FolderOpen, ChevronDown, Check, Layers } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Skeleton } from "../components/ui/skeleton";
+import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const IMG_API = "https://back.prohome.uz/api/v1/image";
@@ -161,27 +161,6 @@ function StatusCol({ col, index }) {
   );
 }
 
-// ── Skeleton col ──────────────────────────────────────────────────────────────
-function ColSkeleton() {
-  return (
-    <div
-      className="w-[272px] shrink-0 animate-pulse overflow-hidden rounded-xl"
-      style={{
-        background: "#0b1c2c",
-        border: "1px solid rgba(255,255,255,0.04)",
-        alignSelf: "stretch",
-      }}
-    >
-      <div className="h-px bg-white/[0.04]" />
-      <div className="flex items-center gap-2.5 border-b border-white/[0.04] px-4 py-3">
-        <div className="h-1.5 w-1.5 rounded-full bg-white/[0.07]" />
-        <div className="h-3 flex-1 rounded bg-white/[0.05]" />
-        <div className="h-3 w-4 rounded bg-white/[0.04]" />
-      </div>
-    </div>
-  );
-}
-
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Status() {
   const [projects, setProjects] = useState([]);
@@ -250,6 +229,15 @@ export default function Status() {
     }
   };
 
+  if (loading) {
+    return (
+      <KotibamLoader
+        minHeight="100%"
+        className="h-full rounded-none border-0 bg-[#071828]"
+      />
+    );
+  }
+
   // ── Layout: section fills viewport, no page scroll ────────────────────────
   return (
     <section
@@ -285,18 +273,13 @@ export default function Status() {
             flex: 1,
           }}
         >
-          {loading ? (
-            <Skeleton className="h-8 w-44 rounded-lg bg-white/[0.05]" />
-          ) : (
-            <ProjectSelect
-              projects={projects}
-              selected={selectedProject}
-              onChange={handleProjectChange}
-            />
-          )}
+          <ProjectSelect
+            projects={projects}
+            selected={selectedProject}
+            onChange={handleProjectChange}
+          />
           {/* Status color dots */}
-          {!loading &&
-            selectedProject &&
+          {selectedProject &&
             !statusLoading &&
             status.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -339,24 +322,7 @@ export default function Status() {
       </div>
 
       {/* ── Body ── */}
-      {loading ? (
-        <div
-          style={{
-            display: "flex",
-            flex: 1,
-            gap: 12,
-            padding: 20,
-            overflow: "hidden",
-            alignItems: "stretch",
-          }}
-        >
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <ColSkeleton key={i} />
-            ))}
-        </div>
-      ) : !selectedProject ? (
+      {!selectedProject ? (
         <div
           style={{
             display: "flex",
@@ -407,19 +373,16 @@ export default function Status() {
       ) : statusLoading ? (
         <div
           style={{
-            display: "flex",
             flex: 1,
-            gap: 12,
             padding: 20,
             overflow: "hidden",
-            alignItems: "stretch",
           }}
         >
-          {Array(4)
-            .fill(0)
-            .map((_, i) => (
-              <ColSkeleton key={i} />
-            ))}
+          <KotibamLoader
+            compact
+            minHeight="100%"
+            className="h-full border-white/[0.08] bg-[#0b1c2c]"
+          />
         </div>
       ) : status.length === 0 ? (
         <div

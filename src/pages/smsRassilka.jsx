@@ -34,13 +34,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   MANAGEMENT_ROLES,
   canDeleteData,
   getCurrentRole,
 } from "@/lib/rbac";
 import { apiUrl } from "@/lib/api";
+import KotibamLoader from "@/components/KotibamLoader";
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TEMPLATE_TOKENS = ["{{fullname}}", "{{firstName}}", "{{lastName}}"];
 
@@ -784,17 +784,10 @@ export default function SmsRassilka() {
 
   if (loading) {
     return (
-      <div className="space-y-4 bg-[#0b1220] p-6">
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-24 rounded-2xl" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <Skeleton className="h-[640px] rounded-2xl" />
-          <Skeleton className="h-[640px] rounded-2xl" />
-        </div>
-      </div>
+      <KotibamLoader
+        minHeight="100%"
+        className="h-full rounded-none border-0 bg-[#0b1220]"
+      />
     );
   }
 

@@ -8,6 +8,7 @@ import { Suspense, lazy } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProjectGate from "./components/ProjectGate";
 import AppSidebar from "./components/AppSidebar";
+import KotibamLoader from "./components/KotibamLoader";
 import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { NotificationProvider } from "@/hooks/useNotification";
@@ -43,15 +44,11 @@ const AppErrorFallback = lazy(() => import("./pages/error"));
 const Companies = lazy(() => import("./pages/company"));
 
 function RouteLoader() {
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#9ab8cc]">
-      Yuklanmoqda...
-    </div>
-  );
+  return <KotibamLoader fullScreen />;
 }
 
-function withLazy(component) {
-  return <Suspense fallback={<RouteLoader />}>{component}</Suspense>;
+function withLazy(component, fallback = <RouteLoader />) {
+  return <Suspense fallback={fallback}>{component}</Suspense>;
 }
 
 function RoleHomeRedirect() {
@@ -179,7 +176,7 @@ const router = createBrowserRouter([
       },
       {
         path: "tasks",
-        element: <ProjectGate>{withLazy(<Tasks />)}</ProjectGate>,
+        element: <ProjectGate>{withLazy(<Tasks />, null)}</ProjectGate>,
       },
       {
         path: "leadDetails",
@@ -245,7 +242,7 @@ const router = createBrowserRouter([
         path: "analitika",
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
-            <ProjectGate>{withLazy(<Analitika />)}</ProjectGate>
+            <ProjectGate>{withLazy(<Analitika />, null)}</ProjectGate>
           </ProtectedRoute>
         ),
       },

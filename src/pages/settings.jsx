@@ -290,14 +290,19 @@ export default function settings() {
         ? apiFetch(apiUrl("user/all/rop"))
         : Promise.resolve(null);
 
-      const [ropRes, smRes] = await Promise.all([ropPromise, salesManagerPromise]);
+      const [ropRes, smRes] = await Promise.all([
+        ropPromise,
+        salesManagerPromise,
+      ]);
       const [ropPayload, smPayload] = await Promise.all([
         ropRes?.ok ? ropRes.json() : Promise.resolve([]),
         smRes?.ok ? smRes.json() : Promise.resolve([]),
       ]);
 
       const rops = isSuperAdminLikeRole(role)
-        ? extractUsersFromPayload(ropPayload).map((u) => normalizeUser(u, "ROP"))
+        ? extractUsersFromPayload(ropPayload).map((u) =>
+            normalizeUser(u, "ROP"),
+          )
         : [];
       const salesManagers = extractUsersFromPayload(smPayload).map((u) =>
         normalizeUser(u, "SALESMANAGER"),
@@ -372,7 +377,12 @@ export default function settings() {
         payload?.success === true ||
         payload?.status === "success" ||
         payload?.created === true ||
-        Boolean(payload?.user || payload?.data?.user || payload?.data?.id || payload?.id);
+        Boolean(
+          payload?.user ||
+          payload?.data?.user ||
+          payload?.data?.id ||
+          payload?.id,
+        );
 
       if (requestSucceeded) {
         toast.success("Foydalanuvchi qo'shildi ✅");
@@ -735,9 +745,7 @@ export default function settings() {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            setShowInvitePassword((prev) => !prev)
-                          }
+                          onClick={() => setShowInvitePassword((prev) => !prev)}
                           className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
                           aria-label={
                             showInvitePassword
@@ -753,7 +761,7 @@ export default function settings() {
                         </button>
                       </div>
                     </FieldRow>
-                    <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:px-6 sm:justify-end">
+                    <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:justify-end sm:px-6">
                       <button
                         type="submit"
                         disabled={inviting}
@@ -911,8 +919,8 @@ export default function settings() {
                               !canDeleteUsers
                                 ? "Sizda o'chirish huquqi yo'q"
                                 : user.role === "SALESMANAGER"
-                                ? "O'chirish"
-                                : "ROP delete endpoint berilmagan"
+                                  ? "O'chirish"
+                                  : "ROP delete endpoint berilmagan"
                             }
                           >
                             {deletingId === user.id ? (
@@ -1060,7 +1068,8 @@ export default function settings() {
                       },
                     ].map((item) => {
                       const Icon = item.icon;
-                      const isTelegramSupport = item.title === "Telegram support";
+                      const isTelegramSupport =
+                        item.title === "Telegram support";
                       return (
                         <button
                           type="button"
@@ -1226,7 +1235,8 @@ export default function settings() {
           <DialogHeader>
             <DialogTitle>AI-CRM Support</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Backend endpoint tayyor bo'lgach shu forma xavfsiz tarzda support botga ulanadi.
+              Backend endpoint tayyor bo'lgach shu forma xavfsiz tarzda support
+              botga ulanadi.
             </DialogDescription>
           </DialogHeader>
 
@@ -1238,7 +1248,9 @@ export default function settings() {
                 </label>
                 <StyledInput
                   value={supportForm.fullName}
-                  onChange={(value) => handleSupportFieldChange("fullName", value)}
+                  onChange={(value) =>
+                    handleSupportFieldChange("fullName", value)
+                  }
                   placeholder="Ism Familiya"
                 />
               </div>
@@ -1249,7 +1261,7 @@ export default function settings() {
                 <StyledInput
                   value={supportForm.phone}
                   onChange={(value) => handleSupportFieldChange("phone", value)}
-                  placeholder="+998 90 123 45 67"
+                  placeholder="+998 ** *** ** **"
                 />
               </div>
             </div>
@@ -1260,7 +1272,9 @@ export default function settings() {
               </label>
               <StyledInput
                 value={supportForm.companyName}
-                onChange={(value) => handleSupportFieldChange("companyName", value)}
+                onChange={(value) =>
+                  handleSupportFieldChange("companyName", value)
+                }
                 placeholder="Kompaniya yoki loyiha nomi"
               />
             </div>
@@ -1271,7 +1285,9 @@ export default function settings() {
               </label>
               <textarea
                 value={supportForm.problem}
-                onChange={(e) => handleSupportFieldChange("problem", e.target.value)}
+                onChange={(e) =>
+                  handleSupportFieldChange("problem", e.target.value)
+                }
                 placeholder="Muammoni iloji boricha aniq yozing..."
                 className="min-h-32 w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
               />
@@ -1288,7 +1304,9 @@ export default function settings() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setSupportScreenshot(e.target.files?.[0] || null)}
+                    onChange={(e) =>
+                      setSupportScreenshot(e.target.files?.[0] || null)
+                    }
                     className="hidden"
                   />
                 </label>
@@ -1313,7 +1331,8 @@ export default function settings() {
 
             <div className="flex items-center justify-between rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3">
               <p className="text-xs text-gray-500">
-                Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu joy ulanadi.
+                Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu
+                joy ulanadi.
               </p>
               <button
                 type="submit"
