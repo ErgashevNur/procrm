@@ -442,17 +442,29 @@ function TemplateDialog({
   );
 }
 
+// Send mode constants
+const SEND_MODES = [
+  { key: "leads", label: "Tanlangan leadlar" },
+  { key: "status", label: "Status bo'yicha" },
+  { key: "all", label: "Barchaga" },
+];
+
 export default function SmsRassilka() {
   const projectId = getProjectId();
   const companyId = getCompanyId();
   const role = getCurrentRole();
+  // POST template: faqat ROP+ (SALESMANAGER emas)
+  const canCreateTemplate = ["SUPERADMIN", "ADMIN", "ROP"].includes(role);
+  // PATCH/DELETE: barcha management rollar
   const canManageTemplates = MANAGEMENT_ROLES.includes(role);
   const canDeleteTemplates = canManageTemplates && canDeleteData(role);
 
   const [leads, setLeads] = useState([]);
-  const [history, setHistory] = useState([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [statuses, setStatuses] = useState([]);
   const [templates, setTemplates] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [stats, setStats] = useState({ total: 0, sent: 0, pending: 0, failed: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
@@ -461,50 +473,60 @@ export default function SmsRassilka() {
   const [templatePermissionDenied, setTemplatePermissionDenied] = useState(false);
 
   const [tab, setTab] = useState("compose");
-  const [message, setMessage] = useState("");
+  const [activeTemplateId, setActiveTemplateId] = useState(null);
+  const [sendMode, setSendMode] = useState("leads");
   const [selected, setSelected] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedStatusId, setSelectedStatusId] = useState(null);
   const [templateSearch, setTemplateSearch] = useState("");
-  const [activeTemplateId, setActiveTemplateId] = useState(null);
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [templateMode, setTemplateMode] = useState("create");
   const [templateForm, setTemplateForm] = useState({ id: null, name: "", content: "" });
 
-  const textRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
-  const fetchAll = async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
+  const activeTemplate = useMemo(
+    () => templates.find((t) => t.id === activeTemplateId) || null,
+    [templates, activeTemplateId],
+  );
+  const previewMessage = resolveTemplateContent(activeTemplate);
 
+  // ── Leads search (debounced) ─────────────────────────────────────────────
+  const fetchLeads = async (q = "") => {
+    setLeadsLoading(true);
     try {
-      const [leadRes, historyRes, templateRes] = await Promise.all([
-        apiFetch(`${API}/leeds?projectId=${projectId}`, { headers: hdr(false) }),
-        apiFetch(`${API}/sms/history?projectId=${projectId}`, { headers: hdr(false) }),
-        apiFetch(`${API}/sms-template`, { headers: hdr(false) }),
-      ]);
-
-      if (leadRes?.ok) {
-        const data = await leadRes.json();
+      const params = new URLSearchParams({ projectId });
+      if (q.trim()) params.set("search", q.trim());
+      const res = await apiFetch(`${API}/leeds/all/search?${params}`);
+      if (res?.ok) {
+        const data = await res.json();
         setLeads(pickLeads(data));
       }
+    } catch {
+      // silent
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
 
-      if (historyRes?.ok) {
-        const data = await historyRes.json();
-        const list = pickList(data);
-        setHistory(list);
-        setStats({
-          total: list.length,
-          sent: list.filter((item) => ["SENT", "SUCCESS"].includes(item?.status)).length,
-          pending: list.filter((item) => item?.status === "PENDING").length,
-          failed: list.filter((item) => item?.status === "FAILED").length,
-        });
-      } else {
-        setHistory([]);
-        setStats({ total: 0, sent: 0, pending: 0, failed: 0 });
-      }
+  useEffect(() => {
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => fetchLeads(search), 350);
+    return () => clearTimeout(searchTimeoutRef.current);
+  }, [search]);
+
+  // ── Templates & history ──────────────────────────────────────────────────
+  const fetchTemplatesAndHistory = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const [templateRes, historyRes, statusRes] = await Promise.all([
+        apiFetch(`${API}/sms-template`),
+        apiFetch(`${API}/sms/history?projectId=${projectId}`),
+        apiFetch(`${API}/status/${projectId}`),
+      ]);
 
       if (templateRes?.ok) {
         const data = await templateRes.json();
@@ -517,13 +539,27 @@ export default function SmsRassilka() {
       } else if (templateRes?.status === 403) {
         setTemplates([]);
         setTemplatePermissionDenied(true);
-      } else {
-        setTemplates([]);
-        setTemplatePermissionDenied(false);
+      }
+
+      if (historyRes?.ok) {
+        const data = await historyRes.json();
+        const list = pickList(data);
+        setHistory(list);
+        setStats({
+          total: list.length,
+          sent: list.filter((i) => ["SENT", "SUCCESS"].includes(i?.status)).length,
+          pending: list.filter((i) => i?.status === "PENDING").length,
+          failed: list.filter((i) => i?.status === "FAILED").length,
+        });
+      }
+
+      if (statusRes?.ok) {
+        const data = await statusRes.json();
+        const list = pickList(data);
+        setStatuses(list);
       }
     } catch (error) {
-      console.error(error);
-      if (!silent) toast.error("SMS bo'limi ma'lumotlari yuklanmadi");
+      if (!silent) toast.error("Ma'lumotlar yuklanmadi");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -531,63 +567,39 @@ export default function SmsRassilka() {
   };
 
   useEffect(() => {
-    fetchAll();
+    fetchLeads();
+    fetchTemplatesAndHistory();
   }, []);
 
-  useEffect(() => {
-    const el = textRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
-  }, [message]);
-
-  const uniqueStatuses = useMemo(
-    () => [...new Set(leads.map((lead) => lead?.status?.name).filter(Boolean))],
-    [leads],
-  );
-
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      const query = search.trim().toLowerCase();
-      const name = getLeadName(lead).toLowerCase();
-
-      if (query && !name.includes(query) && !lead?.phone?.includes(search.trim())) {
-        return false;
-      }
-
-      if (filterStatus !== "all" && lead?.status?.name !== filterStatus) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [filterStatus, leads, search]);
 
   useEffect(() => {
-    if (selectAll) setSelected(new Set(filteredLeads.map((lead) => lead.id)));
+    if (selectAll) setSelected(new Set(leads.map((l) => l.id)));
     else setSelected(new Set());
-  }, [selectAll, filteredLeads]);
+  }, [selectAll, leads]);
 
   const filteredTemplates = useMemo(() => {
-    const query = templateSearch.trim().toLowerCase();
-    return templates.filter((template) => {
-      if (!query) return true;
-      return [template?.name, resolveTemplateContent(template)]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(query));
+    const q = templateSearch.trim().toLowerCase();
+    return templates.filter((t) => {
+      if (!q) return true;
+      return [t?.name, resolveTemplateContent(t)].filter(Boolean).some((v) => v.toLowerCase().includes(q));
     });
   }, [templateSearch, templates]);
 
-  const selectedLead = useMemo(() => {
-    if (selected.size === 0) return leads[0] || null;
-    return leads.find((lead) => selected.has(lead.id)) || leads[0] || null;
-  }, [leads, selected]);
-
-  const charCount = message.length;
-  const smsCount = Math.max(1, Math.ceil(charCount / 160));
   const selectionCount = selected.size;
-  const estimatedMessages = selectionCount * smsCount;
-  const personalizedPreview = personalizeMessage(message, selectedLead);
+  const selectedLead = useMemo(
+    () => leads.find((l) => selected.has(l.id)) || leads[0] || null,
+    [leads, selected],
+  );
+  const personalizedPreview = personalizeMessage(previewMessage, selectedLead);
+
+  const smsCount = previewMessage ? Math.max(1, Math.ceil(previewMessage.length / 160)) : 0;
+  const recipientCountForMode =
+    sendMode === "all"
+      ? leads.length
+      : sendMode === "status"
+        ? Number(statuses.find((s) => s.id === selectedStatusId)?.leadCount ?? 0)
+        : selectionCount;
+  const estimatedMessages = smsCount * recipientCountForMode;
 
   const toggleLead = (id) => {
     setSelected((prev) => {
@@ -598,184 +610,119 @@ export default function SmsRassilka() {
     });
   };
 
+  // ── Template CRUD ────────────────────────────────────────────────────────
   const openCreateTemplate = () => {
-    if (!canManageTemplates) {
-      toast.error("Sizda template yaratish uchun ruxsat yo'q");
-      return;
-    }
+    if (!canCreateTemplate) { toast.error("Sizda template yaratish uchun ruxsat yo'q"); return; }
     setTemplateMode("create");
     setTemplateForm({ id: null, name: "", content: "" });
     setTemplateDialogOpen(true);
   };
 
   const openEditTemplate = (template) => {
-    if (!canManageTemplates) {
-      toast.error("Sizda template tahrirlash uchun ruxsat yo'q");
-      return;
-    }
+    if (!canManageTemplates) { toast.error("Sizda template tahrirlash uchun ruxsat yo'q"); return; }
     setTemplateMode("edit");
-    setTemplateForm({
-      id: template?.id || null,
-      name: template?.name || "",
-      content: resolveTemplateContent(template),
-    });
+    setTemplateForm({ id: template?.id || null, name: template?.name || "", content: resolveTemplateContent(template) });
     setTemplateDialogOpen(true);
   };
 
   const applyTemplate = (template) => {
-    setMessage(resolveTemplateContent(template));
     setActiveTemplateId(template?.id || null);
     setTab("compose");
-    toast.success(`"${template?.name || "Template"}" qo'llandi`);
+    toast.success(`"${template?.name || "Template"}" tanlandi`);
   };
 
   const duplicateTemplate = (template) => {
+    if (!canCreateTemplate) { toast.error("Sizda template yaratish uchun ruxsat yo'q"); return; }
     setTemplateMode("create");
-    setTemplateForm({
-      id: null,
-      name: `${template?.name || "Template"} copy`,
-      content: resolveTemplateContent(template),
-    });
+    setTemplateForm({ id: null, name: `${template?.name || "Template"} copy`, content: resolveTemplateContent(template) });
     setTemplateDialogOpen(true);
   };
 
   const saveTemplate = async () => {
-    if (!canManageTemplates) {
-      toast.error("Sizda template boshqarish uchun ruxsat yo'q");
-      return;
-    }
-    if (!templateForm.name.trim()) {
-      toast.error("Template nomi kiritilmagan");
-      return;
-    }
-    if (!templateForm.content.trim()) {
-      toast.error("Template matni kiritilmagan");
-      return;
-    }
-    if (!companyId) {
-      toast.error("Company ID topilmadi");
-      return;
-    }
+    if (!templateForm.name.trim()) { toast.error("Template nomi kiritilmagan"); return; }
+    if (!templateForm.content.trim()) { toast.error("Template matni kiritilmagan"); return; }
+    if (!companyId) { toast.error("Company ID topilmadi"); return; }
 
     setSavingTemplate(true);
     try {
       const isEdit = templateMode === "edit" && templateForm.id;
       const url = isEdit ? `${API}/sms-template/${templateForm.id}` : `${API}/sms-template`;
-      const payload = {
-        companyId: Number(companyId),
-        name: templateForm.name.trim(),
-        content: templateForm.content.trim(),
-      };
+      const payload = { companyId: Number(companyId), name: templateForm.name.trim(), content: templateForm.content.trim() };
 
-      const response = await apiFetch(url, {
-        method: isEdit ? "PATCH" : "POST",
-        body: JSON.stringify(payload),
-      });
-
+      const response = await apiFetch(url, { method: isEdit ? "PATCH" : "POST", body: JSON.stringify(payload) });
       if (!response?.ok) {
-        const message =
-          response?.status === 403
-            ? "Sizda template saqlash uchun ruxsat yo'q"
-            : await extractApiMessage(response, "Template saqlashda xato yuz berdi");
-        throw new Error(message);
+        const msg = response?.status === 403 ? "Ruxsat yo'q" : await extractApiMessage(response, "Saqlashda xato");
+        throw new Error(msg);
       }
 
       const data = await response.json().catch(() => null);
       const saved = pickItem(data) || payload;
-
-      setTemplates((prev) => {
-        if (isEdit) {
-          return prev.map((item) =>
-            item.id === templateForm.id ? { ...item, ...saved, ...payload } : item,
-          );
-        }
-        return [saved, ...prev];
-      });
-
+      setTemplates((prev) => isEdit
+        ? prev.map((item) => item.id === templateForm.id ? { ...item, ...saved, ...payload } : item)
+        : [saved, ...prev]);
       setTemplateDialogOpen(false);
       setActiveTemplateId(saved?.id || templateForm.id || null);
       toast.success(isEdit ? "Template yangilandi" : "Template yaratildi");
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Template saqlashda xato yuz berdi");
+      toast.error(error.message || "Saqlashda xato yuz berdi");
     } finally {
       setSavingTemplate(false);
     }
   };
 
   const removeTemplate = async (template) => {
-    if (!canDeleteTemplates) {
-      toast.error("Sizda template o'chirish uchun ruxsat yo'q");
-      return;
-    }
+    if (!canDeleteTemplates) { toast.error("Ruxsat yo'q"); return; }
     if (!template?.id) return;
-
-    const confirmed = window.confirm(`"${template.name}" templatega o'chirish berilsinmi?`);
-    if (!confirmed) return;
+    if (!window.confirm(`"${template.name}" o'chirilsinmi?`)) return;
 
     setDeletingTemplateId(template.id);
     try {
-      const response = await apiFetch(`${API}/sms-template/${template.id}`, {
-        method: "DELETE",
-        headers: hdr(false),
-      });
-
-      if (!response?.ok) {
-        const message =
-          response?.status === 403
-            ? "Sizda template o'chirish uchun ruxsat yo'q"
-            : await extractApiMessage(response, "Template o'chirishda xato yuz berdi");
-        throw new Error(message);
-      }
-
+      const response = await apiFetch(`${API}/sms-template/${template.id}`, { method: "DELETE" });
+      if (!response?.ok) throw new Error(await extractApiMessage(response, "O'chirishda xato"));
       setTemplates((prev) => prev.filter((item) => item.id !== template.id));
       if (activeTemplateId === template.id) setActiveTemplateId(null);
       toast.success("Template o'chirildi");
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Template o'chirishda xato yuz berdi");
+      toast.error(error.message || "O'chirishda xato yuz berdi");
     } finally {
       setDeletingTemplateId(null);
     }
   };
 
+  // ── SMS yuborish ─────────────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!message.trim()) {
-      toast.error("Xabar matni kiritilmagan");
+    if (!activeTemplateId) {
+      toast.error("Avval template tanlang");
+      setTab("templates");
       return;
     }
-    if (selected.size === 0) {
-      toast.error("Hech bo'lmasa bitta qabulchi tanlang");
-      return;
+
+    const payload = { projectId: Number(projectId), templateId: activeTemplateId };
+
+    if (sendMode === "all") {
+      payload.isAll = true;
+    } else if (sendMode === "status") {
+      if (!selectedStatusId) { toast.error("Status tanlang"); return; }
+      payload.statusId = Number(selectedStatusId);
+    } else {
+      if (selected.size === 0) { toast.error("Hech bo'lmasa bitta lead tanlang"); return; }
+      payload.leadIds = [...selected];
     }
 
     setSending(true);
     try {
-      const response = await apiFetch(`${API}/sms/send`, {
-        method: "POST",
-        body: JSON.stringify({
-          projectId: Number(projectId),
-          message: message.trim(),
-          leadIds: [...selected],
-        }),
-      });
-
+      const response = await apiFetch(`${API}/sms/send`, { method: "POST", body: JSON.stringify(payload) });
       if (!response?.ok) {
-        const message =
-          response?.status === 403
-            ? "Sizda SMS yuborish uchun ruxsat yo'q"
-            : await extractApiMessage(response, "SMS yuborishda xato yuz berdi");
-        throw new Error(message);
+        const msg = response?.status === 403 ? "Ruxsat yo'q" : await extractApiMessage(response, "SMS yuborishda xato");
+        throw new Error(msg);
       }
-
-      toast.success(`${selected.size} ta mijozga SMS yuborildi`);
-      setMessage("");
+      const recipientCount = recipientCountForMode;
+      toast.success(`${recipientCount} ta mijozga SMS yuborildi`);
       setSelected(new Set());
       setSelectAll(false);
       setTab("history");
-      await fetchAll(true);
+      await fetchTemplatesAndHistory(true);
     } catch (error) {
-      console.error(error);
       toast.error(error.message || "SMS yuborishda xato yuz berdi");
     } finally {
       setSending(false);
@@ -820,7 +767,7 @@ export default function SmsRassilka() {
                 Template
               </Button>
             ) : null}
-            <Button size="sm" variant="outline" onClick={() => fetchAll(true)} disabled={refreshing}>
+            <Button size="sm" variant="outline" onClick={() => fetchTemplatesAndHistory(true)} disabled={refreshing}>
               {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Yangilash
             </Button>
@@ -832,6 +779,7 @@ export default function SmsRassilka() {
             <div className="flex border-b border-white/6">
               {[
                 ["compose", "Yuborish", Send],
+                ["templates", "Templatelar", FileText],
                 ["history", "Tarix", BarChart2],
               ].map(([key, label, Icon]) => (
                 <button
@@ -849,129 +797,215 @@ export default function SmsRassilka() {
               ))}
             </div>
 
-            {tab === "compose" ? (
-              <div className="flex h-[calc(100vh-180px)] flex-col">
-                <div className="border-b border-white/6 p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
-                      Xabar matni
-                    </p>
-                    <span className="text-[11px] text-white/35">
-                      {charCount} belgi · {smsCount} SMS
-                    </span>
+            {tab === "templates" ? (
+              <div className="h-[calc(100vh-180px)] overflow-y-auto p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">SMS shablonlari</p>
+                    <p className="text-xs text-white/35">{templates.length} ta template</p>
                   </div>
-                  <div className="rounded-2xl border border-[#1d4ed8]/40 bg-[#081726] p-3 shadow-[inset_0_0_0_1px_rgba(37,99,235,0.08)]">
-                    <textarea
-                      ref={textRef}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="SMS xabar matnini kiriting..."
-                      rows={4}
-                      className="min-h-28 w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-white/22"
-                    />
-                    <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-white/8">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.min((charCount / 160) * 100, 100)}%`,
-                          background: charCount > 140 ? "#f59e0b" : "#2563eb",
-                        }}
-                      />
-                    </div>
-                  </div>
+                  {canCreateTemplate ? (
+                    <Button size="sm" variant="outline" onClick={openCreateTemplate}>
+                      <Plus />
+                      Yangi
+                    </Button>
+                  ) : null}
+                </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {templates.slice(0, 3).map((template) => (
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+                  <Search size={13} className="text-white/25" />
+                  <input
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    placeholder="Template qidirish..."
+                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                  />
+                </div>
+
+                {templatePermissionDenied ? (
+                  <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/8 text-center">
+                    <AlertCircle size={24} className="text-amber-300/80" />
+                    <p className="mt-3 text-sm text-white/60">Ruxsat yetarli emas</p>
+                  </div>
+                ) : filteredTemplates.length === 0 ? (
+                  <div className="flex h-48 flex-col items-center justify-center text-center">
+                    <FileText size={26} className="text-white/15" />
+                    <p className="mt-3 text-sm text-white/40">Template topilmadi</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTemplates.map((template) => (
+                      <div key={template?.id || template?.name} className="relative">
+                        <TemplateCard
+                          template={template}
+                          active={activeTemplateId === template?.id}
+                          canManage={canManageTemplates}
+                          canDelete={canDeleteTemplates}
+                          onUse={applyTemplate}
+                          onEdit={openEditTemplate}
+                          onDelete={removeTemplate}
+                          onDuplicate={duplicateTemplate}
+                        />
+                        {deletingTemplateId === template?.id ? (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[#08131e]/70">
+                            <Loader2 className="animate-spin text-white" />
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : tab === "compose" ? (
+              <div className="flex h-[calc(100vh-180px)] flex-col">
+                {/* Template tanlash */}
+                <div className="border-b border-white/6 p-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                    Template
+                  </p>
+                  {activeTemplate ? (
+                    <div className="rounded-xl border border-blue-500/30 bg-blue-600/10 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-blue-300">{activeTemplate.name}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-white/50">{previewMessage}</p>
+                        </div>
+                        <button
+                          onClick={() => setTab("templates")}
+                          className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/50 hover:text-white"
+                        >
+                          O'zgartirish
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setTab("templates")}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] py-3 text-sm text-white/40 transition-colors hover:border-blue-500/40 hover:text-blue-300"
+                    >
+                      <FileText size={14} />
+                      Template tanlash (majburiy)
+                    </button>
+                  )}
+                </div>
+
+                {/* Yuborish rejimi */}
+                <div className="border-b border-white/6 px-4 py-3">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                    Kimga yuborish
+                  </p>
+                  <div className="flex gap-2">
+                    {[
+                      { key: "leads", label: "Tanlanganlar" },
+                      { key: "status", label: "Status" },
+                      { key: "all", label: "Barchaga" },
+                    ].map((mode) => (
                       <button
-                        key={template?.id || template?.name}
-                        onClick={() => applyTemplate(template)}
-                        className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-white/50 transition-colors hover:text-white"
+                        key={mode.key}
+                        onClick={() => setSendMode(mode.key)}
+                        className={`flex-1 rounded-xl border py-2 text-[11px] font-semibold transition-all ${
+                          sendMode === mode.key
+                            ? "border-blue-500/40 bg-blue-600/15 text-blue-300"
+                            : "border-white/8 bg-white/[0.02] text-white/40 hover:text-white/70"
+                        }`}
                       >
-                        <Zap size={10} className="mr-1 inline" />
-                        {template?.name}
+                        {mode.label}
                       </button>
                     ))}
                   </div>
-                </div>
 
-                <div className="border-b border-white/6 px-4 py-3">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-2 text-xs text-white/55">
-                      <input
-                        type="checkbox"
-                        checked={selectAll}
-                        onChange={(e) => setSelectAll(e.target.checked)}
-                        className="h-4 w-4 rounded accent-blue-500"
-                      />
-                      Barchasi
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">
-                        {selectionCount} ta
-                      </span>
-                      <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/55 outline-none"
-                      >
-                        <option value="all">Barcha status</option>
-                        {uniqueStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-                    <Search size={14} className="text-white/25" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Mijoz ismi yoki telefon..."
-                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/22"
-                    />
-                    {search ? (
-                      <button onClick={() => setSearch("")} className="text-white/30 hover:text-white">
-                        <X size={14} />
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-3">
-                  {filteredLeads.length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center text-center">
-                      <Users size={28} className="text-white/15" />
-                      <p className="mt-3 text-sm text-white/40">Mijozlar topilmadi</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredLeads.map((lead) => (
-                        <LeadRow
-                          key={lead.id}
-                          lead={lead}
-                          checked={selected.has(lead.id)}
-                          onToggle={toggleLead}
-                        />
+                  {sendMode === "status" && (
+                    <select
+                      value={selectedStatusId ?? ""}
+                      onChange={(e) => setSelectedStatusId(e.target.value ? Number(e.target.value) : null)}
+                      className="mt-2 w-full rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none"
+                    >
+                      <option value="">Status tanlang</option>
+                      {statuses.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
+                    </select>
+                  )}
+
+                  {sendMode === "leads" && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 text-xs text-white/55">
+                          <input type="checkbox" checked={selectAll} onChange={(e) => setSelectAll(e.target.checked)} className="h-4 w-4 rounded accent-blue-500" />
+                          Barchani tanlash
+                        </label>
+                        <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-300">{selectionCount} ta</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+                        <Search size={13} className="shrink-0 text-white/25" />
+                        <input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Ism, familiya yoki telefon..."
+                          className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                        />
+                        {search && <button onClick={() => setSearch("")} className="text-white/30 hover:text-white"><X size={13} /></button>}
+                      </div>
                     </div>
                   )}
                 </div>
+
+                {/* Leadlar ro'yxati (faqat leads mode) */}
+                {sendMode === "leads" ? (
+                  <div className="flex-1 overflow-y-auto p-3">
+                    {leadsLoading ? (
+                      <div className="flex h-full items-center justify-center">
+                        <Loader2 size={20} className="animate-spin text-white/30" />
+                      </div>
+                    ) : leads.length === 0 ? (
+                      <div className="flex h-full flex-col items-center justify-center text-center">
+                        <Users size={28} className="text-white/15" />
+                        <p className="mt-3 text-sm text-white/40">Leadlar topilmadi</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {leads.map((lead) => (
+                          <LeadRow key={lead.id} lead={lead} checked={selected.has(lead.id)} onToggle={toggleLead} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-1 items-center justify-center p-6 text-center">
+                    <div>
+                      {sendMode === "all" ? (
+                        <>
+                          <Users size={32} className="mx-auto text-blue-400/50" />
+                          <p className="mt-3 text-sm text-white/60">Barcha leadlarga yuboriladi</p>
+                          <p className="mt-1 text-xs text-white/30">{leads.length} ta lead</p>
+                        </>
+                      ) : (
+                        <>
+                          <Filter size={32} className="mx-auto text-amber-400/50" />
+                          <p className="mt-3 text-sm text-white/60">
+                            {selectedStatusId
+                              ? `"${statuses.find((s) => s.id === selectedStatusId)?.name}" statusidagi leadlarga`
+                              : "Status tanlanmagan"}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-white/6 p-4">
                   <Button
                     className="w-full"
                     onClick={handleSend}
-                    disabled={sending || !message.trim() || selectionCount === 0}
+                    disabled={sending || !activeTemplateId}
                   >
                     {sending ? <Loader2 className="animate-spin" /> : <Send />}
-                    {sending ? "Yuborilmoqda..." : "Yuborish"}
+                    {sending ? "Yuborilmoqda..." : "SMS yuborish"}
                   </Button>
                 </div>
               </div>
             ) : (
+              /* history tab */
               <div className="h-[calc(100vh-180px)] overflow-y-auto p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -1096,13 +1130,13 @@ export default function SmsRassilka() {
                       </div>
                     </div>
 
-                    {message.trim() ? (
+                    {personalizedPreview.trim() ? (
                       <div className="rounded-[18px] rounded-tl-sm bg-[#2563eb] px-3.5 py-2.5 text-xs leading-6 text-white">
                         {personalizedPreview}
                       </div>
                     ) : (
                       <div className="py-8 text-center text-[11px] text-white/30">
-                        Xabar matni kiritilganda preview shu yerda ko'rinadi
+                        Template tanlanganida preview shu yerda ko'rinadi
                       </div>
                     )}
 
@@ -1122,7 +1156,7 @@ export default function SmsRassilka() {
                 <div className="mt-5 rounded-xl border border-white/8 bg-white/[0.03] p-4 text-sm text-white/65">
                   <div className="mb-2 flex items-center justify-between">
                     <span>Qabulchilar</span>
-                    <span className="font-semibold text-white">{selectionCount} ta</span>
+                    <span className="font-semibold text-white">{recipientCountForMode} ta</span>
                   </div>
                   <div className="mb-2 flex items-center justify-between">
                     <span>Bir qabulchiga</span>

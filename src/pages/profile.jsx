@@ -12,6 +12,7 @@ import {
 import { emitAuthChange } from "@/hooks/useNotification";
 import { useUser } from "@/context/UserContext";
 import { removeDeviceToken } from "@/services/notificationService";
+import { toast } from "@/lib/toast";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const LANGUAGES = ["Русский", "O'zbek", "English"];
@@ -109,9 +110,9 @@ function CopyBtn({ value }) {
         setOk(true);
         setTimeout(() => setOk(false), 1500);
       }}
-      className="ml-2 text-gray-500 transition-colors hover:text-gray-300"
+      className="ml-1.5 text-[#4a6a85] transition-colors hover:text-[#69a7ff]"
     >
-      {ok ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+      {ok ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
     </button>
   );
 }
@@ -127,29 +128,21 @@ function LangSelect({ value, onChange }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
   return (
-    <div ref={ref} className="relative w-72">
+    <div ref={ref} className="relative w-full">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] transition-colors hover:border-[#3a5570] focus:outline-none"
+        className="flex w-full items-center justify-between rounded-xl border border-white/[0.07] bg-[#071828] px-3 py-2.5 text-sm text-white transition-all hover:border-white/20 focus:border-blue-500/50 focus:outline-none"
       >
         {value}
-        <ChevronDown
-          size={14}
-          className={`text-[#7a9ab5] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown size={14} className={`text-[#69a7ff] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 z-30 mt-1 w-full overflow-hidden rounded border border-[#253d52] bg-[#1a2e40] shadow-2xl">
+        <div className="absolute top-full left-0 z-30 mt-1 w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#071828] shadow-2xl">
           {LANGUAGES.map((l) => (
             <button
               key={l}
-              onClick={() => {
-                onChange(l);
-                setOpen(false);
-              }}
-              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 ${
-                l === value ? "text-blue-400" : "text-[#c8dce8]"
-              }`}
+              onClick={() => { onChange(l); setOpen(false); }}
+              className={`w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/5 ${l === value ? "text-[#69a7ff]" : "text-[#c8dce8]"}`}
             >
               {l}
             </button>
@@ -160,63 +153,52 @@ function LangSelect({ value, onChange }) {
   );
 }
 
-function Row({ label, children }) {
-  return (
-    <div className="mb-0.5 flex min-h-11 items-start">
-      <div className="w-44 shrink-0 pt-2.5">
-        <span className="text-sm text-[#7a9ab5]">{label}</span>
-      </div>
-      <div className="flex items-center pt-1.5">{children}</div>
-    </div>
-  );
-}
-
-function ReadonlyValue({ value }) {
-  return (
-    <span className="text-sm text-[#c8dce8]">
-      {value !== null && value !== undefined && value !== ""
-        ? String(value)
-        : "—"}
-    </span>
-  );
-}
-
-function TInput({ value, onChange, placeholder, type = "text" }) {
+function ProfileInput({ value, onChange, placeholder, type = "text" }) {
   return (
     <input
       type={type}
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-72 rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+      className="w-full rounded-xl border border-white/[0.07] bg-[#071828] px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/50"
     />
   );
 }
 
-function PasswordInput({
-  value,
-  onChange,
-  placeholder,
-  show,
-  onToggleVisibility,
-}) {
+function PasswordInput({ value, onChange, placeholder, show, onToggleVisibility }) {
   return (
-    <div className="relative w-72">
+    <div className="relative w-full">
       <input
         type={show ? "text" : "password"}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded border border-[#253d52] bg-[#1a2e40] px-3 py-2 pr-10 text-sm text-[#c8dce8] placeholder-[#3a5570] transition-colors outline-none focus:border-blue-500"
+        className="w-full rounded-xl border border-white/[0.07] bg-[#071828] px-3 py-2.5 pr-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/50"
       />
       <button
         type="button"
         onClick={onToggleVisibility}
-        className="absolute top-1/2 right-3 -translate-y-1/2 text-[#7a9ab5] transition-colors hover:text-[#c8dce8]"
-        aria-label={show ? "Hide password" : "Show password"}
+        className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-600 transition-colors hover:text-blue-400"
       >
         {show ? <EyeOff size={15} /> : <Eye size={15} />}
       </button>
+    </div>
+  );
+}
+
+function SectionTitle({ children }) {
+  return (
+    <p className="mb-4 text-[11px] font-semibold tracking-widest text-[#69a7ff] uppercase">
+      {children}
+    </p>
+  );
+}
+
+function InfoRow({ label, children }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-white/[0.05] last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="flex items-center gap-1 text-sm text-[#c0d8e8]">{children}</div>
     </div>
   );
 }
@@ -227,7 +209,6 @@ export default function Profile() {
   const { updateUser } = useUser();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState(null);
   const [accountEmail, setAccountEmail] = useState("");
 
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -313,7 +294,6 @@ export default function Profile() {
   const handleSave = async () => {
     if (!isDirty) return;
     setSaving(true);
-    setError(null);
     try {
       const fd = new FormData();
       fd.append("fullName", form.fullName);
@@ -346,8 +326,9 @@ export default function Profile() {
       setInitialForm({ ...form });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      toast.success("Profil saqlandi");
     } catch (err) {
-      setError("Saqlashda xato: " + err.message);
+      toast.error("Saqlashda xato: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -399,8 +380,10 @@ export default function Profile() {
 
       setPasswordSaved(true);
       setTimeout(() => setPasswordSaved(false), 2000);
+      toast.success("Parol muvaffaqiyatli yangilandi");
     } catch (err) {
       setPasswordError("Parolni yangilashda xato: " + err.message);
+      toast.error("Parolni yangilashda xato: " + err.message);
     } finally {
       setPasswordSaving(false);
     }
@@ -431,208 +414,159 @@ export default function Profile() {
 
   const avatarLetter = (form.fullName || form.email || "U")[0].toUpperCase();
 
-  // button holati
-  const btnLabel = saving
-    ? "Сохраняется..."
-    : saved
-      ? "Сохранено ✓"
-      : isDirty
-        ? "Сохранить •"
-        : "Сохранить";
-
-  const btnClass = `flex items-center gap-2 rounded border px-5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-    isDirty && !saving
-      ? "border-blue-500 bg-blue-600 text-white hover:bg-blue-500"
-      : "border-[#2a4560] bg-[#1a2e40] text-[#9ab8cc] hover:border-[#3a5570]"
-  }`;
-  const passwordBtnLabel = passwordSaving
-    ? "Обновляется..."
-    : passwordSaved
-      ? "Обновлено ✓"
-      : "Обновить пароль";
-  const passwordBtnClass =
-    "flex items-center gap-2 rounded border border-amber-500/40 bg-amber-500/15 px-4 py-2 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50";
-
   return (
-    <div
-      className="mx-auto min-h-screen bg-[#0d1e2e] text-white"
-      style={{ fontFamily: "'Segoe UI', Arial, sans-serif" }}
-    >
+    <div className="min-h-screen bg-[#071828] font-[Segoe_UI,sans-serif] text-white">
       {/* Header */}
-      <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-[#162840] bg-[#0d1e2e] px-6 py-3.5">
-        <span className="text-[15px] font-medium text-[#c0d8e8]">
-          Настройки профиля
-        </span>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/16 hover:text-red-200"
-          >
-            <LogOut size={14} />
-            Logout
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !isDirty}
-            className={btnClass}
-          >
-            {saving && <Loader2 size={13} className="animate-spin" />}
-            {btnLabel}
-          </button>
+      <div className="animate-in fade-in slide-in-from-top-2 sticky top-0 z-10 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur duration-300">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+          <h1 className="text-lg font-bold text-white">Profil sozlamalari</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300"
+            >
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Chiqish</span>
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !isDirty}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all disabled:opacity-40 ${
+                isDirty && !saving
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)] hover:opacity-90"
+                  : "border border-white/[0.08] bg-[#0a1929] text-gray-500"
+              }`}
+            >
+              {saving && <Loader2 size={13} className="animate-spin" />}
+              {saving ? "Saqlanmoqda..." : saved ? "Saqlandi ✓" : "Saqlash"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="mx-auto max-w-3xl px-6 pt-4">
-          <div className="rounded border border-red-800/50 bg-red-900/20 px-4 py-2 text-sm text-red-400">
-            {error}
-          </div>
-        </div>
-      )}
-
-      {/* Body */}
-      <div className="mx-auto max-w-3xl p-6">
-        <div className="rounded-md border border-[#162840] bg-[#0f2030] p-7">
-          <div className="flex gap-9">
-            {/* Avatar */}
-            <div className="shrink-0">
-              <div className="relative h-24 w-24">
+      <div className="mx-auto max-w-3xl space-y-4 p-6">
+        {/* Avatar card */}
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
+          <div className="flex items-center gap-5">
+            <div className="relative shrink-0">
+              <div className="h-18 w-18 overflow-hidden rounded-2xl">
                 {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt="avatar"
-                    className="h-full w-full rounded-full object-cover"
-                  />
+                  <img src={avatarPreview} alt="avatar" className="h-full w-full object-cover" />
                 ) : (
                   <div
-                    className="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-4xl font-black text-white"
-                    style={{
-                      background: "linear-gradient(145deg,#7a3810,#a04a20)",
-                    }}
+                    className="flex h-18 w-18 items-center justify-center text-2xl font-black text-white"
+                    style={{ background: "linear-gradient(145deg,#1a4080,#2558b0)" }}
                   >
                     {avatarLetter}
                   </div>
                 )}
-                <label className="absolute right-1 bottom-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[#2a4560] bg-[#1a2e40] transition-colors hover:bg-[#243d54]">
-                  <Camera size={13} className="text-[#7a9ab5]" />
-                  <input
-                    type="file"
-                    accept="image/jpg,image/png,image/jpeg,image/gif"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                </label>
               </div>
+              <label className="absolute -right-1 -bottom-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-xl border border-white/[0.08] bg-[#071828] transition-colors hover:border-blue-500/40 hover:bg-[#0d2035]">
+                <Camera size={12} className="text-blue-400" />
+                <input type="file" accept="image/jpg,image/png,image/jpeg,image/gif" className="hidden" onChange={handleAvatarChange} />
+              </label>
             </div>
-
-            {/* Fields */}
-            <div className="flex-1">
-              {/* ── Readonly ── */}
-              <Row label="ID">
-                <ReadonlyValue value={info.id} />
-                {info.id !== "" && <CopyBtn value={info.id} />}
-              </Row>
-              <Row label="Company ID">
-                <ReadonlyValue value={info.companyId} />
-                {info.companyId !== "" && <CopyBtn value={info.companyId} />}
-              </Row>
-              <Row label="Role">
-                {info.role ? (
-                  <span className="rounded bg-[#1a3a50] px-2 py-0.5 text-xs font-semibold tracking-wide text-blue-300">
-                    {info.role}
-                  </span>
-                ) : (
-                  <ReadonlyValue value={null} />
-                )}
-              </Row>
-              <Row label="Создан">
-                <ReadonlyValue value={formatDate(info.createdAt)} />
-              </Row>
-              <Row label="Обновлён">
-                <ReadonlyValue value={formatDate(info.updatedAt)} />
-              </Row>
-
-              {/* ── Divider ── */}
-              <div className="my-3 border-t border-[#162840]" />
-
-              {/* ── Editable ── */}
-              <Row label="Полное имя">
-                <TInput
-                  value={form.fullName}
-                  onChange={set("fullName")}
-                  placeholder="Введите имя"
-                />
-              </Row>
-              <Row label="Email">
-                <TInput
-                  value={form.email}
-                  onChange={set("email")}
-                  placeholder="email@example.com"
-                  type="email"
-                />
-              </Row>
-              <Row label="Language / Язык">
-                <LangSelect value={form.language} onChange={set("language")} />
-              </Row>
-
-              {/* ── Divider ── */}
-              <div className="my-4 border-t border-[#162840]" />
-
-              {/* ── Password ── */}
-              <Row label="Аккаунт email">
-                <ReadonlyValue value={accountEmail} />
-              </Row>
-              <Row label="Текущий пароль">
-                <PasswordInput
-                  value={passwordForm.oldPassword}
-                  onChange={setPasswordField("oldPassword")}
-                  placeholder="Введите текущий пароль"
-                  show={showPasswords.oldPassword}
-                  onToggleVisibility={() =>
-                    togglePasswordVisibility("oldPassword")
-                  }
-                />
-              </Row>
-              <Row label="Новый пароль">
-                <PasswordInput
-                  value={passwordForm.newPassword}
-                  onChange={setPasswordField("newPassword")}
-                  placeholder="Введите новый пароль"
-                  show={showPasswords.newPassword}
-                  onToggleVisibility={() =>
-                    togglePasswordVisibility("newPassword")
-                  }
-                />
-              </Row>
-              <Row label="Подтверждение">
-                <PasswordInput
-                  value={passwordForm.confirmPassword}
-                  onChange={setPasswordField("confirmPassword")}
-                  placeholder="Повторите новый пароль"
-                  show={showPasswords.confirmPassword}
-                  onToggleVisibility={() =>
-                    togglePasswordVisibility("confirmPassword")
-                  }
-                />
-              </Row>
-              <div className="mt-2 ml-44">
-                <button
-                  type="button"
-                  onClick={handlePasswordReset}
-                  disabled={passwordSaving}
-                  className={passwordBtnClass}
-                >
-                  {passwordSaving && <Loader2 size={13} className="animate-spin" />}
-                  {passwordBtnLabel}
-                </button>
-              </div>
-              {passwordError && (
-                <div className="mt-2 ml-44 rounded border border-red-800/50 bg-red-900/20 px-3 py-2 text-sm text-red-400">
-                  {passwordError}
-                </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-white">{form.fullName || "—"}</p>
+              <p className="mt-0.5 truncate text-sm text-gray-500">{accountEmail || form.email || "—"}</p>
+              {info.role && (
+                <span className="mt-2 inline-block rounded-lg border border-blue-500/20 bg-blue-600/10 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                  {info.role}
+                </span>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Shaxsiy ma'lumotlar */}
+          <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
+            <SectionTitle>Shaxsiy ma'lumotlar</SectionTitle>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1.5 block text-xs text-gray-500">To'liq ism</label>
+                <ProfileInput value={form.fullName} onChange={set("fullName")} placeholder="Ismingizni kiriting" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-gray-500">Email</label>
+                <ProfileInput value={form.email} onChange={set("email")} placeholder="email@example.com" type="email" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-gray-500">Til</label>
+                <LangSelect value={form.language} onChange={set("language")} />
+              </div>
+            </div>
+          </div>
+
+          {/* Tizim ma'lumotlari */}
+          <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
+            <SectionTitle>Tizim ma'lumotlari</SectionTitle>
+            <InfoRow label="ID">
+              {info.id || "—"}
+              {info.id && <CopyBtn value={info.id} />}
+            </InfoRow>
+            <InfoRow label="Kompaniya ID">
+              {info.companyId || "—"}
+              {info.companyId && <CopyBtn value={info.companyId} />}
+            </InfoRow>
+            <InfoRow label="Rol">
+              {info.role ? (
+                <span className="rounded-lg bg-blue-600/10 px-2 py-0.5 text-xs font-semibold text-blue-300">{info.role}</span>
+              ) : "—"}
+            </InfoRow>
+            <InfoRow label="Yaratilgan">{formatDate(info.createdAt)}</InfoRow>
+            <InfoRow label="Yangilangan">{formatDate(info.updatedAt)}</InfoRow>
+          </div>
+        </div>
+
+        {/* Parol */}
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
+          <SectionTitle>Parolni yangilash</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1.5 block text-xs text-gray-500">Joriy parol</label>
+              <PasswordInput
+                value={passwordForm.oldPassword}
+                onChange={setPasswordField("oldPassword")}
+                placeholder="Joriy parol"
+                show={showPasswords.oldPassword}
+                onToggleVisibility={() => togglePasswordVisibility("oldPassword")}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-gray-500">Yangi parol</label>
+              <PasswordInput
+                value={passwordForm.newPassword}
+                onChange={setPasswordField("newPassword")}
+                placeholder="Yangi parol"
+                show={showPasswords.newPassword}
+                onToggleVisibility={() => togglePasswordVisibility("newPassword")}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-gray-500">Tasdiqlash</label>
+              <PasswordInput
+                value={passwordForm.confirmPassword}
+                onChange={setPasswordField("confirmPassword")}
+                placeholder="Qaytaring"
+                show={showPasswords.confirmPassword}
+                onToggleVisibility={() => togglePasswordVisibility("confirmPassword")}
+              />
+            </div>
+          </div>
+          {passwordError && (
+            <p className="mt-3 text-xs text-red-400">{passwordError}</p>
+          )}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={passwordSaving}
+              className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-500/15 disabled:opacity-50"
+            >
+              {passwordSaving && <Loader2 size={13} className="animate-spin" />}
+              {passwordSaving ? "Yangilanmoqda..." : passwordSaved ? "Yangilandi ✓" : "Parolni yangilash"}
+            </button>
           </div>
         </div>
       </div>
