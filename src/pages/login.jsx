@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import Lottie from "lottie-react";
 import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";

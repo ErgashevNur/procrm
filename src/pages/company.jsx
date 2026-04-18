@@ -18,7 +18,7 @@ import {
   ChevronRight,
   Eye,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Switch } from "@/components/ui/switch";
 import {
   canDeleteData,
