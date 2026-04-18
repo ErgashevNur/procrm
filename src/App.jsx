@@ -276,7 +276,26 @@ const App = () => {
   return (
     <NotificationProvider>
       <RouterProvider router={router} />
-      <Toaster />
+      <Toaster
+        position="top-right"
+        closeButton
+        expand
+        toastOptions={{
+          classNames: {
+            toast: "crm-toast",
+            title: "crm-toast-title",
+            description: "crm-toast-description",
+            closeButton: "crm-toast-close",
+            actionButton: "crm-toast-action",
+            cancelButton: "crm-toast-cancel",
+            success: "crm-toast--success",
+            error: "crm-toast--error",
+            info: "crm-toast--info",
+            warning: "crm-toast--warning",
+            loading: "crm-toast--loading",
+          },
+        }}
+      />
     </NotificationProvider>
   );
 };
