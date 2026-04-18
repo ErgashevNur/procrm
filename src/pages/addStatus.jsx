@@ -41,7 +41,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ROLES, canDeleteData, getCurrentRole } from "@/lib/rbac";
 import {
   Dialog,

@@ -402,27 +402,16 @@
     --toast-accent: #69a7ff;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 14px;
+    border: 1px solid rgba(105, 167, 255, 0.18) !important;
+    border-radius: 14px !important;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01)),
-      linear-gradient(160deg, rgba(12, 24, 38, 0.94), rgba(9, 16, 28, 0.9));
-    color: #e7eef6;
+      linear-gradient(180deg, rgba(105, 167, 255, 0.06), rgba(105, 167, 255, 0.01)),
+      linear-gradient(160deg, rgba(10, 20, 34, 0.97), rgba(7, 14, 26, 0.96)) !important;
+    color: #e7eef6 !important;
     box-shadow:
-      0 18px 44px rgba(0, 0, 0, 0.45),
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-    backdrop-filter: blur(16px);
-  }
-
-  .crm-toast::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background: var(--toast-accent);
-    box-shadow: 0 0 18px var(--toast-accent);
+      0 20px 48px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(105, 167, 255, 0.08) inset !important;
+    backdrop-filter: blur(20px) !important;
   }
 
   .crm-toast-title {

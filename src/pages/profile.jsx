@@ -10,6 +10,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { emitAuthChange } from "@/hooks/useNotification";
+import { useUser } from "@/context/UserContext";
 import { removeDeviceToken } from "@/services/notificationService";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
@@ -223,6 +224,7 @@ function PasswordInput({
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Profile() {
+  const { updateUser } = useUser();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
@@ -337,6 +339,7 @@ export default function Profile() {
 
         if (typeof updated.email === "string") setAccountEmail(updated.email);
         updateUserInStorage(updated);
+        updateUser(updated);
       }
 
       // saqlangandan keyin initial ni yangilaymiz — button yana "Сохранить" bo'ladi

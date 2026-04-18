@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { useExcelWorker } from "../hooks/Useexcelworker";
 import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";

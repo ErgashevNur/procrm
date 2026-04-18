@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Eye, EyeOff } from "lucide-react";
 import { getGoogleAuthUrl, persistAuthSession } from "@/lib/auth";
 import { getDefaultRouteByRole } from "@/lib/rbac";

@@ -16,7 +16,7 @@ import {
   LayoutList,
   Columns3,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Link } from "react-router-dom";
 import KotibamLoader from "@/components/KotibamLoader";
 import {

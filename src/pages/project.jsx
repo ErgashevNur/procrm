@@ -12,7 +12,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { canDeleteData, getCurrentRole } from "@/lib/rbac";
 import KotibamLoader from "@/components/KotibamLoader";
 

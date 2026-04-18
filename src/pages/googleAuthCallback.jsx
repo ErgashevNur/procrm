@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { getDefaultRouteByRole } from "@/lib/rbac";
 import { extractAuthPayloadFromUrl, persistAuthSession } from "@/lib/auth";
 
