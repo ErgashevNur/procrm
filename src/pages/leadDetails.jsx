@@ -41,20 +41,13 @@ import {
 import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const TOAST_STYLE = {
-  style: {
-    background: "#0f2231",
-    color: "#e5e7eb",
-    border: "1px solid rgba(96,165,250,0.2)",
-  },
-};
 
 function toastSuccess(message) {
-  toast.success(message, TOAST_STYLE);
+  toast.success(message);
 }
 
 function toastError(message) {
-  toast.error(message, TOAST_STYLE);
+  toast.error(message);
 }
 
 function pad2(value) {
@@ -148,11 +141,33 @@ function toNumberOrUndefined(value, { digitsOnly = false } = {}) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function normalizeLeadPhoneForApi(raw) {
+function extractUzLocalPhoneDigits(raw) {
   const digits = String(raw || "").replace(/\D/g, "");
-  if (!digits) return undefined;
-  if (digits.startsWith("998")) return digits.slice(0, 12);
-  return `998${digits.slice(0, 9)}`;
+  if (!digits) return "";
+  return (digits.startsWith("998") ? digits.slice(3) : digits).slice(0, 9);
+}
+
+function formatUzPhoneInput(raw, { forcePrefix = false } = {}) {
+  const localDigits = extractUzLocalPhoneDigits(raw);
+  if (!localDigits) return forcePrefix ? "+998" : "";
+
+  const part1 = localDigits.slice(0, 2);
+  const part2 = localDigits.slice(2, 5);
+  const part3 = localDigits.slice(5, 7);
+  const part4 = localDigits.slice(7, 9);
+
+  let formatted = "+998";
+  if (part1) formatted += ` ${part1}`;
+  if (part2) formatted += ` ${part2}`;
+  if (part3) formatted += ` ${part3}`;
+  if (part4) formatted += ` ${part4}`;
+  return formatted;
+}
+
+function normalizeLeadPhoneForApi(raw) {
+  const localDigits = extractUzLocalPhoneDigits(raw);
+  if (!localDigits) return undefined;
+  return `998${localDigits}`;
 }
 
 function isValidLeadPhone(value) {
@@ -1261,6 +1276,20 @@ const LeadDetails = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "phone") {
+      setDealData((prev) => ({
+        ...prev,
+        phone: formatUzPhoneInput(value, { forcePrefix: true }),
+      }));
+      return;
+    }
+    if (name === "extraPhone") {
+      setDealData((prev) => ({
+        ...prev,
+        extraPhone: formatUzPhoneInput(value),
+      }));
+      return;
+    }
     setDealData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -1354,7 +1383,6 @@ const LeadDetails = () => {
         success: "Yangilandi ✅",
         error: "Xatolik ❌",
       },
-      TOAST_STYLE,
     );
     try {
       await updatePromise;
@@ -1623,9 +1651,11 @@ const LeadDetails = () => {
                     <Input
                       type="tel"
                       name="phone"
-                      value={dealData.phone || ""}
+                      value={formatUzPhoneInput(dealData.phone, { forcePrefix: true })}
                       onChange={handleChange}
-                      placeholder="+998 __ ___ __ __"
+                      placeholder="+998 ** *** ** **"
+                      inputMode="numeric"
+                      autoComplete="tel"
                     />
                   </Field>
                   <Field>
@@ -1633,9 +1663,11 @@ const LeadDetails = () => {
                     <Input
                       type="tel"
                       name="extraPhone"
-                      value={dealData.extraPhone || ""}
+                      value={formatUzPhoneInput(dealData.extraPhone)}
                       onChange={handleChange}
-                      placeholder="+998 __ ___ __ __"
+                      placeholder="+998 ** *** ** **"
+                      inputMode="numeric"
+                      autoComplete="tel"
                     />
                   </Field>
                 </div>
@@ -1825,18 +1857,26 @@ function InfoRow({ label, value }) {
 }
 
 function PhoneRow({ label, value }) {
+  const normalizedPhone = normalizeLeadPhoneForApi(value);
+  const validPhone = isValidLeadPhone(normalizedPhone);
+  const formattedPhone = formatUzPhoneInput(value, {
+    forcePrefix: Boolean(value),
+  });
+
   return (
     <div>
       <p className="text-[11px] text-gray-600">{label}</p>
       <div className="flex items-center gap-2">
         <Phone size={13} className="shrink-0 text-blue-400" />
-        {value ? (
+        {validPhone ? (
           <a
-            href={`tel:${value}`}
+            href={`tel:+${normalizedPhone}`}
             className="text-sm text-blue-400 hover:underline"
           >
-            {value}
+            {formattedPhone}
           </a>
+        ) : value ? (
+          <span className="text-sm text-white">{formattedPhone}</span>
         ) : (
           <span className="text-sm text-gray-600">—</span>
         )}

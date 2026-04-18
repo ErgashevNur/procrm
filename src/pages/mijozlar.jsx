@@ -305,6 +305,12 @@ function formatBudgetDisplay(raw) {
   return Number(digits).toLocaleString("ru-RU");
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeAiDate(raw) {
   const value = String(raw || "").trim();
   if (!value) return "";
@@ -1648,6 +1654,12 @@ export default function Pipeline() {
     !aiProcessing &&
     !isRecordingInProgress &&
     !isProcessingRecordedAudio;
+  const matchedAiSource = leadSource.find(
+    (item) => normalizeText(item?.name) === normalizeText(aiDraft?.source),
+  );
+  const selectedAiSourceId = matchedAiSource
+    ? String(matchedAiSource.id)
+    : undefined;
   const getVoiceStepClass = (step) => {
     if (step < currentVoiceStep) {
       return "rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-1 text-center text-emerald-200";
@@ -2224,16 +2236,35 @@ export default function Pipeline() {
                           </Field>
                           <Field>
                             <FieldLabel>Manba</FieldLabel>
-                            <Input
-                              value={aiDraft.source || ""}
-                              placeholder="Tanlang..."
-                              onChange={(e) =>
+                            <Select
+                              value={selectedAiSourceId}
+                              onValueChange={(value) => {
+                                const selected = leadSource.find(
+                                  (item) => String(item.id) === String(value),
+                                );
                                 handleAiDraftFieldChange(
                                   "source",
-                                  e.target.value,
-                                )
-                              }
-                            />
+                                  selected?.name || "",
+                                );
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Tanlang..." />
+                              </SelectTrigger>
+                              <SelectContent className="mt-2">
+                                {leadSource.length === 0 ? (
+                                  <div className="px-2 py-1.5 text-xs text-gray-400">
+                                    Manbalar topilmadi
+                                  </div>
+                                ) : (
+                                  leadSource.map((s) => (
+                                    <SelectItem key={s.id} value={String(s.id)}>
+                                      {s.name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
                           </Field>
                         </div>
                         <Field>
