@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useUser } from "@/context/UserContext";
 import { Settings, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -71,16 +72,8 @@ export default function AppSidebar() {
     resetTaskNotificationCount,
   } = useNotification();
 
-  let user = {};
-  let role = null;
-  try {
-    const raw = localStorage.getItem("userData");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      user = parsed.user || {};
-      role = user.role || null;
-    }
-  } catch {}
+  const { user } = useUser();
+  const role = user.role || null;
 
   const avatarUrl = getImageUrl(user.img);
   const avatarLetter = (user.fullName || user.email || "U")[0].toUpperCase();

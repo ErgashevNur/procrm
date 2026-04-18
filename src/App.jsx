@@ -12,6 +12,7 @@ import KotibamLoader from "./components/KotibamLoader";
 import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { NotificationProvider } from "@/hooks/useNotification";
+import { UserProvider } from "@/context/UserContext";
 import {
   CRM_ROLES,
   MANAGEMENT_ROLES,
@@ -274,12 +275,29 @@ const router = createBrowserRouter([
 
 const App = () => {
   return (
+    <UserProvider>
     <NotificationProvider>
       <RouterProvider router={router} />
       <Toaster
-        position="top-right"
-        closeButton
+        position="top-center"
         expand
+        style={{
+          "--normal-bg": "rgba(10, 20, 34, 0.96)",
+          "--normal-text": "#f5f7fb",
+          "--normal-border": "rgba(255, 255, 255, 0.12)",
+          "--success-bg": "rgba(10, 20, 34, 0.96)",
+          "--success-text": "#f5f7fb",
+          "--success-border": "rgba(255, 255, 255, 0.12)",
+          "--error-bg": "rgba(10, 20, 34, 0.96)",
+          "--error-text": "#f5f7fb",
+          "--error-border": "rgba(255, 255, 255, 0.12)",
+          "--warning-bg": "rgba(10, 20, 34, 0.96)",
+          "--warning-text": "#f5f7fb",
+          "--warning-border": "rgba(255, 255, 255, 0.12)",
+          "--info-bg": "rgba(10, 20, 34, 0.96)",
+          "--info-text": "#f5f7fb",
+          "--info-border": "rgba(255, 255, 255, 0.12)",
+        }}
         toastOptions={{
           classNames: {
             toast: "crm-toast",
@@ -297,6 +315,7 @@ const App = () => {
         }}
       />
     </NotificationProvider>
+    </UserProvider>
   );
 };
 

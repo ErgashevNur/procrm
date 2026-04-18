@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiUrl } from "@/lib/api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("user");
