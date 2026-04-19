@@ -39,6 +39,7 @@ import {
   getCurrentRole,
 } from "@/lib/rbac";
 import KotibamLoader from "@/components/KotibamLoader";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 
@@ -1648,26 +1649,20 @@ const LeadDetails = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <Field>
                     <FieldLabel>Telefon</FieldLabel>
-                    <Input
-                      type="tel"
-                      name="phone"
-                      value={formatUzPhoneInput(dealData.phone, { forcePrefix: true })}
-                      onChange={handleChange}
-                      placeholder="+998 ** *** ** **"
-                      inputMode="numeric"
-                      autoComplete="tel"
+                    <PhoneInput
+                      value={dealData.phone}
+                      onChange={(val) =>
+                        handleChange({ target: { name: "phone", value: val } })
+                      }
                     />
                   </Field>
                   <Field>
                     <FieldLabel>Qo'shimcha</FieldLabel>
-                    <Input
-                      type="tel"
-                      name="extraPhone"
-                      value={formatUzPhoneInput(dealData.extraPhone)}
-                      onChange={handleChange}
-                      placeholder="+998 ** *** ** **"
-                      inputMode="numeric"
-                      autoComplete="tel"
+                    <PhoneInput
+                      value={dealData.extraPhone}
+                      onChange={(val) =>
+                        handleChange({ target: { name: "extraPhone", value: val } })
+                      }
                     />
                   </Field>
                 </div>

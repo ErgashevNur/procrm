@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
 import Lottie from "lottie-react";
-import { Eye, EyeOff, House, LockKeyhole, Mail } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, House, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { EmailInput } from "@/components/ui/email-input";
 import { getDefaultRouteByRole, isSupportedRole } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,7 +208,12 @@ const getLoginRequestError = (response, payload) => {
 
 function FieldError({ message }) {
   if (!message) return null;
-  return <p className="mt-2 text-[11px] text-rose-400/90">{message}</p>;
+  return (
+    <p role="alert" className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-rose-400">
+      <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
+      {message}
+    </p>
+  );
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -413,19 +419,14 @@ export default function Login() {
                     <Mail className="h-3.5 w-3.5" />
                     Email
                   </label>
-                  <Input
+                  <EmailInput
                     id="email"
-                    type="email"
-                    placeholder="example@mail.com"
                     value={email}
-                    onChange={(e) => handleChange("email", e.target.value)}
+                    onChange={(val) => handleChange("email", val)}
                     onBlur={() => handleBlur("email")}
                     aria-invalid={emailHasError ? "true" : "false"}
-                    className={`h-11 rounded-xl border bg-white/[0.04] px-4 text-sm text-white transition-colors placeholder:text-white/20 focus:ring-0 focus-visible:ring-0 ${
-                      emailHasError
-                        ? "border-rose-500/50 bg-rose-500/[0.06]"
-                        : "border-white/[0.08] focus:border-sky-500/50"
-                    }`}
+                    error={emailHasError}
+                    placeholder="example"
                   />
                   <FieldError message={emailHasError ? errors.email : ""} />
                 </div>
@@ -500,9 +501,17 @@ export default function Login() {
                 <Button
                   type="submit"
                   disabled={loading}
+                  aria-busy={loading}
                   className="h-11 w-full rounded-xl bg-sky-500 text-sm font-semibold text-white shadow-[0_12px_32px_rgba(14,165,233,0.22)] transition-all hover:bg-sky-400 hover:shadow-[0_16px_40px_rgba(14,165,233,0.32)] disabled:opacity-60"
                 >
-                  {loading ? "Yuklanmoqda..." : "Kirish"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Yuklanmoqda...
+                    </>
+                  ) : (
+                    "Kirish"
+                  )}
                 </Button>
               </form>
             </div>

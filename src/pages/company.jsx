@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Switch } from "@/components/ui/switch";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { EmailInput } from "@/components/ui/email-input";
 import {
   canDeleteData,
   getCurrentRole,
@@ -1111,7 +1113,7 @@ function MyCompanyEditDrawer({ companyId, company, onClose, onSaved }) {
               <TInput value={form.managerName} onChange={setField("managerName")} placeholder="To'liq ism sharif" maxLength={120} />
             </FormField>
             <FormField label="Telefon raqam" required icon={Phone} error={errors.phoneNumber}>
-              <TInput value={form.phoneNumber} onChange={setField("phoneNumber")} placeholder="+998 ** *** ** **" type="tel" maxLength={17} />
+              <PhoneInput value={form.phoneNumber} onChange={setField("phoneNumber")} error={errors.phoneNumber} />
             </FormField>
           </div>
 
@@ -1331,23 +1333,20 @@ function CompanyDrawer({ company, onClose, onSaved }) {
               icon={Phone}
               error={errors.phoneNumber}
             >
-              <TInput
+              <PhoneInput
                 value={form.phoneNumber}
                 onChange={setField("phoneNumber")}
-                placeholder="+998 ** *** ** **"
-                type="tel"
-                maxLength={17}
+                error={errors.phoneNumber}
               />
             </FormField>
 
             {!isEdit ? (
               <FormField label="Email" required error={errors.email}>
-                <TInput
+                <EmailInput
                   value={form.email}
                   onChange={setField("email")}
-                  placeholder="company@mail.com"
-                  type="email"
-                  maxLength={254}
+                  placeholder="kompaniya"
+                  error={errors.email}
                 />
               </FormField>
             ) : null}
