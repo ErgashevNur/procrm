@@ -517,6 +517,20 @@ async function updateCompany({
   }
 }
 
+async function updateMyCompany({ companyId, name, managerName, phoneNumber }) {
+  const payload = {
+    name,
+    managerName,
+    phoneNumber,
+    permissions: ["CRM"],
+  };
+  const res = await apiFetch(`/company/${companyId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  await parseApiResponse(res, "Kompaniyani yangilab bo'lmadi");
+}
+
 // ─── UI Components ─────────────────────────────────────────────────────────────
 
 function FormField({ label, required = false, icon: Icon, error, children }) {
@@ -1026,6 +1040,103 @@ function getInitialForm(company) {
   };
 }
 
+function MyCompanyEditDrawer({ companyId, company, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: company?.name ?? "",
+    managerName: company?.managerName ?? "",
+    phoneNumber: company?.phoneNumber ?? "",
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const validate = () => {
+    const nextErrors = {};
+    const name = sanitizeText(form.name, 120);
+    const managerName = sanitizeText(form.managerName, 120);
+    const phoneNumber = cleanPhone(form.phoneNumber);
+
+    if (!name) nextErrors.name = "Nom majburiy";
+    if (!managerName) nextErrors.managerName = "Menejer ismi majburiy";
+    if (!phoneNumber) nextErrors.phoneNumber = "Telefon majburiy";
+    else if (!isValidUzPhone(phoneNumber)) nextErrors.phoneNumber = "Telefon +998XXXXXXXXX formatida bo'lishi kerak";
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return null;
+    return { name, managerName, phoneNumber };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const normalized = validate();
+    if (!normalized || submitting || !companyId) return;
+    setSubmitting(true);
+    try {
+      await updateMyCompany({ companyId, ...normalized });
+      toast.success("Kompaniya ma'lumotlari yangilandi");
+      onSaved?.();
+      onClose();
+    } catch (error) {
+      toast.error(error?.message || "Xatolik yuz berdi");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-[4px]">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="animate-in slide-in-from-right relative flex h-full w-full max-w-md flex-col border-l border-white/6 bg-[#071828] shadow-2xl duration-200">
+        <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">Kompaniyani tahrirlash</h2>
+            <p className="mt-0.5 text-xs text-gray-600">Asosiy ma'lumotlarni yangilang</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.06] text-gray-500 transition-colors hover:text-white"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <FormField label="Nomi" required icon={Building2} error={errors.name}>
+              <TInput value={form.name} onChange={setField("name")} placeholder="Kompaniya nomi" maxLength={120} />
+            </FormField>
+            <FormField label="Menejer ismi" required icon={Users} error={errors.managerName}>
+              <TInput value={form.managerName} onChange={setField("managerName")} placeholder="To'liq ism sharif" maxLength={120} />
+            </FormField>
+            <FormField label="Telefon raqam" required icon={Phone} error={errors.phoneNumber}>
+              <TInput value={form.phoneNumber} onChange={setField("phoneNumber")} placeholder="+998 ** *** ** **" type="tel" maxLength={17} />
+            </FormField>
+          </div>
+
+          <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-white/[0.08] py-2.5 text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
+              Bekor
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50"
+            >
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Check size={15} /> Saqlash</>}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CompanyDrawer({ company, onClose, onSaved }) {
   const isEdit = Boolean(company);
   const [form, setForm] = useState(() => getInitialForm(company));
@@ -1409,6 +1520,7 @@ function CompaniesContent() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [drawer, setDrawer] = useState(null);
+  const [myCompanyDrawer, setMyCompanyDrawer] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -1602,10 +1714,7 @@ function CompaniesContent() {
                   key={company.id}
                   company={company}
                   onView={(item) => setSelectedCompany(item)}
-                  onEdit={(item) => {
-                    setSelectedCompany(null);
-                    setDrawer(item);
-                  }}
+                  onEdit={(item) => setMyCompanyDrawer(item)}
                   onDelete={(item) => setDeleteTarget(item)}
                   lockDelete={!canDeleteCompanies}
                 />
@@ -1684,8 +1793,17 @@ function CompaniesContent() {
           onClose={() => setSelectedCompany(null)}
           onEdit={(item) => {
             setSelectedCompany(null);
-            setDrawer(item);
+            setMyCompanyDrawer(item);
           }}
+        />
+      ) : null}
+
+      {myCompanyDrawer ? (
+        <MyCompanyEditDrawer
+          companyId={myCompanyDrawer.id}
+          company={myCompanyDrawer}
+          onClose={() => setMyCompanyDrawer(null)}
+          onSaved={fetchCompanies}
         />
       ) : null}
     </div>
