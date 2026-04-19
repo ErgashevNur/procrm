@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 const USER_UPDATED_EVENT = "crm:user-updated";
 
@@ -20,6 +20,15 @@ export function UserProvider({ children }) {
 
   const updateUser = useCallback((updatedFields) => {
     setUser((prev) => ({ ...prev, ...updatedFields }));
+  }, []);
+
+  // Login/logout bo'lganda localStorage dan qayta o'qib state ni yangilaydi
+  useEffect(() => {
+    function syncFromStorage() {
+      setUser(readUserFromStorage());
+    }
+    window.addEventListener("prohome:auth-changed", syncFromStorage);
+    return () => window.removeEventListener("prohome:auth-changed", syncFromStorage);
   }, []);
 
   return (
