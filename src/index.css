@@ -214,8 +214,8 @@
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -461,19 +461,42 @@
 
   .crm-toast--success {
     --toast-accent: #34c759;
+    border-color: rgba(52, 199, 89, 0.22) !important;
+    background:
+      linear-gradient(180deg, rgba(52, 199, 89, 0.07), rgba(52, 199, 89, 0.01)),
+      linear-gradient(160deg, rgba(8, 20, 14, 0.97), rgba(6, 13, 10, 0.96)) !important;
   }
 
   .crm-toast--error {
     --toast-accent: #ff5f57;
+    border-color: rgba(255, 95, 87, 0.22) !important;
+    background:
+      linear-gradient(180deg, rgba(255, 95, 87, 0.08), rgba(255, 95, 87, 0.01)),
+      linear-gradient(160deg, rgba(22, 8, 8, 0.97), rgba(14, 6, 6, 0.96)) !important;
   }
 
   .crm-toast--warning {
     --toast-accent: #ffb020;
+    border-color: rgba(255, 176, 32, 0.22) !important;
+    background:
+      linear-gradient(180deg, rgba(255, 176, 32, 0.07), rgba(255, 176, 32, 0.01)),
+      linear-gradient(160deg, rgba(20, 15, 5, 0.97), rgba(13, 10, 4, 0.96)) !important;
   }
 
   .crm-toast--info,
   .crm-toast--loading {
     --toast-accent: #69a7ff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
