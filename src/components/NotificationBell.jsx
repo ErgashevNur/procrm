@@ -55,7 +55,7 @@ export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => 
       <PopoverContent
         align="end"
         sideOffset={10}
-        className="w-[360px] border-white/10 bg-[#0d1a28] p-0 text-white shadow-[0_24px_60px_rgba(0,0,0,0.38)]"
+        className="w-[min(360px,calc(100vw-1.5rem))] border-white/10 bg-[#0d1a28] p-0 text-white shadow-[0_24px_60px_rgba(0,0,0,0.38)]"
       >
         <div className="max-h-[480px] overflow-y-auto">
           <div className="sticky top-0 flex items-center justify-between border-b border-white/8 bg-[#102033] px-4 py-3">

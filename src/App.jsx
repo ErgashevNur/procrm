@@ -8,6 +8,7 @@ import { Suspense, lazy } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProjectGate from "./components/ProjectGate";
 import AppSidebar from "./components/AppSidebar";
+import MobileHeader from "./components/MobileHeader";
 import KotibamLoader from "./components/KotibamLoader";
 import { Toaster } from "sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -101,6 +102,7 @@ export function ProtectedLayout() {
         <AppSidebar />
 
         <SidebarInset className="relative flex h-svh min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+          <MobileHeader />
           <main
             className="h-full min-h-0 flex-1 overflow-y-auto bg-transparent"
             style={{

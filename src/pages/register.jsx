@@ -4,6 +4,8 @@ import { toast } from "@/lib/toast";
 import { Eye, EyeOff } from "lucide-react";
 import { getGoogleAuthUrl, persistAuthSession } from "@/lib/auth";
 import { getDefaultRouteByRole } from "@/lib/rbac";
+import { PhoneInput, isValidUzPhone, normalizePhone } from "@/components/ui/phone-input";
+import { EmailInput } from "@/components/ui/email-input";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const DEFAULT_PERMISSIONS = ["CRM"];
@@ -73,22 +75,12 @@ export default function Register() {
     const nextErrors = {};
 
     if (!form.name.trim()) nextErrors.name = "Kompaniya nomini kiriting";
-    if (!form.phoneNumber.trim())
-      nextErrors.phoneNumber = "Telefon raqam kiriting";
-    if (
-      form.phoneNumber.trim() &&
-      !/^\+998\d{9}$/.test(form.phoneNumber.trim())
-    ) {
-      nextErrors.phoneNumber =
-        "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak";
-    }
+    if (!form.phoneNumber) nextErrors.phoneNumber = "Telefon raqam kiriting";
+    else if (!isValidUzPhone(form.phoneNumber))
+      nextErrors.phoneNumber = "To'liq telefon raqam kiriting (9 ta raqam)";
     if (!form.email.trim()) nextErrors.email = "Email kiriting";
-    if (
-      form.email.trim() &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
-    ) {
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
       nextErrors.email = "Email noto'g'ri";
-    }
     if (!form.password.trim()) nextErrors.password = "Parol kiriting";
 
     setErrors(nextErrors);
@@ -114,7 +106,7 @@ export default function Register() {
         },
         body: JSON.stringify({
           name: form.name.trim(),
-          phoneNumber: form.phoneNumber.trim(),
+          phoneNumber: normalizePhone(form.phoneNumber),
           email: form.email.trim(),
           password: form.password,
           permissions: DEFAULT_PERMISSIONS,
@@ -408,10 +400,10 @@ export default function Register() {
                 >
                   Telefon raqam *
                 </label>
-                <input
+                <PhoneInput
                   value={form.phoneNumber}
-                  onChange={(e) => setField("phoneNumber", e.target.value)}
-                  placeholder="+998 ** *** ** **"
+                  onChange={(val) => setField("phoneNumber", val)}
+                  error={errors.phoneNumber}
                   style={inputStyle("phoneNumber")}
                 />
                 {errors.phoneNumber && (
@@ -427,11 +419,10 @@ export default function Register() {
                 >
                   Email *
                 </label>
-                <input
-                  type="email"
+                <EmailInput
                   value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                  placeholder="company@mail.com"
+                  onChange={(val) => setField("email", val)}
+                  error={errors.email}
                   style={inputStyle("email")}
                 />
                 {errors.email && (

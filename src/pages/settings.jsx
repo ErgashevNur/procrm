@@ -25,6 +25,8 @@ import {
   EyeOff,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { EmailInput } from "@/components/ui/email-input";
 import {
   Dialog,
   DialogContent,
@@ -727,11 +729,11 @@ export default function settings() {
                       />
                     </FieldRow>
                     <FieldRow label="Email">
-                      <StyledInput
-                        type="email"
+                      <EmailInput
                         value={inviteEmail}
                         onChange={setInviteEmail}
-                        placeholder="xodim@company.uz"
+                        placeholder="xodim"
+                        className="max-w-xs"
                       />
                     </FieldRow>
                     <FieldRow label="Пароль">
@@ -820,12 +822,10 @@ export default function settings() {
                                 placeholder="F.I.O"
                                 className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                               />
-                              <input
-                                type="email"
+                              <EmailInput
                                 value={editEmail}
-                                onChange={(e) => setEditEmail(e.target.value)}
-                                placeholder="Email"
-                                className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                                onChange={setEditEmail}
+                                placeholder="email"
                               />
                               <div className="relative">
                                 <input
@@ -1258,10 +1258,9 @@ export default function settings() {
                 <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
                   Telefon
                 </label>
-                <StyledInput
+                <PhoneInput
                   value={supportForm.phone}
                   onChange={(value) => handleSupportFieldChange("phone", value)}
-                  placeholder="+998 ** *** ** **"
                 />
               </div>
             </div>
