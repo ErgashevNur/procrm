@@ -26,11 +26,7 @@ export function normalizePhone(raw) {
 }
 
 export function isValidUzPhone(value) {
-  const local = extractLocalDigits(value);
-  return (
-    local.length === 9 &&
-    /^(50|90|91|93|94|95|97|98|99|20|77|33|88|70|55|87)\d{7}$/.test(local)
-  );
+  return extractLocalDigits(value).length === 9;
 }
 
 /**
