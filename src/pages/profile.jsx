@@ -9,13 +9,14 @@ import {
   Loader2,
   LogOut,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n, { LANGUAGES, LANGUAGE_MAP } from "@/i18n/index.js";
 import { emitAuthChange } from "@/hooks/useNotification";
 import { useUser } from "@/context/UserContext";
 import { removeDeviceToken } from "@/services/notificationService";
 import { toast } from "@/lib/toast";
 
 const API_BASE = import.meta.env.VITE_VITE_API_KEY_PROHOME;
-const LANGUAGES = ["Русский", "O'zbek", "English"];
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ function InfoRow({ label, children }) {
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Profile() {
+  const { t } = useTranslation();
   const { updateUser } = useUser();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -227,7 +229,7 @@ export default function Profile() {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
-    language: "Русский",
+    language: "O'zbek",
   });
 
   // dirty tracking uchun initial qiymatlar
@@ -268,7 +270,7 @@ export default function Profile() {
     const loaded = {
       fullName: user.fullName ?? "",
       email: user.email ?? "",
-      language: "Русский",
+      language: user.language ?? "O'zbek",
     };
 
     setForm(loaded);
@@ -278,7 +280,13 @@ export default function Profile() {
     if (user.img) setAvatarPreview(getImageUrl(user.img));
   }, []);
 
-  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k) => (v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    if (k === "language" && LANGUAGE_MAP[v]) {
+      i18n.changeLanguage(LANGUAGE_MAP[v]);
+      updateUserInStorage({ language: v });
+    }
+  };
   const setPasswordField = (k) => (v) =>
     setPasswordForm((f) => ({ ...f, [k]: v }));
   const togglePasswordVisibility = (k) =>
@@ -298,6 +306,7 @@ export default function Profile() {
       const fd = new FormData();
       fd.append("fullName", form.fullName);
       fd.append("email", form.email);
+      fd.append("language", form.language);
       if (avatarFile) fd.append("img", avatarFile);
 
       const result = await patchProfile(fd);
@@ -318,34 +327,34 @@ export default function Profile() {
         }
 
         if (typeof updated.email === "string") setAccountEmail(updated.email);
-        updateUserInStorage(updated);
-        updateUser(updated);
+        updateUserInStorage({ ...updated, language: form.language });
+        updateUser({ ...updated, language: form.language });
       }
 
       // saqlangandan keyin initial ni yangilaymiz — button yana "Сохранить" bo'ladi
       setInitialForm({ ...form });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      toast.success("Profil saqlandi");
+      toast.success(t("profile.profileSaved"));
     } catch (err) {
-      toast.error("Saqlashda xato: " + err.message);
+      toast.error(t("profile.profileSaveError") + err.message);
     } finally {
       setSaving(false);
     }
   };
 
   const validatePasswordForm = () => {
-    if (!accountEmail.trim()) return "Email topilmadi, qayta login qiling";
-    if (!passwordForm.oldPassword.trim()) return "Joriy parolni kiriting";
-    if (!passwordForm.newPassword.trim()) return "Yangi parolni kiriting";
+    if (!accountEmail.trim()) return t("profile.validation.emailNotFound");
+    if (!passwordForm.oldPassword.trim()) return t("profile.validation.currentPasswordRequired");
+    if (!passwordForm.newPassword.trim()) return t("profile.validation.newPasswordRequired");
     if (passwordForm.newPassword.length < 6)
-      return "Yangi parol kamida 6 belgidan iborat bo'lishi kerak";
+      return t("profile.validation.passwordTooShort");
     if (passwordForm.oldPassword === passwordForm.newPassword)
-      return "Yangi parol joriy paroldan farq qilishi kerak";
+      return t("profile.validation.passwordSame");
     if (!passwordForm.confirmPassword.trim())
-      return "Yangi parol tasdig'ini kiriting";
+      return t("profile.validation.confirmRequired");
     if (passwordForm.newPassword !== passwordForm.confirmPassword)
-      return "Yangi parol va tasdiq bir xil emas";
+      return t("profile.validation.passwordMismatch");
     return "";
   };
 
@@ -380,10 +389,10 @@ export default function Profile() {
 
       setPasswordSaved(true);
       setTimeout(() => setPasswordSaved(false), 2000);
-      toast.success("Parol muvaffaqiyatli yangilandi");
+      toast.success(t("profile.passwordUpdated"));
     } catch (err) {
-      setPasswordError("Parolni yangilashda xato: " + err.message);
-      toast.error("Parolni yangilashda xato: " + err.message);
+      setPasswordError(t("profile.passwordUpdateError") + err.message);
+      toast.error(t("profile.passwordUpdateError") + err.message);
     } finally {
       setPasswordSaving(false);
     }
@@ -419,14 +428,14 @@ export default function Profile() {
       {/* Header */}
       <div className="animate-in fade-in slide-in-from-top-2 sticky top-0 z-10 border-b border-white/[0.06] bg-[#071828]/90 px-6 py-4 backdrop-blur duration-300">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <h1 className="text-lg font-bold text-white">Profil sozlamalari</h1>
+          <h1 className="text-lg font-bold text-white">{t("profile.title")}</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300"
             >
               <LogOut size={14} />
-              <span className="hidden sm:inline">Chiqish</span>
+              <span className="hidden sm:inline">{t("common.logout")}</span>
             </button>
             <button
               onClick={handleSave}
@@ -438,7 +447,7 @@ export default function Profile() {
               }`}
             >
               {saving && <Loader2 size={13} className="animate-spin" />}
-              {saving ? "Saqlanmoqda..." : saved ? "Saqlandi ✓" : "Saqlash"}
+              {saving ? t("common.saving") : saved ? t("common.saved") : t("common.save")}
             </button>
           </div>
         </div>
@@ -481,18 +490,18 @@ export default function Profile() {
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Shaxsiy ma'lumotlar */}
           <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
-            <SectionTitle>Shaxsiy ma'lumotlar</SectionTitle>
+            <SectionTitle>{t("profile.personalInfo")}</SectionTitle>
             <div className="space-y-3">
               <div>
-                <label className="mb-1.5 block text-xs text-gray-500">To'liq ism</label>
-                <ProfileInput value={form.fullName} onChange={set("fullName")} placeholder="Ismingizni kiriting" />
+                <label className="mb-1.5 block text-xs text-gray-500">{t("profile.fullName")}</label>
+                <ProfileInput value={form.fullName} onChange={set("fullName")} placeholder={t("profile.fullNamePlaceholder")} />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-gray-500">Email</label>
-                <ProfileInput value={form.email} onChange={set("email")} placeholder="email@example.com" type="email" />
+                <label className="mb-1.5 block text-xs text-gray-500">{t("common.email")}</label>
+                <ProfileInput value={form.email} onChange={set("email")} placeholder={t("profile.emailPlaceholder")} type="email" />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs text-gray-500">Til</label>
+                <label className="mb-1.5 block text-xs text-gray-500">{t("profile.language")}</label>
                 <LangSelect value={form.language} onChange={set("language")} />
               </div>
             </div>
@@ -500,55 +509,55 @@ export default function Profile() {
 
           {/* Tizim ma'lumotlari */}
           <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
-            <SectionTitle>Tizim ma'lumotlari</SectionTitle>
-            <InfoRow label="ID">
+            <SectionTitle>{t("profile.systemInfo")}</SectionTitle>
+            <InfoRow label={t("profile.id")}>
               {info.id || "—"}
               {info.id && <CopyBtn value={info.id} />}
             </InfoRow>
-            <InfoRow label="Kompaniya ID">
+            <InfoRow label={t("profile.companyId")}>
               {info.companyId || "—"}
               {info.companyId && <CopyBtn value={info.companyId} />}
             </InfoRow>
-            <InfoRow label="Rol">
+            <InfoRow label={t("profile.role")}>
               {info.role ? (
                 <span className="rounded-lg bg-blue-600/10 px-2 py-0.5 text-xs font-semibold text-blue-300">{info.role}</span>
               ) : "—"}
             </InfoRow>
-            <InfoRow label="Yaratilgan">{formatDate(info.createdAt)}</InfoRow>
-            <InfoRow label="Yangilangan">{formatDate(info.updatedAt)}</InfoRow>
+            <InfoRow label={t("profile.createdAt")}>{formatDate(info.createdAt)}</InfoRow>
+            <InfoRow label={t("profile.updatedAt")}>{formatDate(info.updatedAt)}</InfoRow>
           </div>
         </div>
 
         {/* Parol */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#0a1929] p-5">
-          <SectionTitle>Parolni yangilash</SectionTitle>
+          <SectionTitle>{t("profile.updatePassword")}</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-xs text-gray-500">Joriy parol</label>
+              <label className="mb-1.5 block text-xs text-gray-500">{t("profile.currentPassword")}</label>
               <PasswordInput
                 value={passwordForm.oldPassword}
                 onChange={setPasswordField("oldPassword")}
-                placeholder="Joriy parol"
+                placeholder={t("profile.currentPassword")}
                 show={showPasswords.oldPassword}
                 onToggleVisibility={() => togglePasswordVisibility("oldPassword")}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs text-gray-500">Yangi parol</label>
+              <label className="mb-1.5 block text-xs text-gray-500">{t("profile.newPassword")}</label>
               <PasswordInput
                 value={passwordForm.newPassword}
                 onChange={setPasswordField("newPassword")}
-                placeholder="Yangi parol"
+                placeholder={t("profile.newPassword")}
                 show={showPasswords.newPassword}
                 onToggleVisibility={() => togglePasswordVisibility("newPassword")}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs text-gray-500">Tasdiqlash</label>
+              <label className="mb-1.5 block text-xs text-gray-500">{t("profile.confirm")}</label>
               <PasswordInput
                 value={passwordForm.confirmPassword}
                 onChange={setPasswordField("confirmPassword")}
-                placeholder="Qaytaring"
+                placeholder={t("profile.repeatPassword")}
                 show={showPasswords.confirmPassword}
                 onToggleVisibility={() => togglePasswordVisibility("confirmPassword")}
               />
@@ -565,7 +574,7 @@ export default function Profile() {
               className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-500/15 disabled:opacity-50"
             >
               {passwordSaving && <Loader2 size={13} className="animate-spin" />}
-              {passwordSaving ? "Yangilanmoqda..." : passwordSaved ? "Yangilandi ✓" : "Parolni yangilash"}
+              {passwordSaving ? t("common.updating") : passwordSaved ? t("common.updated") : t("profile.updatePassword")}
             </button>
           </div>
         </div>

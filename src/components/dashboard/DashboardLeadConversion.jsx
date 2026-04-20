@@ -1,6 +1,8 @@
-import { STATUS_META } from "@/components/dashboard/statusMeta";
+import { useTranslation } from "react-i18next";
+import { getStatusMeta } from "@/components/dashboard/statusMeta";
 
 export default function DashboardLeadConversion({ byStatus, totalLeads }) {
+  const { t } = useTranslation();
   return (
     <div
       className="crm-card"
@@ -9,14 +11,15 @@ export default function DashboardLeadConversion({ byStatus, totalLeads }) {
       }}
     >
       <div className="mb-4">
-        <p className="crm-kicker">Lead konversiyasi</p>
+        <p className="crm-kicker">{t("dashboard.leadConversion")}</p>
         <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
-          Jami leadlar qaysi holatda qancha ekanini ko'rsatadi.
+          {t("dashboard.leadConversionDesc")}
         </p>
       </div>
       <div className="flex h-16 items-end gap-1">
         {Object.entries(byStatus).map(([key, count]) => {
-          const meta = STATUS_META[key] || { color: "#6b7280", label: key };
+          const statusMeta = getStatusMeta();
+          const meta = statusMeta[key] || { color: "#6b7280", label: key };
           const h = totalLeads > 0 ? Math.max((count / totalLeads) * 100, 4) : 4;
           return (
             <div key={key} className="flex flex-1 flex-col items-center gap-1">

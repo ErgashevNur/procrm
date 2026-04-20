@@ -1,0 +1,409 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "saved": "Сохранено ✓",
+    "cancel": "Отмена",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "add": "Добавить",
+    "logout": "Выйти",
+    "settings": "Настройки",
+    "close": "Закрыть",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "confirm": "Подтвердить",
+    "yes": "Да",
+    "no": "Нет",
+    "search": "Поиск",
+    "new": "Новый",
+    "total": "Всего",
+    "actions": "Действия",
+    "status": "Статус",
+    "name": "Название",
+    "email": "Email",
+    "phone": "Телефон",
+    "date": "Дата",
+    "noData": "Данные не найдены",
+    "required": "обязательно",
+    "optional": "необязательно",
+    "update": "Обновить",
+    "updating": "Обновление...",
+    "updated": "Обновлено ✓",
+    "upload": "Загрузить",
+    "download": "Скачать",
+    "send": "Отправить",
+    "sending": "Отправка...",
+    "sent": "Отправлено",
+    "connect": "Подключить",
+    "disconnect": "Отключить",
+    "connected": "Подключено",
+    "back": "Назад",
+    "next": "Далее",
+    "submit": "Отправить",
+    "reset": "Сбросить",
+    "select": "Выбрать",
+    "selectAll": "Выбрать всё",
+    "language": "Язык"
+  },
+
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "leads": "Лиды",
+    "tasks": "Задачи",
+    "analytics": "Аналитика",
+    "smsRassilka": "SMS/Рассылка",
+    "leadSource": "Источники лидов",
+    "projects": "Проекты",
+    "companies": "Компании",
+    "crmMarket": "CRM Market",
+    "settings": "Настройки",
+    "noProject": "Проект не выбран",
+    "newNotification": "новых"
+  },
+
+  "header": {
+    "dashboard": "Dashboard",
+    "leads": "Лиды",
+    "tasks": "Задачи",
+    "leadSources": "Источники лидов",
+    "projects": "Проекты",
+    "statuses": "Статусы",
+    "addStatus": "Добавить статус",
+    "smsRassilka": "SMS / Рассылка",
+    "settings": "Настройки",
+    "profile": "Профиль",
+    "kanban": "Kanban",
+    "leadDetails": "Детали лида",
+    "analytics": "Аналитика",
+    "companies": "Компании",
+    "crmMarket": "CRM Market"
+  },
+
+  "profile": {
+    "title": "Настройки профиля",
+    "personalInfo": "Личные данные",
+    "fullName": "Полное имя",
+    "fullNamePlaceholder": "Введите ваше имя",
+    "emailPlaceholder": "email@example.com",
+    "language": "Язык",
+    "systemInfo": "Системная информация",
+    "id": "ID",
+    "companyId": "ID компании",
+    "role": "Роль",
+    "createdAt": "Создан",
+    "updatedAt": "Обновлён",
+    "updatePassword": "Обновить пароль",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirm": "Подтверждение",
+    "repeatPassword": "Повторите",
+    "profileSaved": "Профиль сохранён",
+    "profileSaveError": "Ошибка сохранения: ",
+    "passwordUpdated": "Пароль успешно обновлён",
+    "passwordUpdateError": "Ошибка обновления пароля: ",
+    "validation": {
+      "emailNotFound": "Email не найден, войдите снова",
+      "currentPasswordRequired": "Введите текущий пароль",
+      "newPasswordRequired": "Введите новый пароль",
+      "passwordTooShort": "Новый пароль должен быть не менее 6 символов",
+      "passwordSame": "Новый пароль должен отличаться от текущего",
+      "confirmRequired": "Введите подтверждение нового пароля",
+      "passwordMismatch": "Новый пароль и подтверждение не совпадают"
+    }
+  },
+
+  "settings": {
+    "title": "Настройки",
+    "sections": {
+      "billing": "Счёт и оплата",
+      "users": "Пользователи",
+      "integrations": "Чаты и мессенджеры",
+      "support": "Поддержка"
+    },
+    "billing": {
+      "pricingPlans": "Тарифные планы",
+      "current": "Текущий",
+      "perMonth": "сум/месяц",
+      "upToUsers": "до пользователей",
+      "switchPlan": "Перейти",
+      "currentPlan": "Текущий тариф",
+      "subscriptionInfo": "Информация о вашей подписке",
+      "plan": "Тариф",
+      "status": "Статус",
+      "active": "Активен",
+      "nextPayment": "Следующий платёж",
+      "amount": "Сумма",
+      "users": "Пользователи",
+      "paymentHistory": "История платежей",
+      "paid": "Оплачен"
+    },
+    "users": {
+      "addUser": "Добавить пользователя",
+      "inviteDescription": "Отправьте приглашение сотруднику",
+      "fullName": "ФИО",
+      "password": "Пароль",
+      "passwordPlaceholder": "Минимум 6 символов",
+      "sendInvite": "Отправить приглашение",
+      "usersList": "Список пользователей",
+      "noUsers": "Пользователи не найдены",
+      "userAdded": "Пользователь добавлен ✅",
+      "userUpdated": "Пользователь обновлён ✅",
+      "userDeleted": "Удалено",
+      "nameEmailRequired": "Имя и email обязательны",
+      "noDeletePermission": "У вас нет прав для удаления пользователя",
+      "updateError": "Ошибка обновления ❌",
+      "newPassword": "Новый пароль (необязательно)",
+      "hidePassword": "Скрыть пароль",
+      "showPassword": "Показать пароль"
+    },
+    "integrations": {
+      "telegramHint": "Получайте уведомления о лидах и задачах через Telegram бот",
+      "instagramHint": "Принимайте DM сообщения как лиды",
+      "whatsappHint": "Интеграция с WhatsApp Business API",
+      "apiToken": "API Token",
+      "connected": "Подключено",
+      "disconnect": "Отключить",
+      "connect": "Подключить",
+      "tokenRequired": "Введите токен",
+      "connectSuccess": "Подключено ✅"
+    },
+    "support": {
+      "title": "Поддержка AI-CRM",
+      "description": "Быстрые каналы для получения помощи по вопросам, техническим проблемам или онбордингу.",
+      "telegramSupport": "Telegram поддержка",
+      "telegramHint": "После подключения backend эндпоинта поддержка через Telegram будет работать отсюда.",
+      "emailHint": "Реальный email поддержки будет заменён после готовности backend и домена.",
+      "phoneTitle": "Телефон",
+      "phoneHint": "Реальный номер поддержки будет подключён позже.",
+      "workingHours": "Рабочее время",
+      "workingHoursHint": "По Узбекистану/Фергане. Критические обращения рассматриваются вне очереди.",
+      "quickHelp": "Быстрая помощь",
+      "quickHelpDesc": "Готовые направления для наиболее распространённых ситуаций поддержки.",
+      "technicalIssue": "Техническая проблема",
+      "technicalText": "Если страница не работает, напишите в поддержку с текстом ошибки и скриншотом.",
+      "security": "Безопасность",
+      "securityText": "Проблемы с ролями, доступом или входом рассматриваются в приоритетном порядке.",
+      "guide": "Руководство",
+      "guideText": "Вы можете получить краткое руководство по статусам, источникам лидов или интеграциям.",
+      "beforeContact": "Перед обращением в поддержку",
+      "beforeContactDesc": "Подготовьте следующее для более быстрой помощи от поддержки.",
+      "beforeItems": [
+        "Укажите, в каком проекте возникла проблема.",
+        "Покажите, когда началась проблема и шаги для её воспроизведения.",
+        "Если появилась ошибка, добавьте скриншот или видео.",
+        "Укажите, в какой роли пользователя наблюдается проблема."
+      ],
+      "usefulLinks": "Полезные ссылки",
+      "usefulLinksDesc": "В дальнейшем будет заменено реальной базой знаний или документацией.",
+      "link1": "Краткое руководство по CRM",
+      "link2": "Работа с лидами и статусами",
+      "link3": "Чеклист подключения интеграций",
+      "endpointPending": "Ожидание эндпоинта",
+      "formPending": "Отправка временно отключена. Будет включена после готовности backend эндпоинта.",
+      "fullName": "Имя",
+      "companyName": "Название компании",
+      "problem": "Проблема",
+      "problemPlaceholder": "Опишите проблему как можно точнее...",
+      "screenshot": "Скриншот",
+      "screenshotUpload": "Загрузить скриншот",
+      "screenshotHint": "Вы можете отправить PNG, JPG или WebP скриншот",
+      "removeFile": "Удалить",
+      "requiredFields": "Имя, телефон, название компании и проблема обязательны",
+      "modalTitle": "AI-CRM Поддержка",
+      "modalDesc": "После готовности backend эндпоинта эта форма безопасно подключится к боту поддержки.",
+      "companyPlaceholder": "Название компании или проекта"
+    },
+    "saved": "Сохранено ✅",
+    "error": "Ошибка ❌"
+  },
+
+  "dashboard": {
+    "periodLabels": {
+      "all": "Общий обзор",
+      "today": "Сегодняшнее состояние",
+      "week": "Еженедельный обзор",
+      "month": "Ежемесячный обзор",
+      "custom": "Настраиваемый период"
+    },
+    "periodHints": {
+      "all": "Здесь отображены все данные.",
+      "today": "Здесь отображены данные за сегодня.",
+      "week": "Здесь отображены данные за эту неделю.",
+      "month": "Здесь отображены данные за этот месяц.",
+      "custom": "Здесь отображены данные за выбранный диапазон дат.",
+      "default": "Здесь отображены данные за выбранный период."
+    },
+    "overview": "Обзор",
+    "totalLeads": "Всего лидов",
+    "tasks": "Задачи",
+    "date": "Дата",
+    "period": "Период",
+    "startDate": "Дата начала",
+    "endDate": "Дата окончания",
+    "periods": {
+      "all": "Все",
+      "today": "Сегодня",
+      "week": "Неделя",
+      "month": "Месяц",
+      "custom": "Настраиваемый"
+    },
+    "statCards": {
+      "totalLeads": "Всего лидов",
+      "totalNote": "Общее количество поступивших лидов.",
+      "today": "Сегодня",
+      "todayNote": "Количество лидов за сегодня.",
+      "thisWeek": "Эта неделя",
+      "weekNote": "Количество лидов за эту неделю.",
+      "thisMonth": "Этот месяц",
+      "monthNote": "Количество лидов за этот месяц."
+    },
+    "byStatus": "По статусам",
+    "byStatusDesc": "Здесь отображается, в каком состоянии находятся лиды.",
+    "count": "шт",
+    "tasksTitle": "Задачи",
+    "tasksDesc": "Здесь отображается состояние задач.",
+    "total": "всего",
+    "completed": "Выполнено",
+    "pending": "Ожидание",
+    "overdue": "Просрочено",
+    "done": "выполнено",
+    "leadConversion": "Конверсия лидов",
+    "leadConversionDesc": "Показывает, в каком статусе находится какое количество лидов."
+  },
+
+  "statusMeta": {
+    "new": "Новый",
+    "pending": "Ожидание",
+    "success": "Успешно",
+    "canceled": "Отменён"
+  },
+
+  "leads": {
+    "title": "Лиды",
+    "addLead": "Добавить лид",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "phone": "Телефон",
+    "birthDate": "Дата рождения",
+    "address": "Адрес",
+    "additional": "Дополнительно",
+    "tags": "Теги",
+    "budget": "Бюджет",
+    "source": "Источник",
+    "send": "Отправить",
+    "noLeads": "Нет лидов",
+    "search": "Поиск..."
+  },
+
+  "tasks": {
+    "title": "Задачи",
+    "addTask": "Добавить задачу",
+    "noTasks": "Нет задач"
+  },
+
+  "companies": {
+    "title": "Компании",
+    "addCompany": "Новая компания",
+    "addNew": "Новая",
+    "editCompany": "Редактировать компанию",
+    "updateBasicInfo": "Обновить основную информацию",
+    "companyName": "Название компании",
+    "manager": "Менеджер",
+    "description": "Описание",
+    "permissions": "Права доступа",
+    "uploadLogo": "Загрузите или перетащите логотип",
+    "logoHint": "PNG, JPG, WEBP (2MB)",
+    "change": "Изменить",
+    "addedSuccess": "Компания добавлена",
+    "updatedSuccess": "Компания обновлена",
+    "deletedSuccess": "Компания удалена",
+    "loadError": "Не удалось загрузить компании"
+  },
+
+  "status": {
+    "title": "Статусы",
+    "addStatus": "Новый статус",
+    "color": "Цвет",
+    "noStatuses": "Нет статусов",
+    "addedSuccess": "Статус добавлен ✅",
+    "updatedSuccess": "Статус обновлён ✅",
+    "deletedSuccess": "Статус удалён ✅",
+    "orderSaved": "Порядок сохранён ✅"
+  },
+
+  "leadSource": {
+    "title": "Источники лидов",
+    "addSource": "Добавить источник лида",
+    "sourceName": "Название источника",
+    "icon": "Иконка",
+    "activeStatus": "Активный статус",
+    "added": "Добавлено",
+    "connectSocial": "Подключить социальные сети"
+  },
+
+  "analytics": {
+    "title": "Аналитика",
+    "leads": "лид"
+  },
+
+  "sms": {
+    "title": "SMS / Рассылка",
+    "templateName": "Название шаблона",
+    "messageText": "Текст сообщения",
+    "selectStatus": "Выберите статус",
+    "noTemplate": "Шаблон не найден",
+    "insufficientPermission": "Недостаточно прав"
+  },
+
+  "kanban": {
+    "title": "Kanban Board",
+    "noLeads": "Нет лидов"
+  },
+
+  "error": {
+    "title": "Произошла ошибка",
+    "goHome": "Вернуться на главную"
+  },
+
+  "login": {
+    "slides": {
+      "slide1Title": "ИИ-помощник поддерживает рабочий ритм",
+      "slide1Desc": "Ускоряет повторяющиеся процессы и помогает управлять ежедневной работой команды из одного центра.",
+      "slide1Stat": "Автоматизация 24/7",
+      "slide2Title": "Лиды не теряются",
+      "slide2Desc": "Каждый клиент, статус и следующий шаг чётко виден в одном pipeline.",
+      "slide2Stat": "Контроль лидов",
+      "slide3Title": "Цифры ускоряют принятие решений",
+      "slide3Desc": "С аналитикой в реальном времени вы мгновенно видите точки роста в процессе продаж.",
+      "slide3Stat": "Живые отчёты!"
+    },
+    "title": "Вход",
+    "subtitle": "Войдите в свой аккаунт",
+    "emailLabel": "Email",
+    "passwordLabel": "Пароль",
+    "loginButton": "Войти",
+    "loggingIn": "Вход...",
+    "invalidCredentials": "Неверный email или пароль"
+  },
+
+  "project": {
+    "selectProject": "Выберите проект",
+    "noProjects": "Нет проектов"
+  },
+
+  "forms": {
+    "createdSuccess": "Форма успешно создана!",
+    "updatedSuccess": "Форма успешно обновлена!",
+    "deleted": "Форма удалена",
+    "loadError": "Не удалось загрузить формы",
+    "headerImageAdded": "Заголовочное изображение добавлено"
+  },
+
+  "notification": {
+    "title": "Уведомления",
+    "noNotifications": "Нет уведомлений",
+    "markAllRead": "Отметить все прочитанными"
+  }
+}

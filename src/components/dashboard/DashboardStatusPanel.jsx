@@ -1,6 +1,8 @@
+import { useTranslation } from "react-i18next";
 import StatusBar from "@/components/dashboard/StatusBar";
 
 export default function DashboardStatusPanel({ totalLeads, byStatus, percentages }) {
+  const { t } = useTranslation();
   return (
     <div
       className="crm-card"
@@ -10,13 +12,13 @@ export default function DashboardStatusPanel({ totalLeads, byStatus, percentages
     >
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="crm-kicker">Statuslar bo'yicha</p>
+          <p className="crm-kicker">{t("dashboard.byStatus")}</p>
           <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
-            Leadlar qaysi holatda turgani shu yerda ko'rinadi.
+            {t("dashboard.byStatusDesc")}
           </p>
         </div>
         <span className="text-xs font-semibold text-[color:var(--crm-muted-2)]">
-          {totalLeads} ta
+          {totalLeads} {t("dashboard.count")}
         </span>
       </div>
       <div className="space-y-1 divide-y divide-white/3">

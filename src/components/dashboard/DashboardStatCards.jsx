@@ -1,38 +1,40 @@
 import { TrendingUp, Users, CalendarCheck2, BarChart3 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import StatCard from "@/components/dashboard/StatCard";
 
 export default function DashboardStatCards({ totalLeads, daily, weekly, monthly }) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <StatCard
         icon={Users}
-        label="Jami Leadlar"
+        label={t("dashboard.statCards.totalLeads")}
         value={totalLeads}
-        note="Umumiy tushgan leadlar soni."
+        note={t("dashboard.statCards.totalNote")}
         color="#3b82f6"
         delay={0.05}
       />
       <StatCard
         icon={TrendingUp}
-        label="Bugun"
+        label={t("dashboard.statCards.today")}
         value={daily}
-        note="Bugun nechta lead tushgani."
+        note={t("dashboard.statCards.todayNote")}
         color="#22c55e"
         delay={0.1}
       />
       <StatCard
         icon={BarChart3}
-        label="Bu hafta"
+        label={t("dashboard.statCards.thisWeek")}
         value={weekly}
-        note="Shu haftada nechta lead tushgani."
+        note={t("dashboard.statCards.weekNote")}
         color="#f59e0b"
         delay={0.15}
       />
       <StatCard
         icon={CalendarCheck2}
-        label="Bu oy"
+        label={t("dashboard.statCards.thisMonth")}
         value={monthly}
-        note="Shu oyda nechta lead tushgani."
+        note={t("dashboard.statCards.monthNote")}
         color="#a78bfa"
         delay={0.2}
       />

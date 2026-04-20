@@ -1,0 +1,409 @@
+{
+  "common": {
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda...",
+    "saved": "Saqlandi ✓",
+    "cancel": "Bekor qilish",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "add": "Qo'shish",
+    "logout": "Chiqish",
+    "settings": "Sozlamalar",
+    "close": "Yopish",
+    "loading": "Yuklanmoqda...",
+    "error": "Xatolik",
+    "success": "Muvaffaqiyat",
+    "confirm": "Tasdiqlash",
+    "yes": "Ha",
+    "no": "Yo'q",
+    "search": "Qidirish",
+    "new": "Yangi",
+    "total": "Jami",
+    "actions": "Amallar",
+    "status": "Holat",
+    "name": "Nom",
+    "email": "Email",
+    "phone": "Telefon",
+    "date": "Sana",
+    "noData": "Ma'lumot topilmadi",
+    "required": "majburiy",
+    "optional": "ixtiyoriy",
+    "update": "Yangilash",
+    "updating": "Yangilanmoqda...",
+    "updated": "Yangilandi ✓",
+    "upload": "Yuklash",
+    "download": "Yuklab olish",
+    "send": "Yuborish",
+    "sending": "Yuborilmoqda...",
+    "sent": "Yuborildi",
+    "connect": "Ulash",
+    "disconnect": "Uzish",
+    "connected": "Ulandi",
+    "back": "Orqaga",
+    "next": "Keyingi",
+    "submit": "Yuborish",
+    "reset": "Tozalash",
+    "select": "Tanlash",
+    "selectAll": "Hammasini tanlash",
+    "language": "Til"
+  },
+
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "leads": "Leadlar",
+    "tasks": "Tasklar",
+    "analytics": "Analitika",
+    "smsRassilka": "Sms/Rassilka",
+    "leadSource": "Lead manbasi",
+    "projects": "Projectlar",
+    "companies": "Kompaniyalar",
+    "crmMarket": "CRM Market",
+    "settings": "Sozlamalar",
+    "noProject": "Loyiha tanlanmagan",
+    "newNotification": "yangi"
+  },
+
+  "header": {
+    "dashboard": "Dashboard",
+    "leads": "Leadlar",
+    "tasks": "Tasklar",
+    "leadSources": "Lead manbalari",
+    "projects": "Projectlar",
+    "statuses": "Statuslar",
+    "addStatus": "Status qo'shish",
+    "smsRassilka": "SMS / Rassilka",
+    "settings": "Sozlamalar",
+    "profile": "Profil",
+    "kanban": "Kanban",
+    "leadDetails": "Lead tafsiloti",
+    "analytics": "Analitika",
+    "companies": "Kompaniyalar",
+    "crmMarket": "CRM Market"
+  },
+
+  "profile": {
+    "title": "Profil sozlamalari",
+    "personalInfo": "Shaxsiy ma'lumotlar",
+    "fullName": "To'liq ism",
+    "fullNamePlaceholder": "Ismingizni kiriting",
+    "emailPlaceholder": "email@example.com",
+    "language": "Til",
+    "systemInfo": "Tizim ma'lumotlari",
+    "id": "ID",
+    "companyId": "Kompaniya ID",
+    "role": "Rol",
+    "createdAt": "Yaratilgan",
+    "updatedAt": "Yangilangan",
+    "updatePassword": "Parolni yangilash",
+    "currentPassword": "Joriy parol",
+    "newPassword": "Yangi parol",
+    "confirm": "Tasdiqlash",
+    "repeatPassword": "Qaytaring",
+    "profileSaved": "Profil saqlandi",
+    "profileSaveError": "Saqlashda xato: ",
+    "passwordUpdated": "Parol muvaffaqiyatli yangilandi",
+    "passwordUpdateError": "Parolni yangilashda xato: ",
+    "validation": {
+      "emailNotFound": "Email topilmadi, qayta login qiling",
+      "currentPasswordRequired": "Joriy parolni kiriting",
+      "newPasswordRequired": "Yangi parolni kiriting",
+      "passwordTooShort": "Yangi parol kamida 6 belgidan iborat bo'lishi kerak",
+      "passwordSame": "Yangi parol joriy paroldan farq qilishi kerak",
+      "confirmRequired": "Yangi parol tasdig'ini kiriting",
+      "passwordMismatch": "Yangi parol va tasdiq bir xil emas"
+    }
+  },
+
+  "settings": {
+    "title": "Sozlamalar",
+    "sections": {
+      "billing": "Hisob va to'lov",
+      "users": "Foydalanuvchilar",
+      "integrations": "Chatlar va messenjerlar",
+      "support": "Qo'llab-quvvatlash"
+    },
+    "billing": {
+      "pricingPlans": "Tarif rejalari",
+      "current": "Joriy",
+      "perMonth": "so'm/oy",
+      "upToUsers": "ga qadar foydalanuvchi",
+      "switchPlan": "O'tish",
+      "currentPlan": "Joriy tarif",
+      "subscriptionInfo": "Obuna ma'lumotlari",
+      "plan": "Tarif",
+      "status": "Holat",
+      "active": "Faol",
+      "nextPayment": "Keyingi to'lov",
+      "amount": "Summa",
+      "users": "Foydalanuvchilar",
+      "paymentHistory": "To'lov tarixi",
+      "paid": "To'langan"
+    },
+    "users": {
+      "addUser": "Foydalanuvchi qo'shish",
+      "inviteDescription": "Xodimga taklif yuboring",
+      "fullName": "F.I.Sh",
+      "password": "Parol",
+      "passwordPlaceholder": "Kamida 6 belgi",
+      "sendInvite": "Taklif yuborish",
+      "usersList": "Foydalanuvchilar ro'yxati",
+      "noUsers": "Foydalanuvchilar topilmadi",
+      "userAdded": "Foydalanuvchi qo'shildi ✅",
+      "userUpdated": "Foydalanuvchi yangilandi ✅",
+      "userDeleted": "O'chirildi",
+      "nameEmailRequired": "Ism va email majburiy",
+      "noDeletePermission": "Sizda foydalanuvchini o'chirish uchun ruxsat yo'q",
+      "updateError": "Yangilashda xatolik ❌",
+      "newPassword": "Yangi parol (ixtiyoriy)",
+      "hidePassword": "Parolni yashirish",
+      "showPassword": "Parolni ko'rsatish"
+    },
+    "integrations": {
+      "telegramHint": "Leadlar va tasklar haqida Telegram bot orqali xabarnomalar oling",
+      "instagramHint": "DM xabarlarini lead sifatida qabul qiling",
+      "whatsappHint": "WhatsApp Business API bilan integratsiya",
+      "apiToken": "API Token",
+      "connected": "Ulandi",
+      "disconnect": "Uzish",
+      "connect": "Ulash",
+      "tokenRequired": "Token kiriting",
+      "connectSuccess": "Ulandi ✅"
+    },
+    "support": {
+      "title": "AI-CRM Qo'llab-quvvatlash",
+      "description": "Savollar, texnik muammo yoki onboarding bo'yicha yordam olish uchun tezkor kanallar.",
+      "telegramSupport": "Telegram support",
+      "telegramHint": "Support forma backendga ulangach Telegram support oqimi shu yerdan ishlaydi.",
+      "emailHint": "Haqiqiy support email backend va domen tayyor bo'lgach almashtiriladi.",
+      "phoneTitle": "Telefon",
+      "phoneHint": "Haqiqiy support raqami keyin ulanadi.",
+      "workingHours": "Ish vaqti",
+      "workingHoursHint": "O'zbekiston/Farg'ona bo'yicha. Kritik murojaatlar navbatdan tashqari ko'riladi.",
+      "quickHelp": "Tezkor yordam",
+      "quickHelpDesc": "Ko'p uchraydigan support scenariylari uchun tayyor yo'nalishlar.",
+      "technicalIssue": "Texnik muammo",
+      "technicalText": "Sahifa ishlamay qolsa, xatolik matni va screenshot bilan supportga yozing.",
+      "security": "Xavfsizlik",
+      "securityText": "Rol, access yoki login muammolari bo'lsa prioritet tartibda ko'rib chiqiladi.",
+      "guide": "Qo'llanma",
+      "guideText": "Status, lead manbasi yoki integratsiyalar bo'yicha qisqa yo'riqnoma olishingiz mumkin.",
+      "beforeContact": "Murojaat yuborishdan oldin",
+      "beforeContactDesc": "Support tezroq yordam berishi uchun quyidagilarni tayyorlab yuboring.",
+      "beforeItems": [
+        "Qaysi loyiha ichida muammo yuz berganini yozing.",
+        "Muammo qachon boshlanganini va takrorlash qadamlarini ko'rsating.",
+        "Agar xatolik chiqsa, screenshot yoki video qo'shing.",
+        "Qaysi foydalanuvchi rolida muammo kuzatilganini yozing."
+      ],
+      "usefulLinks": "Foydali havolalar",
+      "usefulLinksDesc": "Keyinchalik haqiqiy knowledge base yoki docs bilan almashtiriladi.",
+      "link1": "CRM bo'yicha qisqa yo'riqnoma",
+      "link2": "Lead va status bilan ishlash",
+      "link3": "Integratsiyalarni ulash bo'yicha checklist",
+      "endpointPending": "Endpoint kutilmoqda",
+      "formPending": "Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu joy ulanadi.",
+      "fullName": "Ism",
+      "companyName": "Kompaniya nomi",
+      "problem": "Muammo",
+      "problemPlaceholder": "Muammoni iloji boricha aniq yozing...",
+      "screenshot": "Screenshot",
+      "screenshotUpload": "Screenshot yuklash",
+      "screenshotHint": "PNG, JPG yoki WebP screenshot yuborishingiz mumkin",
+      "removeFile": "Olib tashlash",
+      "requiredFields": "Ism, telefon, kompaniya nomi va muammo majburiy",
+      "modalTitle": "AI-CRM Support",
+      "modalDesc": "Backend endpoint tayyor bo'lgach shu forma xavfsiz tarzda support botga ulanadi.",
+      "companyPlaceholder": "Kompaniya yoki loyiha nomi"
+    },
+    "saved": "Saqlandi ✅",
+    "error": "Xatolik ❌"
+  },
+
+  "dashboard": {
+    "periodLabels": {
+      "all": "Umumiy ko'rinish",
+      "today": "Bugungi holat",
+      "week": "Haftalik ko'rinish",
+      "month": "Oylik ko'rinish",
+      "custom": "Maxsus oraliq"
+    },
+    "periodHints": {
+      "all": "Hamma ma'lumot shu yerda ko'rsatilgan.",
+      "today": "Bu yerda bugungi ma'lumotlar ko'rsatilgan.",
+      "week": "Bu yerda shu haftadagi ma'lumotlar ko'rsatilgan.",
+      "month": "Bu yerda shu oydagi ma'lumotlar ko'rsatilgan.",
+      "custom": "Bu yerda tanlangan sanalar oralig'idagi ma'lumotlar ko'rsatilgan.",
+      "default": "Bu yerda tanlangan vaqt bo'yicha ma'lumotlar ko'rsatilgan."
+    },
+    "overview": "Overview",
+    "totalLeads": "Jami leadlar",
+    "tasks": "Tasklar",
+    "date": "Sana",
+    "period": "Davr",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi",
+    "periods": {
+      "all": "Hammasi",
+      "today": "Bugun",
+      "week": "Hafta",
+      "month": "Oy",
+      "custom": "Maxsus"
+    },
+    "statCards": {
+      "totalLeads": "Jami Leadlar",
+      "totalNote": "Umumiy tushgan leadlar soni.",
+      "today": "Bugun",
+      "todayNote": "Bugun nechta lead tushgani.",
+      "thisWeek": "Bu hafta",
+      "weekNote": "Shu haftada nechta lead tushgani.",
+      "thisMonth": "Bu oy",
+      "monthNote": "Shu oyda nechta lead tushgani."
+    },
+    "byStatus": "Statuslar bo'yicha",
+    "byStatusDesc": "Leadlar qaysi holatda turgani shu yerda ko'rinadi.",
+    "count": "ta",
+    "tasksTitle": "Tasklar",
+    "tasksDesc": "Vazifalar holati shu yerda ko'rinadi.",
+    "total": "jami",
+    "completed": "Bajarilgan",
+    "pending": "Kutilmoqda",
+    "overdue": "Muddati o'tgan",
+    "done": "bajarildi",
+    "leadConversion": "Lead konversiyasi",
+    "leadConversionDesc": "Jami leadlar qaysi holatda qancha ekanini ko'rsatadi."
+  },
+
+  "statusMeta": {
+    "new": "Yangi",
+    "pending": "Kutilmoqda",
+    "success": "Muvaffaqiyatli",
+    "canceled": "Bekor qilingan"
+  },
+
+  "leads": {
+    "title": "Leadlar",
+    "addLead": "Lead qo'shish",
+    "firstName": "Ism",
+    "lastName": "Familiya",
+    "phone": "Telefon",
+    "birthDate": "Tug'ilgan sana",
+    "address": "Manzil",
+    "additional": "Qo'shimcha",
+    "tags": "Teglar",
+    "budget": "Budjet",
+    "source": "Manba",
+    "send": "Yuborish",
+    "noLeads": "Leadlar yo'q",
+    "search": "Qidirish..."
+  },
+
+  "tasks": {
+    "title": "Tasklar",
+    "addTask": "Task qo'shish",
+    "noTasks": "Tasklar yo'q"
+  },
+
+  "companies": {
+    "title": "Kompaniyalar",
+    "addCompany": "Yangi kompaniya",
+    "addNew": "Yangi",
+    "editCompany": "Kompaniyani tahrirlash",
+    "updateBasicInfo": "Asosiy ma'lumotlarni yangilang",
+    "companyName": "Kompaniya nomi",
+    "manager": "Manager",
+    "description": "Tavsif",
+    "permissions": "Ruxsatlar",
+    "uploadLogo": "Logo yuklang yoki tashlang",
+    "logoHint": "PNG, JPG, WEBP (2MB)",
+    "change": "O'zgartirish",
+    "addedSuccess": "Kompaniya qo'shildi",
+    "updatedSuccess": "Kompaniya yangilandi",
+    "deletedSuccess": "Kompaniya o'chirildi",
+    "loadError": "Kompaniyalar yuklanmadi"
+  },
+
+  "status": {
+    "title": "Statuslar",
+    "addStatus": "Yangi status",
+    "color": "Rang",
+    "noStatuses": "Statuslar yo'q",
+    "addedSuccess": "Status qo'shildi ✅",
+    "updatedSuccess": "Status yangilandi ✅",
+    "deletedSuccess": "Status o'chirildi ✅",
+    "orderSaved": "Tartib saqlandi ✅"
+  },
+
+  "leadSource": {
+    "title": "Lead manbalari",
+    "addSource": "Yangi lead manbasi qo'shish",
+    "sourceName": "Manba nomi",
+    "icon": "Icon rasmi",
+    "activeStatus": "Aktiv holati",
+    "added": "Qo'shilgan",
+    "connectSocial": "Ijtimoiy tarmoqlarni ulash"
+  },
+
+  "analytics": {
+    "title": "Analitika",
+    "leads": "lead"
+  },
+
+  "sms": {
+    "title": "SMS / Rassilka",
+    "templateName": "Template nomi",
+    "messageText": "Xabar matni",
+    "selectStatus": "Status tanlang",
+    "noTemplate": "Template topilmadi",
+    "insufficientPermission": "Ruxsat yetarli emas"
+  },
+
+  "kanban": {
+    "title": "Kanban Board",
+    "noLeads": "Leadlar yo'q"
+  },
+
+  "error": {
+    "title": "Xatolik yuz berdi",
+    "goHome": "Bosh sahifaga qaytish"
+  },
+
+  "login": {
+    "slides": {
+      "slide1Title": "AI yordamchi ish ritmini ushlab turadi",
+      "slide1Desc": "Takroriy jarayonlarni tezlashtirib, jamoaning kundalik ishini bir markazdan boshqarishga yordam beradi.",
+      "slide1Stat": "24/7 avtomatlashtirish",
+      "slide2Title": "Leadlar yo'qolib ketmaydi",
+      "slide2Desc": "Har bir mijoz, status va keyingi qadam bitta pipeline ichida aniq ko'rinadi.",
+      "slide2Stat": "Leadlar nazorati",
+      "slide3Title": "Raqamlar qarorni tezlashtiradi",
+      "slide3Desc": "Real vaqt analitikasi bilan savdo jarayonidagi o'sish nuqtalarini darhol ko'rasiz.",
+      "slide3Stat": "Jonli hisobotlar!"
+    },
+    "title": "Kirish",
+    "subtitle": "Hisobingizga kiring",
+    "emailLabel": "Email",
+    "passwordLabel": "Parol",
+    "loginButton": "Kirish",
+    "loggingIn": "Kirilmoqda...",
+    "invalidCredentials": "Email yoki parol noto'g'ri"
+  },
+
+  "project": {
+    "selectProject": "Loyiha tanlang",
+    "noProjects": "Loyihalar yo'q"
+  },
+
+  "forms": {
+    "createdSuccess": "Forma muvaffaqiyatli yaratildi!",
+    "updatedSuccess": "Forma muvaffaqiyatli yangilandi!",
+    "deleted": "Forma o'chirildi",
+    "loadError": "Formalarni yuklab bo'lmadi",
+    "headerImageAdded": "Header rasmi qo'shildi"
+  },
+
+  "notification": {
+    "title": "Bildirishnomalar",
+    "noNotifications": "Bildirishnoma yo'q",
+    "markAllRead": "Hammasini o'qildi"
+  }
+}

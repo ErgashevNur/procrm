@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export default function DashboardOverviewCard({
   periodLabel,
   periodHint,
@@ -13,6 +15,7 @@ export default function DashboardOverviewCard({
   toDate,
   setToDate,
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="crm-card crm-hairline overflow-hidden"
@@ -20,7 +23,7 @@ export default function DashboardOverviewCard({
     >
       <div className="mb-6 flex flex-col gap-4 border-b border-white/6 pb-5 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl">
-          <p className="crm-kicker">Overview</p>
+          <p className="crm-kicker">{t("dashboard.overview")}</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white md:text-[2rem]">
             {periodLabel}
           </h1>
@@ -31,15 +34,15 @@ export default function DashboardOverviewCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
-            Jami leadlar:{" "}
+            {t("dashboard.totalLeads")}:{" "}
             <span className="font-semibold text-white">{totalLeads}</span>
           </div>
           <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
-            Tasklar: <span className="font-semibold text-white">{tasks.total}</span>
+            {t("dashboard.tasks")}: <span className="font-semibold text-white">{tasks.total}</span>
           </div>
           {hasDateRange ? (
             <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-xs text-[color:var(--crm-muted)]">
-              Sana:{" "}
+              {t("dashboard.date")}:{" "}
               <span className="font-semibold text-white">
                 {formatDisplayDate(dateRange.from)} -{" "}
                 {formatDisplayDate(dateRange.to)}
@@ -51,22 +54,22 @@ export default function DashboardOverviewCard({
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
-          Davr
+          {t("dashboard.period")}
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             className="crm-control h-11 rounded-2xl px-3.5 text-sm text-white outline-none"
           >
-            <option value="all">Hammasi</option>
-            <option value="today">Bugun</option>
-            <option value="week">Hafta</option>
-            <option value="month">Oy</option>
-            <option value="custom">Maxsus</option>
+            <option value="all">{t("dashboard.periods.all")}</option>
+            <option value="today">{t("dashboard.periods.today")}</option>
+            <option value="week">{t("dashboard.periods.week")}</option>
+            <option value="month">{t("dashboard.periods.month")}</option>
+            <option value="custom">{t("dashboard.periods.custom")}</option>
           </select>
         </label>
 
         <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
-          Boshlanish sanasi
+          {t("dashboard.startDate")}
           <input
             type="date"
             value={fromDate}
@@ -77,7 +80,7 @@ export default function DashboardOverviewCard({
         </label>
 
         <label className="flex flex-col gap-1.5 text-xs text-[color:var(--crm-muted)]">
-          Tugash sanasi
+          {t("dashboard.endDate")}
           <input
             type="date"
             value={toDate}

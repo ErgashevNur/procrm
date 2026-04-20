@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Save,
   Loader2,
@@ -59,12 +60,11 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
-// ── Sidebar sections ──────────────────────────────────────────────────────
-const SECTIONS = [
-  { key: "billing", label: "Счет и оплата", icon: CreditCard }, // Hisob va to'lov
-  { key: "users", label: "Пользователи", icon: Users2 }, // Foydalanuvchilar
-  { key: "integrations", label: "Чаты и мессенджеры", icon: MessageCircle }, // Integratsiyalar
-  { key: "support", label: "Поддержка", icon: Headset }, // Support
+const SECTION_KEYS = [
+  { key: "billing", icon: CreditCard },
+  { key: "users", icon: Users2 },
+  { key: "integrations", icon: MessageCircle },
+  { key: "support", icon: Headset },
 ];
 
 // ── Small UI components ───────────────────────────────────────────────────
@@ -168,7 +168,15 @@ function RoleBadge({ role }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-export default function settings() {
+export default function Settings() {
+  const { t } = useTranslation();
+
+  const SECTIONS = SECTION_KEYS.map(({ key, icon }) => ({
+    key,
+    label: t(`settings.sections.${key}`),
+    icon,
+  }));
+
   const role = getCurrentRole();
   const canDeleteUsers = canDeleteData(role);
   const projectId = localStorage.getItem("projectId");
@@ -316,7 +324,7 @@ export default function settings() {
       setUsers(unique);
     } catch (e) {
       console.error(e);
-      toast.error("Foydalanuvchilarni yuklab bo'lmadi");
+      toast.error(t("common.loading"));
     } finally {
       setUsersLoading(false);
     }
@@ -341,9 +349,9 @@ export default function settings() {
       } else {
         await new Promise((r) => setTimeout(r, 500));
       }
-      toast.success("Saqlandi ✅");
+      toast.success(t("settings.saved"));
     } catch {
-      toast.error("Xatolik ❌");
+      toast.error(t("settings.error"));
     } finally {
       setSaving(false);
     }
@@ -387,7 +395,7 @@ export default function settings() {
         );
 
       if (requestSucceeded) {
-        toast.success("Foydalanuvchi qo'shildi ✅");
+        toast.success(t("settings.users.userAdded"));
         setInviteFullName("");
         setInviteEmail("");
         setInvitePassword("");
@@ -404,7 +412,7 @@ export default function settings() {
   // ── Delete user ───────────────────────────────────────────────────────
   const handleDeleteUser = async (id, role) => {
     if (!canDeleteUsers) {
-      toast.error("Sizda foydalanuvchini o'chirish uchun ruxsat yo'q");
+      toast.error(t("settings.users.noDeletePermission"));
       return;
     }
     if (role !== "SALESMANAGER") {
@@ -418,7 +426,7 @@ export default function settings() {
       });
       if (!res || !res.ok) throw new Error();
       setUsers((p) => p.filter((u) => u.id !== id));
-      toast.success("O'chirildi");
+      toast.success(t("settings.users.userDeleted"));
     } catch {
       toast.error("Xatolik ❌");
     } finally {
@@ -445,7 +453,7 @@ export default function settings() {
   const handleUpdateUser = async (user) => {
     if (!user?.id) return;
     if (!editFullName.trim() || !editEmail.trim()) {
-      toast.error("Ism va email majburiy");
+      toast.error(t("settings.users.nameEmailRequired"));
       return;
     }
     setUpdatingId(user.id);
@@ -467,11 +475,11 @@ export default function settings() {
         body: JSON.stringify(body),
       });
       if (!res || !res.ok) throw new Error();
-      toast.success("Foydalanuvchi yangilandi ✅");
+      toast.success(t("settings.users.userUpdated"));
       await loadUsers();
       cancelEditUser();
     } catch {
-      toast.error("Yangilashda xatolik ❌");
+      toast.error(t("settings.users.updateError"));
     } finally {
       setUpdatingId(null);
     }
@@ -480,13 +488,13 @@ export default function settings() {
   // ── Connect integration ───────────────────────────────────────────────
   const connectInteg = async (key) => {
     if (!integrations[key].token.trim()) {
-      toast.error("Token kiriting");
+      toast.error(t("settings.integrations.tokenRequired"));
       return;
     }
     setSaving(true);
     await new Promise((r) => setTimeout(r, 600));
     setIntegrations((p) => ({ ...p, [key]: { ...p[key], connected: true } }));
-    toast.success("Ulandi ✅");
+    toast.success(t("settings.integrations.connectSuccess"));
     setSaving(false);
   };
 
@@ -502,7 +510,7 @@ export default function settings() {
       !supportForm.companyName.trim() ||
       !supportForm.problem.trim()
     ) {
-      toast.error("Ism, telefon, kompaniya nomi va muammo majburiy");
+      toast.error(t("settings.support.requiredFields"));
       return;
     }
 
@@ -521,7 +529,7 @@ export default function settings() {
       {/* ═══ STICKY HEADER ═══ */}
       <div className="flex shrink-0 items-center justify-between border-b border-[#1a3045] bg-[#071828] px-6 py-4">
         <h1 className="text-sm font-bold tracking-widest text-gray-300 uppercase">
-          Настройки
+          {t("settings.title")}
         </h1>
         <button
           onClick={handleSave}
@@ -533,7 +541,7 @@ export default function settings() {
           ) : (
             <Save size={14} />
           )}
-          Сохранить
+          {t("common.save")}
         </button>
       </div>
 
@@ -567,7 +575,7 @@ export default function settings() {
             {/* ════ HISOB VA TO'LOV ════ */}
             {active === "billing" && (
               <>
-                <Section title="Тарифные планы">
+                <Section title={t("settings.billing.pricingPlans")}>
                   <div className="grid grid-cols-3 gap-4 bg-[#0f2030] p-6">
                     {[
                       {
@@ -607,7 +615,7 @@ export default function settings() {
                             className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white"
                             style={{ background: plan.color }}
                           >
-                            Текущий
+                            {t("settings.billing.current")}
                           </span>
                         )}
                         <p className="text-sm font-semibold text-white">
@@ -619,13 +627,13 @@ export default function settings() {
                         >
                           {plan.price}
                         </p>
-                        <p className="text-[11px] text-gray-600">сум/месяц</p>
+                        <p className="text-[11px] text-gray-600">{t("settings.billing.perMonth")}</p>
                         <p className="mt-1 text-xs text-gray-500">
-                          до {plan.seats} польз.
+                          {plan.seats} {t("settings.billing.upToUsers")}
                         </p>
                         {!plan.current && (
                           <button className="mt-3 w-full rounded-lg border border-[#1a3045] py-1.5 text-xs text-gray-400 transition-colors hover:text-white">
-                            Перейти
+                            {t("settings.billing.switchPlan")}
                           </button>
                         )}
                       </div>
@@ -634,24 +642,24 @@ export default function settings() {
                 </Section>
 
                 <Section
-                  title="Текущий тариф"
-                  description="Информация о вашей подписке"
+                  title={t("settings.billing.currentPlan")}
+                  description={t("settings.billing.subscriptionInfo")}
                 >
                   <div className="bg-[#0f2030] p-6">
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <InfoCard label="Тариф" value="Pro" color="#3b82f6" />
+                      <InfoCard label={t("settings.billing.plan")} value="Pro" color="#3b82f6" />
                       <InfoCard
-                        label="Статус"
-                        value="Активен"
+                        label={t("settings.billing.status")}
+                        value={t("settings.billing.active")}
                         color="#10b981"
                       />
                       <InfoCard
-                        label="Следующий платёж"
+                        label={t("settings.billing.nextPayment")}
                         value="01.04.2026"
                         color="#f59e0b"
                       />
                       <InfoCard
-                        label="Сумма"
+                        label={t("settings.billing.amount")}
                         value="299 000 сум/мес"
                         color="#8b5cf6"
                       />
@@ -660,7 +668,7 @@ export default function settings() {
                     {/* seats bar */}
                     <div className="mt-4">
                       <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
-                        <span>Пользователи</span>
+                        <span>{t("settings.billing.users")}</span>
                         <span className="text-white">12 / 20</span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/6">
@@ -673,7 +681,7 @@ export default function settings() {
                   </div>
                 </Section>
 
-                <Section title="История платежей">
+                <Section title={t("settings.billing.paymentHistory")}>
                   {[
                     {
                       date: "01.03.2026",
@@ -705,7 +713,7 @@ export default function settings() {
                         {row.amount}
                       </span>
                       <span className="rounded-md bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-400">
-                        Оплачен
+                        {t("settings.billing.paid")}
                       </span>
                     </div>
                   ))}
@@ -717,18 +725,18 @@ export default function settings() {
             {active === "users" && (
               <>
                 <Section
-                  title="Добавить пользователя"
-                  description="Отправьте приглашение сотруднику"
+                  title={t("settings.users.addUser")}
+                  description={t("settings.users.inviteDescription")}
                 >
                   <form onSubmit={handleInvite} noValidate>
-                    <FieldRow label="ФИО">
+                    <FieldRow label={t("settings.users.fullName")}>
                       <StyledInput
                         value={inviteFullName}
                         onChange={setInviteFullName}
-                        placeholder="Ism Familiya"
+                        placeholder={t("profile.fullNamePlaceholder")}
                       />
                     </FieldRow>
-                    <FieldRow label="Email">
+                    <FieldRow label={t("common.email")}>
                       <EmailInput
                         value={inviteEmail}
                         onChange={setInviteEmail}
@@ -736,13 +744,13 @@ export default function settings() {
                         className="max-w-xs"
                       />
                     </FieldRow>
-                    <FieldRow label="Пароль">
+                    <FieldRow label={t("settings.users.password")}>
                       <div className="relative w-full max-w-xs">
                         <StyledInput
                           type={showInvitePassword ? "text" : "password"}
                           value={invitePassword}
                           onChange={setInvitePassword}
-                          placeholder="Kamida 6 belgi"
+                          placeholder={t("settings.users.passwordPlaceholder")}
                           className="max-w-none pr-10"
                         />
                         <button
@@ -751,8 +759,8 @@ export default function settings() {
                           className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
                           aria-label={
                             showInvitePassword
-                              ? "Parolni yashirish"
-                              : "Parolni ko'rsatish"
+                              ? t("settings.users.hidePassword")
+                              : t("settings.users.showPassword")
                           }
                         >
                           {showInvitePassword ? (
@@ -774,13 +782,13 @@ export default function settings() {
                         ) : (
                           <UserPlus size={13} />
                         )}
-                        Отправить приглашение
+                        {t("settings.users.sendInvite")}
                       </button>
                     </div>
                   </form>
                 </Section>
 
-                <Section title="Список пользователей">
+                <Section title={t("settings.users.usersList")}>
                   {usersLoading ? (
                     <div className="flex justify-center bg-[#0f2030] py-10">
                       <Loader2
@@ -792,7 +800,7 @@ export default function settings() {
                     <div className="flex flex-col items-center gap-2 bg-[#0f2030] py-12 text-center">
                       <Users size={28} className="text-gray-700" />
                       <p className="text-sm text-gray-600">
-                        Пользователи не найдены
+                        {t("settings.users.noUsers")}
                       </p>
                     </div>
                   ) : (
@@ -834,7 +842,7 @@ export default function settings() {
                                   onChange={(e) =>
                                     setEditPassword(e.target.value)
                                   }
-                                  placeholder="Yangi parol (ixtiyoriy)"
+                                  placeholder={t("settings.users.newPassword")}
                                   className="w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 pr-9 text-xs text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
                                 />
                                 <button
@@ -945,30 +953,30 @@ export default function settings() {
                     key: "telegram",
                     label: "Telegram",
                     emoji: "🤖",
-                    hint: "Получайте уведомления о лидах и задачах через Telegram бот",
+                    hintKey: "settings.integrations.telegramHint",
                     color: "#2AABEE",
                   },
                   {
                     key: "instagram",
                     label: "Instagram",
                     emoji: "📸",
-                    hint: "Принимайте DM сообщения как лиды",
+                    hintKey: "settings.integrations.instagramHint",
                     color: "#E1306C",
                   },
                   {
                     key: "whatsapp",
                     label: "WhatsApp",
                     emoji: "💬",
-                    hint: "Интеграция с WhatsApp Business API",
+                    hintKey: "settings.integrations.whatsappHint",
                     color: "#25D366",
                   },
-                ].map(({ key, label, emoji, hint, color }) => {
+                ].map(({ key, label, emoji, hintKey, color }) => {
                   const it = integrations[key];
                   return (
                     <Section
                       key={key}
                       title={`${emoji} ${label}`}
-                      description={hint}
+                      description={t(hintKey)}
                     >
                       {it.connected ? (
                         <div className="flex items-center justify-between bg-[#0f2030] px-6 py-5">
@@ -978,7 +986,7 @@ export default function settings() {
                           >
                             <Check size={16} />
                             <span className="text-sm font-medium">
-                              Подключено
+                              {t("settings.integrations.connected")}
                             </span>
                           </div>
                           <button
@@ -990,12 +998,12 @@ export default function settings() {
                             }
                             className="text-xs text-red-400 transition-colors hover:text-red-300"
                           >
-                            Отключить
+                            {t("settings.integrations.disconnect")}
                           </button>
                         </div>
                       ) : (
                         <>
-                          <FieldRow label="API Token">
+                          <FieldRow label={t("settings.integrations.apiToken")}>
                             <StyledInput
                               value={it.token}
                               onChange={(v) =>
@@ -1019,7 +1027,7 @@ export default function settings() {
                               ) : (
                                 <Zap size={13} />
                               )}
-                              Подключить
+                              {t("settings.integrations.connect")}
                             </button>
                           </div>
                         </>
@@ -1033,53 +1041,56 @@ export default function settings() {
             {active === "support" && (
               <>
                 <Section
-                  title="Поддержка AI-CRM"
-                  description="Savollar, texnik muammo yoki onboarding bo'yicha yordam olish uchun tezkor kanallar."
+                  title={t("settings.support.title")}
+                  description={t("settings.support.description")}
                 >
                   <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-2">
                     {[
                       {
-                        title: "Telegram support",
-                        value: "Backend endpoint kutilmoqda",
-                        hint: "Support form backendga ulangach Telegram support oqimi shu yerdan ishlaydi.",
+                        titleKey: "settings.support.telegramSupport",
+                        value: t("settings.support.endpointPending"),
+                        hintKey: "settings.support.telegramHint",
                         icon: MessageCircle,
                         color: "#38bdf8",
+                        isTelegram: true,
                       },
                       {
-                        title: "Email",
+                        titleKey: "Email",
                         value: "support@company.com",
-                        hint: "Haqiqiy support email backend va domen tayyor bo'lgach almashtiriladi.",
+                        hintKey: "settings.support.emailHint",
                         icon: Mail,
                         color: "#a78bfa",
+                        isTelegram: false,
                       },
                       {
-                        title: "Telefon",
+                        titleKey: "settings.support.phoneTitle",
                         value: "+998 XX XXX XX XX",
-                        hint: "Haqiqiy support raqami keyin ulanadi.",
+                        hintKey: "settings.support.phoneHint",
                         icon: PhoneCall,
                         color: "#34d399",
+                        isTelegram: false,
                       },
                       {
-                        title: "Ish vaqti",
+                        titleKey: "settings.support.workingHours",
                         value: "Du-Sha, 09:00-18:00",
-                        hint: "O'zbekiston/Farg'ona bo'yicha. Kritik murojaatlar navbatdan tashqari ko'riladi.",
+                        hintKey: "settings.support.workingHoursHint",
                         icon: Clock3,
                         color: "#f59e0b",
+                        isTelegram: false,
                       },
                     ].map((item) => {
                       const Icon = item.icon;
-                      const isTelegramSupport =
-                        item.title === "Telegram support";
+                      const title = item.titleKey.startsWith("Email") ? item.titleKey : t(item.titleKey);
                       return (
                         <button
                           type="button"
-                          key={item.title}
+                          key={item.titleKey}
                           onClick={() => {
-                            if (isTelegramSupport) setSupportModalOpen(true);
+                            if (item.isTelegram) setSupportModalOpen(true);
                           }}
                           className="rounded-2xl border border-[#1a3045] bg-[linear-gradient(180deg,rgba(10,23,37,0.94),rgba(7,24,40,0.82))] p-6 text-center shadow-[0_14px_32px_rgba(0,0,0,0.2)]"
                           style={{
-                            cursor: isTelegramSupport ? "pointer" : "default",
+                            cursor: item.isTelegram ? "pointer" : "default",
                           }}
                         >
                           <div className="flex flex-col items-center">
@@ -1094,7 +1105,7 @@ export default function settings() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-white">
-                                {item.title}
+                                {title}
                               </p>
                               <p
                                 className="mt-1 text-sm font-medium"
@@ -1103,11 +1114,11 @@ export default function settings() {
                                 {item.value}
                               </p>
                               <p className="mt-4 text-xs leading-6 text-gray-500">
-                                {item.hint}
+                                {t(item.hintKey)}
                               </p>
-                              {isTelegramSupport && (
+                              {item.isTelegram && (
                                 <span className="mt-4 inline-flex rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold text-cyan-200">
-                                  Endpoint kutilmoqda
+                                  {t("settings.support.endpointPending")}
                                 </span>
                               )}
                             </div>
@@ -1119,26 +1130,26 @@ export default function settings() {
                 </Section>
 
                 <Section
-                  title="Tezkor yordam"
-                  description="Ko'p uchraydigan support scenariylari uchun tayyor yo'nalishlar."
+                  title={t("settings.support.quickHelp")}
+                  description={t("settings.support.quickHelpDesc")}
                 >
                   <div className="grid gap-4 bg-[#0f2030] p-6 md:grid-cols-3">
                     {[
                       {
-                        title: "Texnik muammo",
-                        text: "Sahifa ishlamay qolsa, xatolik matni va screenshot bilan supportga yozing.",
+                        titleKey: "settings.support.technicalIssue",
+                        textKey: "settings.support.technicalText",
                         icon: Headset,
                         tone: "#60a5fa",
                       },
                       {
-                        title: "Xavfsizlik",
-                        text: "Rol, access yoki login muammolari bo'lsa prioritet tartibda ko'rib chiqiladi.",
+                        titleKey: "settings.support.security",
+                        textKey: "settings.support.securityText",
                         icon: ShieldCheck,
                         tone: "#34d399",
                       },
                       {
-                        title: "Qo'llanma",
-                        text: "Status, lead manbasi yoki integratsiyalar bo'yicha qisqa yo'riqnoma olishingiz mumkin.",
+                        titleKey: "settings.support.guide",
+                        textKey: "settings.support.guideText",
                         icon: HelpCircle,
                         tone: "#f59e0b",
                       },
@@ -1146,7 +1157,7 @@ export default function settings() {
                       const Icon = card.icon;
                       return (
                         <div
-                          key={card.title}
+                          key={card.titleKey}
                           className="rounded-2xl border border-[#1a3045] bg-[#0a1b2c] p-5"
                         >
                           <div
@@ -1159,10 +1170,10 @@ export default function settings() {
                             <Icon size={18} />
                           </div>
                           <p className="text-sm font-semibold text-white">
-                            {card.title}
+                            {t(card.titleKey)}
                           </p>
                           <p className="mt-2 text-xs leading-5 text-gray-500">
-                            {card.text}
+                            {t(card.textKey)}
                           </p>
                         </div>
                       );
@@ -1171,17 +1182,12 @@ export default function settings() {
                 </Section>
 
                 <Section
-                  title="Murojaat yuborishdan oldin"
-                  description="Support tezroq yordam berishi uchun quyidagilarni tayyorlab yuboring."
+                  title={t("settings.support.beforeContact")}
+                  description={t("settings.support.beforeContactDesc")}
                 >
-                  {[
-                    "Qaysi loyiha ichida muammo yuz berganini yozing.",
-                    "Muammo qachon boshlanganini va takrorlash qadamlarini ko'rsating.",
-                    "Agar xatolik chiqsa, screenshot yoki video qo'shing.",
-                    "Qaysi foydalanuvchi rolida muammo kuzatilganini yozing.",
-                  ].map((item) => (
+                  {(t("settings.support.beforeItems", { returnObjects: true }) || []).map((item, i) => (
                     <div
-                      key={item}
+                      key={i}
                       className="flex items-center gap-3 bg-[#0f2030] px-6 py-4"
                     >
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">
@@ -1193,33 +1199,24 @@ export default function settings() {
                 </Section>
 
                 <Section
-                  title="Foydali havolalar"
-                  description="Keyinchalik haqiqiy knowledge base yoki docs bilan almashtiriladi."
+                  title={t("settings.support.usefulLinks")}
+                  description={t("settings.support.usefulLinksDesc")}
                 >
                   {[
-                    {
-                      label: "CRM bo'yicha qisqa yo'riqnoma",
-                      href: "#",
-                    },
-                    {
-                      label: "Lead va status bilan ishlash",
-                      href: "#",
-                    },
-                    {
-                      label: "Integratsiyalarni ulash bo'yicha checklist",
-                      href: "#",
-                    },
+                    { labelKey: "settings.support.link1", href: "#" },
+                    { labelKey: "settings.support.link2", href: "#" },
+                    { labelKey: "settings.support.link3", href: "#" },
                   ].map((link) => (
                     <a
-                      key={link.label}
+                      key={link.labelKey}
                       href={link.href}
                       onClick={(e) => {
                         e.preventDefault();
-                        toast.info("Knowledge base linki keyin ulanadi");
+                        toast.info(t("settings.support.endpointPending"));
                       }}
                       className="flex items-center justify-between bg-[#0f2030] px-6 py-4 text-sm text-gray-300 transition-colors hover:bg-[#12283a] hover:text-white"
                     >
-                      <span>{link.label}</span>
+                      <span>{t(link.labelKey)}</span>
                       <ExternalLink size={14} className="text-gray-500" />
                     </a>
                   ))}
@@ -1233,10 +1230,9 @@ export default function settings() {
       <Dialog open={supportModalOpen} onOpenChange={setSupportModalOpen}>
         <DialogContent className="border-[#1a3045] bg-[#0b1b2a] text-white sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI-CRM Support</DialogTitle>
+            <DialogTitle>{t("settings.support.modalTitle")}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Backend endpoint tayyor bo'lgach shu forma xavfsiz tarzda support
-              botga ulanadi.
+              {t("settings.support.modalDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -1244,19 +1240,19 @@ export default function settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
-                  Ism
+                  {t("settings.support.fullName")}
                 </label>
                 <StyledInput
                   value={supportForm.fullName}
                   onChange={(value) =>
                     handleSupportFieldChange("fullName", value)
                   }
-                  placeholder="Ism Familiya"
+                  placeholder={t("profile.fullNamePlaceholder")}
                 />
               </div>
               <div>
                 <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
-                  Telefon
+                  {t("common.phone")}
                 </label>
                 <PhoneInput
                   value={supportForm.phone}
@@ -1267,39 +1263,39 @@ export default function settings() {
 
             <div>
               <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
-                Kompaniya nomi
+                {t("settings.support.companyName")}
               </label>
               <StyledInput
                 value={supportForm.companyName}
                 onChange={(value) =>
                   handleSupportFieldChange("companyName", value)
                 }
-                placeholder="Kompaniya yoki loyiha nomi"
+                placeholder={t("settings.support.companyPlaceholder")}
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
-                Muammo
+                {t("settings.support.problem")}
               </label>
               <textarea
                 value={supportForm.problem}
                 onChange={(e) =>
                   handleSupportFieldChange("problem", e.target.value)
                 }
-                placeholder="Muammoni iloji boricha aniq yozing..."
+                placeholder={t("settings.support.problemPlaceholder")}
                 className="min-h-32 w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-semibold tracking-widest text-gray-500 uppercase">
-                Screenshot
+                {t("settings.support.screenshot")}
               </label>
               <div className="flex flex-col gap-3">
                 <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#2a4c69] bg-[#071828] px-3 py-2 text-sm text-gray-300 transition-colors hover:border-blue-400/50 hover:text-white">
                   <ImagePlus size={15} />
-                  Screenshot yuklash
+                  {t("settings.support.screenshotUpload")}
                   <input
                     type="file"
                     accept="image/*"
@@ -1317,12 +1313,12 @@ export default function settings() {
                       onClick={() => setSupportScreenshot(null)}
                       className="text-red-400 transition-colors hover:text-red-300"
                     >
-                      Olib tashlash
+                      {t("settings.support.removeFile")}
                     </button>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-600">
-                    PNG, JPG yoki WebP screenshot yuborishingiz mumkin
+                    {t("settings.support.screenshotHint")}
                   </p>
                 )}
               </div>
@@ -1330,8 +1326,7 @@ export default function settings() {
 
             <div className="flex items-center justify-between rounded-xl border border-[#1a3045] bg-[#0f2030] px-4 py-3">
               <p className="text-xs text-gray-500">
-                Hozircha yuborish o'chirilgan. Backend endpoint berilgach shu
-                joy ulanadi.
+                {t("settings.support.formPending")}
               </p>
               <button
                 type="submit"
@@ -1343,7 +1338,7 @@ export default function settings() {
                 ) : (
                   <SendHorizonal size={14} />
                 )}
-                Endpoint kutilmoqda
+                {t("settings.support.endpointPending")}
               </button>
             </div>
           </form>
