@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import DashboardLoadingState from "@/components/dashboard/DashboardLoadingState";
 import DashboardEmptyState from "@/components/dashboard/DashboardEmptyState";
 import DashboardOverviewCard from "@/components/dashboard/DashboardOverviewCard";
@@ -21,6 +22,7 @@ function formatDisplayDate(value) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, loading, error, period, setPeriod, fromDate, setFromDate, toDate, setToDate } =
     useDashboardData(navigate);
@@ -65,22 +67,21 @@ export default function Dashboard() {
 
   const periodLabel =
     {
-      all: "Umumiy ko'rinish",
-      today: "Bugungi holat",
-      week: "Haftalik ko'rinish",
-      month: "Oylik ko'rinish",
-      custom: "Maxsus oraliq",
+      all: t("dashboard.periodLabels.all"),
+      today: t("dashboard.periodLabels.today"),
+      week: t("dashboard.periodLabels.week"),
+      month: t("dashboard.periodLabels.month"),
+      custom: t("dashboard.periodLabels.custom"),
     }[period] || "Dashboard";
 
   const periodHint =
     {
-      all: "Hamma ma'lumot shu yerda ko'rsatilgan.",
-      today: "Bu yerda bugungi ma'lumotlar ko'rsatilgan.",
-      week: "Bu yerda shu haftadagi ma'lumotlar ko'rsatilgan.",
-      month: "Bu yerda shu oydagi ma'lumotlar ko'rsatilgan.",
-      custom:
-        "Bu yerda tanlangan sanalar oralig'idagi ma'lumotlar ko'rsatilgan.",
-    }[period] || "Bu yerda tanlangan vaqt bo'yicha ma'lumotlar ko'rsatilgan.";
+      all: t("dashboard.periodHints.all"),
+      today: t("dashboard.periodHints.today"),
+      week: t("dashboard.periodHints.week"),
+      month: t("dashboard.periodHints.month"),
+      custom: t("dashboard.periodHints.custom"),
+    }[period] || t("dashboard.periodHints.default");
 
   const hasDateRange = dateRange.from && dateRange.to;
 

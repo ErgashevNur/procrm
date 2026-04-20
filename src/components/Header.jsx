@@ -1,31 +1,34 @@
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ROLE_LABELS, ROLES, getCurrentRole, isSupportedRole } from "@/lib/rbac";
 
-const TITLES = {
-  "/dashboard": "Dashboard",
-  "/leadlar": "Leadlar",
-  "/tasks": "Tasklar",
-  "/leadSource": "Lead manbalari",
-  "/projects": "Projectlar",
-  "/status": "Statuslar",
-  "/addStatus": "Status qo'shish",
-  "/rassilka": "SMS / Rassilka",
-  "/setting": "Sozlamalar",
-  "/profile": "Profil",
-  "/kanban": "Kanban",
-  "/leadDetails": "Lead tafsiloti",
-  "/analitika": "Analitika",
-  "/companies": "Kompaniyalar",
-  "/crm-market": "CRM Market",
-};
-
 export default function Header() {
+  const { t } = useTranslation();
   const location = useLocation();
   const role = getCurrentRole();
   const safeRole = isSupportedRole(role) ? role : ROLES.SALESMANAGER;
-  const title = TITLES[location.pathname] || "CRM";
   const projectName = localStorage.getItem("projectName");
   const roleLabel = ROLE_LABELS[safeRole] || safeRole;
+
+  const TITLES = {
+    "/dashboard": t("header.dashboard"),
+    "/leadlar": t("header.leads"),
+    "/tasks": t("header.tasks"),
+    "/leadSource": t("header.leadSources"),
+    "/projects": t("header.projects"),
+    "/status": t("header.statuses"),
+    "/addStatus": t("header.addStatus"),
+    "/rassilka": t("header.smsRassilka"),
+    "/setting": t("header.settings"),
+    "/profile": t("header.profile"),
+    "/kanban": t("header.kanban"),
+    "/leadDetails": t("header.leadDetails"),
+    "/analitika": t("header.analytics"),
+    "/companies": t("header.companies"),
+    "/crm-market": t("header.crmMarket"),
+  };
+
+  const title = TITLES[location.pathname] || "CRM";
 
   return (
     <div className="crm-glass crm-hairline hidden w-full items-center justify-between gap-4 rounded-[28px] px-5 py-3 md:flex">

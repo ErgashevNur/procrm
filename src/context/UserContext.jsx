@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import i18n, { LANGUAGE_MAP } from "@/i18n/index.js";
 
 const USER_UPDATED_EVENT = "crm:user-updated";
 
@@ -20,7 +21,15 @@ export function UserProvider({ children }) {
 
   const updateUser = useCallback((updatedFields) => {
     setUser((prev) => ({ ...prev, ...updatedFields }));
+    if (updatedFields.language && LANGUAGE_MAP[updatedFields.language]) {
+      i18n.changeLanguage(LANGUAGE_MAP[updatedFields.language]);
+    }
   }, []);
+
+  useEffect(() => {
+    const lang = LANGUAGE_MAP[user.language];
+    if (lang) i18n.changeLanguage(lang);
+  }, [user.language]);
 
   // Login/logout bo'lganda localStorage dan qayta o'qib state ni yangilaydi
   useEffect(() => {
