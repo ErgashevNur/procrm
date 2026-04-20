@@ -1,3 +1,4 @@
+//code written by codenur
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
@@ -9,9 +10,9 @@ import zh from "./locales/zh.json";
 
 export const LANGUAGE_MAP = {
   "O'zbek": "uz",
-  "Русский": "ru",
-  "English": "en",
-  "中文": "zh",
+  Русский: "ru",
+  English: "en",
+  中文: "zh",
 };
 
 export const LANGUAGE_DISPLAY = {
@@ -36,20 +37,18 @@ function getInitialLanguage() {
   return "uz";
 }
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      uz: { translation: uz },
-      ru: { translation: ru },
-      en: { translation: en },
-      zh: { translation: zh },
-    },
-    lng: getInitialLanguage(),
-    fallbackLng: "uz",
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+i18n.use(initReactI18next).init({
+  resources: {
+    uz: { translation: uz },
+    ru: { translation: ru },
+    en: { translation: en },
+    zh: { translation: zh },
+  },
+  lng: getInitialLanguage(),
+  fallbackLng: "uz",
+  interpolation: {
+    escapeValue: false,
+  },
+});
 
 export default i18n;
