@@ -1,4 +1,5 @@
 import { Bell, CheckCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useNotification } from "../hooks/useNotification";
 import {
   Popover,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 
 export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => {
+  const { t } = useTranslation();
   const {
     notifications,
     unreadCount,
@@ -34,7 +36,7 @@ export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => 
             <span
               className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
             >
-              Bildirishnoma
+              {t("notification.title")}
             </span>
           )}
           {unreadCount > 0 && (
@@ -61,7 +63,7 @@ export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => 
           <div className="sticky top-0 flex items-center justify-between border-b border-white/8 bg-[#102033] px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-white">
-                Bildirishnomalar
+                {t("notification.title")}
               </span>
               {unreadCount > 0 && (
                 <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
@@ -75,19 +77,19 @@ export const NotificationBell = ({ isCollapsed = false, inSidebar = false }) => 
                 className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
               >
                 <CheckCheck size={14} />
-                Hammasini o'qildi
+                {t("notification.markAllRead")}
               </button>
             )}
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-10 text-sm text-slate-400">
-              Yuklanmoqda...
+              {t("common.loading")}
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-slate-400">
               <Bell className="mb-2 h-10 w-10 text-slate-500" />
-              <span className="text-sm">Bildirishnoma yo'q</span>
+              <span className="text-sm">{t("notification.noNotifications")}</span>
             </div>
           ) : (
             <ul>

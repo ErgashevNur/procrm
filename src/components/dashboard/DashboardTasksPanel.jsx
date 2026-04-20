@@ -1,8 +1,10 @@
 import { CalendarCheck2, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ArcProgress from "@/components/dashboard/ArcProgress";
 import TaskRing from "@/components/dashboard/TaskRing";
 
 export default function DashboardTasksPanel({ tasks }) {
+  const { t } = useTranslation();
   return (
     <div
       className="crm-card"
@@ -12,15 +14,15 @@ export default function DashboardTasksPanel({ tasks }) {
     >
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="crm-kicker">Tasklar</p>
+          <p className="crm-kicker">{t("dashboard.tasksTitle")}</p>
           <p className="mt-1 text-xs text-[color:var(--crm-muted)]">
-            Vazifalar holati shu yerda ko'rinadi.
+            {t("dashboard.tasksDesc")}
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5">
           <CalendarCheck2 size={11} className="text-blue-400" />
           <span className="text-xs font-bold text-white">{tasks.total}</span>
-          <span className="text-[10px] text-[color:var(--crm-muted-2)]">jami</span>
+          <span className="text-[10px] text-[color:var(--crm-muted-2)]">{t("dashboard.total")}</span>
         </div>
       </div>
 
@@ -38,35 +40,35 @@ export default function DashboardTasksPanel({ tasks }) {
               {tasks.completionRate}%
             </span>
             <span className="mt-0.5 text-[9px] text-[color:var(--crm-muted)]">
-              bajarildi
+              {t("dashboard.done")}
             </span>
           </div>
         </div>
         <div className="flex-1 space-y-2.5">
           {[
             {
-              label: "Bajarilgan",
+              labelKey: "dashboard.completed",
               value: tasks.completed,
               color: "#22c55e",
               icon: CheckCircle2,
             },
             {
-              label: "Kutilmoqda",
+              labelKey: "dashboard.pending",
               value: tasks.pending,
               color: "#f59e0b",
               icon: Clock,
             },
             {
-              label: "Muddati o'tgan",
+              labelKey: "dashboard.overdue",
               value: tasks.overdue,
               color: "#ef4444",
               icon: AlertTriangle,
             },
-          ].map(({ label, value, color, icon: Icon }) => (
-            <div key={label} className="flex items-center justify-between">
+          ].map(({ labelKey, value, color, icon: Icon }) => (
+            <div key={labelKey} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Icon size={12} style={{ color }} />
-                <span className="text-xs text-[color:var(--crm-muted)]">{label}</span>
+                <span className="text-xs text-[color:var(--crm-muted)]">{t(labelKey)}</span>
               </div>
               <span className="text-xs font-bold text-white">{value}</span>
             </div>
@@ -77,19 +79,19 @@ export default function DashboardTasksPanel({ tasks }) {
       {/* Mini rings */}
       <div className="grid grid-cols-3 gap-2 border-t border-white/6 pt-4">
         <TaskRing
-          label="Bajarilgan"
+          label={t("dashboard.completed")}
           value={tasks.completed}
           total={tasks.total}
           color="#22c55e"
         />
         <TaskRing
-          label="Kutilmoqda"
+          label={t("dashboard.pending")}
           value={tasks.pending}
           total={tasks.total}
           color="#f59e0b"
         />
         <TaskRing
-          label="Muddati o'tgan"
+          label={t("dashboard.overdue")}
           value={tasks.overdue}
           total={tasks.total}
           color="#ef4444"

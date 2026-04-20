@@ -1,0 +1,409 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved ✓",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "logout": "Logout",
+    "settings": "Settings",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "new": "New",
+    "total": "Total",
+    "actions": "Actions",
+    "status": "Status",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "date": "Date",
+    "noData": "No data found",
+    "required": "required",
+    "optional": "optional",
+    "update": "Update",
+    "updating": "Updating...",
+    "updated": "Updated ✓",
+    "upload": "Upload",
+    "download": "Download",
+    "send": "Send",
+    "sending": "Sending...",
+    "sent": "Sent",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connected": "Connected",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "reset": "Reset",
+    "select": "Select",
+    "selectAll": "Select all",
+    "language": "Language"
+  },
+
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "leads": "Leads",
+    "tasks": "Tasks",
+    "analytics": "Analytics",
+    "smsRassilka": "SMS/Mailing",
+    "leadSource": "Lead Sources",
+    "projects": "Projects",
+    "companies": "Companies",
+    "crmMarket": "CRM Market",
+    "settings": "Settings",
+    "noProject": "No project selected",
+    "newNotification": "new"
+  },
+
+  "header": {
+    "dashboard": "Dashboard",
+    "leads": "Leads",
+    "tasks": "Tasks",
+    "leadSources": "Lead Sources",
+    "projects": "Projects",
+    "statuses": "Statuses",
+    "addStatus": "Add Status",
+    "smsRassilka": "SMS / Mailing",
+    "settings": "Settings",
+    "profile": "Profile",
+    "kanban": "Kanban",
+    "leadDetails": "Lead Details",
+    "analytics": "Analytics",
+    "companies": "Companies",
+    "crmMarket": "CRM Market"
+  },
+
+  "profile": {
+    "title": "Profile Settings",
+    "personalInfo": "Personal Information",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your name",
+    "emailPlaceholder": "email@example.com",
+    "language": "Language",
+    "systemInfo": "System Information",
+    "id": "ID",
+    "companyId": "Company ID",
+    "role": "Role",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "updatePassword": "Update Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirm": "Confirm",
+    "repeatPassword": "Repeat",
+    "profileSaved": "Profile saved",
+    "profileSaveError": "Save error: ",
+    "passwordUpdated": "Password updated successfully",
+    "passwordUpdateError": "Password update error: ",
+    "validation": {
+      "emailNotFound": "Email not found, please login again",
+      "currentPasswordRequired": "Enter current password",
+      "newPasswordRequired": "Enter new password",
+      "passwordTooShort": "New password must be at least 6 characters",
+      "passwordSame": "New password must differ from current password",
+      "confirmRequired": "Enter new password confirmation",
+      "passwordMismatch": "New password and confirmation do not match"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "billing": "Billing",
+      "users": "Users",
+      "integrations": "Chats & Messengers",
+      "support": "Support"
+    },
+    "billing": {
+      "pricingPlans": "Pricing Plans",
+      "current": "Current",
+      "perMonth": "sum/month",
+      "upToUsers": "up to users",
+      "switchPlan": "Switch",
+      "currentPlan": "Current Plan",
+      "subscriptionInfo": "Your subscription info",
+      "plan": "Plan",
+      "status": "Status",
+      "active": "Active",
+      "nextPayment": "Next Payment",
+      "amount": "Amount",
+      "users": "Users",
+      "paymentHistory": "Payment History",
+      "paid": "Paid"
+    },
+    "users": {
+      "addUser": "Add User",
+      "inviteDescription": "Send an invitation to an employee",
+      "fullName": "Full Name",
+      "password": "Password",
+      "passwordPlaceholder": "At least 6 characters",
+      "sendInvite": "Send Invitation",
+      "usersList": "Users List",
+      "noUsers": "No users found",
+      "userAdded": "User added ✅",
+      "userUpdated": "User updated ✅",
+      "userDeleted": "Deleted",
+      "nameEmailRequired": "Name and email are required",
+      "noDeletePermission": "You don't have permission to delete users",
+      "updateError": "Update error ❌",
+      "newPassword": "New password (optional)",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password"
+    },
+    "integrations": {
+      "telegramHint": "Receive notifications about leads and tasks via Telegram bot",
+      "instagramHint": "Receive DM messages as leads",
+      "whatsappHint": "Integration with WhatsApp Business API",
+      "apiToken": "API Token",
+      "connected": "Connected",
+      "disconnect": "Disconnect",
+      "connect": "Connect",
+      "tokenRequired": "Enter token",
+      "connectSuccess": "Connected ✅"
+    },
+    "support": {
+      "title": "AI-CRM Support",
+      "description": "Quick channels to get help with questions, technical issues, or onboarding.",
+      "telegramSupport": "Telegram Support",
+      "telegramHint": "Once backend endpoint is ready, Telegram support flow will work from here.",
+      "emailHint": "Real support email will be replaced once backend and domain are ready.",
+      "phoneTitle": "Phone",
+      "phoneHint": "Real support number will be connected later.",
+      "workingHours": "Working Hours",
+      "workingHoursHint": "Based on Uzbekistan/Fergana. Critical requests are handled out of queue.",
+      "quickHelp": "Quick Help",
+      "quickHelpDesc": "Ready directions for the most common support scenarios.",
+      "technicalIssue": "Technical Issue",
+      "technicalText": "If a page stops working, write to support with error text and screenshot.",
+      "security": "Security",
+      "securityText": "Role, access, or login issues are handled on priority basis.",
+      "guide": "Guide",
+      "guideText": "You can get a quick guide on statuses, lead sources, or integrations.",
+      "beforeContact": "Before Contacting Support",
+      "beforeContactDesc": "Prepare the following for faster support assistance.",
+      "beforeItems": [
+        "Write which project the issue occurred in.",
+        "Show when the problem started and steps to reproduce it.",
+        "If an error appears, add a screenshot or video.",
+        "Write which user role the issue is observed in."
+      ],
+      "usefulLinks": "Useful Links",
+      "usefulLinksDesc": "Will be replaced with real knowledge base or docs later.",
+      "link1": "Quick CRM guide",
+      "link2": "Working with leads and statuses",
+      "link3": "Integration connection checklist",
+      "endpointPending": "Awaiting endpoint",
+      "formPending": "Sending is disabled for now. Will be enabled once backend endpoint is provided.",
+      "fullName": "Name",
+      "companyName": "Company Name",
+      "problem": "Problem",
+      "problemPlaceholder": "Describe the problem as clearly as possible...",
+      "screenshot": "Screenshot",
+      "screenshotUpload": "Upload Screenshot",
+      "screenshotHint": "You can send PNG, JPG or WebP screenshot",
+      "removeFile": "Remove",
+      "requiredFields": "Name, phone, company name and problem are required",
+      "modalTitle": "AI-CRM Support",
+      "modalDesc": "Once backend endpoint is ready, this form will safely connect to the support bot.",
+      "companyPlaceholder": "Company or project name"
+    },
+    "saved": "Saved ✅",
+    "error": "Error ❌"
+  },
+
+  "dashboard": {
+    "periodLabels": {
+      "all": "Overall View",
+      "today": "Today's Status",
+      "week": "Weekly View",
+      "month": "Monthly View",
+      "custom": "Custom Range"
+    },
+    "periodHints": {
+      "all": "All data is shown here.",
+      "today": "Today's data is shown here.",
+      "week": "This week's data is shown here.",
+      "month": "This month's data is shown here.",
+      "custom": "Data for the selected date range is shown here.",
+      "default": "Data for the selected period is shown here."
+    },
+    "overview": "Overview",
+    "totalLeads": "Total Leads",
+    "tasks": "Tasks",
+    "date": "Date",
+    "period": "Period",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "periods": {
+      "all": "All",
+      "today": "Today",
+      "week": "Week",
+      "month": "Month",
+      "custom": "Custom"
+    },
+    "statCards": {
+      "totalLeads": "Total Leads",
+      "totalNote": "Total number of leads received.",
+      "today": "Today",
+      "todayNote": "Number of leads today.",
+      "thisWeek": "This Week",
+      "weekNote": "Number of leads this week.",
+      "thisMonth": "This Month",
+      "monthNote": "Number of leads this month."
+    },
+    "byStatus": "By Status",
+    "byStatusDesc": "Shows which status leads are in.",
+    "count": "",
+    "tasksTitle": "Tasks",
+    "tasksDesc": "Task status is shown here.",
+    "total": "total",
+    "completed": "Completed",
+    "pending": "Pending",
+    "overdue": "Overdue",
+    "done": "done",
+    "leadConversion": "Lead Conversion",
+    "leadConversionDesc": "Shows how many leads are in each status."
+  },
+
+  "statusMeta": {
+    "new": "New",
+    "pending": "Pending",
+    "success": "Successful",
+    "canceled": "Cancelled"
+  },
+
+  "leads": {
+    "title": "Leads",
+    "addLead": "Add Lead",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "phone": "Phone",
+    "birthDate": "Date of Birth",
+    "address": "Address",
+    "additional": "Additional",
+    "tags": "Tags",
+    "budget": "Budget",
+    "source": "Source",
+    "send": "Send",
+    "noLeads": "No leads",
+    "search": "Search..."
+  },
+
+  "tasks": {
+    "title": "Tasks",
+    "addTask": "Add Task",
+    "noTasks": "No tasks"
+  },
+
+  "companies": {
+    "title": "Companies",
+    "addCompany": "New Company",
+    "addNew": "New",
+    "editCompany": "Edit Company",
+    "updateBasicInfo": "Update basic information",
+    "companyName": "Company Name",
+    "manager": "Manager",
+    "description": "Description",
+    "permissions": "Permissions",
+    "uploadLogo": "Upload or drag logo",
+    "logoHint": "PNG, JPG, WEBP (2MB)",
+    "change": "Change",
+    "addedSuccess": "Company added",
+    "updatedSuccess": "Company updated",
+    "deletedSuccess": "Company deleted",
+    "loadError": "Failed to load companies"
+  },
+
+  "status": {
+    "title": "Statuses",
+    "addStatus": "New Status",
+    "color": "Color",
+    "noStatuses": "No statuses",
+    "addedSuccess": "Status added ✅",
+    "updatedSuccess": "Status updated ✅",
+    "deletedSuccess": "Status deleted ✅",
+    "orderSaved": "Order saved ✅"
+  },
+
+  "leadSource": {
+    "title": "Lead Sources",
+    "addSource": "Add New Lead Source",
+    "sourceName": "Source Name",
+    "icon": "Icon Image",
+    "activeStatus": "Active Status",
+    "added": "Added",
+    "connectSocial": "Connect Social Networks"
+  },
+
+  "analytics": {
+    "title": "Analytics",
+    "leads": "lead"
+  },
+
+  "sms": {
+    "title": "SMS / Mailing",
+    "templateName": "Template Name",
+    "messageText": "Message Text",
+    "selectStatus": "Select Status",
+    "noTemplate": "Template not found",
+    "insufficientPermission": "Insufficient permissions"
+  },
+
+  "kanban": {
+    "title": "Kanban Board",
+    "noLeads": "No leads"
+  },
+
+  "error": {
+    "title": "An error occurred",
+    "goHome": "Return to home"
+  },
+
+  "login": {
+    "slides": {
+      "slide1Title": "AI assistant keeps work rhythm",
+      "slide1Desc": "Speeds up repetitive processes and helps manage the team's daily work from one center.",
+      "slide1Stat": "24/7 automation",
+      "slide2Title": "Leads don't get lost",
+      "slide2Desc": "Every client, status and next step is clearly visible in one pipeline.",
+      "slide2Stat": "Lead control",
+      "slide3Title": "Numbers speed up decisions",
+      "slide3Desc": "With real-time analytics, you instantly see growth points in the sales process.",
+      "slide3Stat": "Live reports!"
+    },
+    "title": "Sign In",
+    "subtitle": "Sign in to your account",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in...",
+    "invalidCredentials": "Invalid email or password"
+  },
+
+  "project": {
+    "selectProject": "Select project",
+    "noProjects": "No projects"
+  },
+
+  "forms": {
+    "createdSuccess": "Form created successfully!",
+    "updatedSuccess": "Form updated successfully!",
+    "deleted": "Form deleted",
+    "loadError": "Failed to load forms",
+    "headerImageAdded": "Header image added"
+  },
+
+  "notification": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read"
+  }
+}

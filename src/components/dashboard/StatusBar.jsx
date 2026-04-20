@@ -1,8 +1,9 @@
 import { BarChart3 } from "lucide-react";
-import { STATUS_META } from "@/components/dashboard/statusMeta";
+import { getStatusMeta } from "@/components/dashboard/statusMeta";
 
 export default function StatusBar({ statusKey, count, total, percent }) {
-  const meta = STATUS_META[statusKey] || {
+  const statusMeta = getStatusMeta();
+  const meta = statusMeta[statusKey] || {
     label: statusKey,
     color: "#6b7280",
     icon: BarChart3,

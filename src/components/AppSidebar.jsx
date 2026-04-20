@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useUser } from "@/context/UserContext";
+import { useTranslation } from "react-i18next";
 import { Settings, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -62,7 +63,20 @@ function settingCls(isActive, isCollapsed) {
   ].join(" ");
 }
 
+const NAV_TITLE_KEYS = {
+  "/dashboard": "sidebar.dashboard",
+  "/leadlar": "sidebar.leads",
+  "/tasks": "sidebar.tasks",
+  "/analitika": "sidebar.analytics",
+  "/rassilka": "sidebar.smsRassilka",
+  "/leadSource": "sidebar.leadSource",
+  "/projects": "sidebar.projects",
+  "/companies": "sidebar.companies",
+  "/crm-market": "sidebar.crmMarket",
+};
+
 function SidebarBody({ isCollapsed }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const {
     leadNotificationCount,
@@ -138,7 +152,7 @@ function SidebarBody({ isCollapsed }) {
           </NavLink>
           {!isCollapsed && (
             <div className="mt-2 rounded-2xl border border-cyan-300/18 bg-cyan-400/8 px-3 py-2 text-[11px] text-cyan-100 backdrop-blur-xl">
-              {projectName || "Loyiha tanlanmagan"}
+              {projectName || t("sidebar.noProject")}
             </div>
           )}
         </div>
@@ -184,7 +198,7 @@ function SidebarBody({ isCollapsed }) {
                     isCollapsed ? "text-center text-[10px]" : "text-left text-sm"
                   }`}
                 >
-                  {item.title}
+                  {NAV_TITLE_KEYS[item.url] ? t(NAV_TITLE_KEYS[item.url]) : item.title}
                 </span>
               </div>
             </NavLink>
@@ -236,7 +250,7 @@ function SidebarBody({ isCollapsed }) {
             <span
               className={`${isCollapsed ? "text-[10px]" : "text-sm"} font-medium`}
             >
-              Sozlamalar
+              {t("common.settings")}
             </span>
           </NavLink>
         )}
