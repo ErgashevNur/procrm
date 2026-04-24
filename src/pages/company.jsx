@@ -1047,6 +1047,7 @@ function MyCompanyEditDrawer({ companyId, company, onClose, onSaved }) {
     name: company?.name ?? "",
     managerName: company?.managerName ?? "",
     phoneNumber: company?.phoneNumber ?? "",
+    status: getCompanyStatus(company, true),
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -1076,6 +1077,16 @@ function MyCompanyEditDrawer({ companyId, company, onClose, onSaved }) {
     setSubmitting(true);
     try {
       await updateMyCompany({ companyId, ...normalized });
+
+      const previousStatus = getCompanyStatus(company, true);
+      if (form.status !== previousStatus) {
+        const statusRes = await apiFetch(`/company/status/${companyId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: form.status, isActive: form.status, active: form.status }),
+        });
+        await parseApiResponse(statusRes, "Statusni yangilashda xatolik");
+      }
+
       toast.success("Kompaniya ma'lumotlari yangilandi");
       onSaved?.();
       onClose();
@@ -1115,6 +1126,21 @@ function MyCompanyEditDrawer({ companyId, company, onClose, onSaved }) {
             <FormField label="Telefon raqam" required icon={Phone} error={errors.phoneNumber}>
               <PhoneInput value={form.phoneNumber} onChange={setField("phoneNumber")} error={errors.phoneNumber} />
             </FormField>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0a1929] px-3 py-2.5">
+              <div>
+                <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Status
+                </p>
+                <p className={`mt-1 text-xs font-semibold ${form.status ? "text-emerald-300" : "text-gray-400"}`}>
+                  {form.status ? "Aktiv" : "Nofaol"}
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(form.status)}
+                onCheckedChange={(v) => setField("status")(v)}
+              />
+            </div>
           </div>
 
           <div className="flex gap-3 border-t border-white/[0.06] px-6 py-4">
