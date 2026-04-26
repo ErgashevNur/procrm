@@ -405,5 +405,31 @@
     "title": "Notifications",
     "noNotifications": "No notifications",
     "markAllRead": "Mark all as read"
+  },
+
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "We are fully committed to the security and privacy of your data",
+    "lastUpdated": "Last updated: April 2026",
+    "backHome": "Back to Home",
+    "contactTitle": "Have questions?",
+    "contactDesc": "If you have any questions about this policy or your data, please reach out to us",
+    "contactBtn": "support@kotibam.uz",
+    "s1Title": "Overview",
+    "s1Body": "Kotibam is an AI-powered CRM platform built for sales teams. This Privacy Policy explains what data is collected when you use Kotibam services, how it is used, and how it is protected. By using our services, you agree to the terms outlined in this policy.",
+    "s2Title": "Data We Collect",
+    "s2Body": "At registration: name, email address, company name, and password. During use: leads, tasks, client records, activity history, and integration settings. Technical data: browser type, IP address, device information, and page visit timestamps. This data is collected to improve service quality and ensure platform security.",
+    "s3Title": "How We Use Your Data",
+    "s3Body": "Collected data is used to: fully deliver and personalize the CRM service; develop new features and improve the product; send notifications via Telegram bot and other integrations; provide technical support; and detect unauthorized activity or security threats. Your data is never sold to third-party advertising companies.",
+    "s4Title": "Data Storage & Security",
+    "s4Body": "All data is stored in Google Firebase's secure cloud infrastructure. Transmission is protected by SSL/TLS encryption. The platform uses role-based access control (RBAC) — each user can only access data relevant to their role. If you request account deletion, your data is fully removed from the system within 30 days.",
+    "s5Title": "Third-Party Services",
+    "s5Body": "Kotibam uses the following third-party services: Google Firebase (authentication and database), Telegram Bot API (notifications), and SMS providers (broadcast messaging). Each of these services has its own privacy policy. You can manage and disconnect integrations from the Settings section.",
+    "s6Title": "Your Rights",
+    "s6Body": "You have the right to: view and download your data; correct inaccurate information; delete your account and all associated data; withdraw consent for data processing; and receive your data in a portable format. To exercise these rights, email support@kotibam.uz. Requests are reviewed within 30 days.",
+    "s7Title": "Cookies & Local Storage",
+    "s7Body": "Kotibam does not use cookies for tracking purposes. Your browser's localStorage is used solely for: storing your selected interface language; your login session token; and UI preference settings. This data is stored only on your device and is never sent to our servers.",
+    "s8Title": "Policy Updates",
+    "s8Body": "This policy may be updated from time to time. For significant changes, a notification will be sent to your registered email address. Changes take effect 14 days after publication. Continuing to use the service after an update constitutes acceptance of the revised terms."
   }
 }

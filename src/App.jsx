@@ -44,6 +44,7 @@ const AddStatus = lazy(() => import("./pages/addStatus"));
 const Analitika = lazy(() => import("./pages/analitika"));
 const AppErrorFallback = lazy(() => import("./pages/error"));
 const Companies = lazy(() => import("./pages/company"));
+const PrivacyPolicy = lazy(() => import("./pages/privacy"));
 
 function RouteLoader() {
   return <KotibamLoader fullScreen />;
@@ -138,6 +139,11 @@ const router = createBrowserRouter([
   {
     path: "/register",
     element: withLazy(<Register />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
+    path: "/privacy",
+    element: withLazy(<PrivacyPolicy />),
     errorElement: withLazy(<AppErrorFallback />),
   },
   {
