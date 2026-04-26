@@ -745,7 +745,17 @@ export default function LandingPage() {
 
      
 
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.18)" }}>© 2026 Kotibam. Barcha huquqlar himoyalangan.</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-end" }}>
+          <a
+            href="/privacy"
+            style={{ fontSize: 12, color: "rgba(255,255,255,.28)", textDecoration: "none", transition: "color .15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,255,255,.65)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,255,255,.28)"}
+          >
+            Maxfiylik siyosati
+          </a>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.18)" }}>© 2026 Kotibam. Barcha huquqlar himoyalangan.</span>
+        </div>
       </footer>
 
     </div>

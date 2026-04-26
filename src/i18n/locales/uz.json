@@ -405,5 +405,31 @@
     "title": "Bildirishnomalar",
     "noNotifications": "Bildirishnoma yo'q",
     "markAllRead": "Hammasini o'qildi"
+  },
+
+  "privacy": {
+    "title": "Maxfiylik siyosati",
+    "subtitle": "Sizning ma'lumotlaringiz xavfsizligi va maxfiyligiga to'liq mas'ulmiz",
+    "lastUpdated": "Oxirgi yangilanish: 2026-yil aprel",
+    "backHome": "Bosh sahifaga qaytish",
+    "contactTitle": "Savollaringiz bormi?",
+    "contactDesc": "Ushbu siyosat yoki ma'lumotlaringiz haqida har qanday savolingiz bo'lsa, bizga murojaat qiling",
+    "contactBtn": "support@kotibam.uz",
+    "s1Title": "Umumiy ma'lumot",
+    "s1Body": "Kotibam — savdo jamoalari uchun yaratilgan AI CRM platforma. Ushbu maxfiylik siyosati Kotibam xizmatlaridan foydalanganda qanday ma'lumotlar to'planishi, qanday ishlatilishi va qanday himoyalanishi haqida to'liq ma'lumot beradi. Bizning xizmatlarimizdan foydalanish orqali siz ushbu siyosat shartlarini qabul qilasiz.",
+    "s2Title": "To'planadigan ma'lumotlar",
+    "s2Body": "Ro'yxatdan o'tishda: ism-familiya, elektron pochta, kompaniya nomi va parol. Xizmatdan foydalanish jarayonida: leadlar, vazifalar, mijoz ma'lumotlari, faoliyat tarixi va integratsiya sozlamalari. Texnik ma'lumotlar: brauzer turi, IP-manzil, qurilma ma'lumotlari va sahifalarni ko'rish vaqtlari. Bu ma'lumotlar xizmat sifatini oshirish va xavfsizlikni ta'minlash maqsadida to'planadi.",
+    "s3Title": "Ma'lumotlardan foydalanish",
+    "s3Body": "To'plangan ma'lumotlar quyidagi maqsadlarda ishlatiladi: CRM xizmatini to'liq ta'minlash va shaxsiylashtirish; yangi funksiyalar va mahsulot sifatini yaxshilash; Telegram bot va boshqa integratsiyalar orqali bildirishnomalar yuborish; texnik yordam ko'rsatish; noqonuniy harakatlar va xavfsizlik tahdidlarini aniqlash. Ma'lumotlaringiz uchinchi tomon reklama kompaniyalariga hech qachon sotilmaydi.",
+    "s4Title": "Ma'lumotlarni saqlash va himoya",
+    "s4Body": "Barcha ma'lumotlar Google Firebase xavfsiz bulut infratuzilmasida saqlanadi. Uzatish SSL/TLS shifrlash orqali himoyalanadi. Platformada rol asosidagi kirish nazorati (RBAC) qo'llaniladi — har bir foydalanuvchi faqat o'z vazifasiga tegishli ma'lumotlarga kirishi mumkin. Hisobingizni o'chirishni so'rasangiz, ma'lumotlaringiz 30 kun ichida tizimdan to'liq o'chiriladi.",
+    "s5Title": "Uchinchi tomon xizmatlar",
+    "s5Body": "Kotibam quyidagi uchinchi tomon xizmatlardan foydalanadi: Google Firebase (autentifikatsiya va ma'lumotlar bazasi), Telegram Bot API (bildirishnomalar), SMS provayderlar (rassilka). Bu xizmatlarning har biri o'z maxfiylik siyosatiga ega. Integratsiyalarni sozlamalar bo'limidan boshqarish va o'chirish mumkin.",
+    "s6Title": "Foydalanuvchi huquqlari",
+    "s6Body": "Siz quyidagi huquqlarga egasiz: ma'lumotlaringizni ko'rish va yuklab olish; noto'g'ri ma'lumotlarni tahrirlash; hisobingizni va barcha ma'lumotlaringizni o'chirish; ma'lumotlarni qayta ishlashga rozilikni bekor qilish; ma'lumotlaringizni boshqa formatda olish. Ushbu huquqlarni amalga oshirish uchun support@kotibam.uz manziliga yozing. So'rovlar 30 kun ichida ko'rib chiqiladi.",
+    "s7Title": "Cookie va mahalliy saqlash",
+    "s7Body": "Kotibam tracking maqsadida cookie-lardan foydalanmaydi. Brauzeringizning localStorage xususiyatidan faqat quyidagi maqsadlarda foydalanamiz: tanlangan til sozlamasi; kirish sessiyasi tokeni; foydalanuvchi interfeys afzalliklari. Bu ma'lumotlar faqat qurilmangizda saqlanadi va serverga yuborilmaydi.",
+    "s8Title": "Siyosat yangilanishlari",
+    "s8Body": "Ushbu siyosat vaqti-vaqti bilan yangilanishi mumkin. Muhim o'zgarishlar bo'lganda ro'yxatdan o'tgan elektron pochta manzilingizga bildirishnoma yuboriladi. O'zgarishlar e'lon qilinganidan 14 kun o'tgach kuchga kiradi. Yangilangan siyosat bilan tanishib chiqmasdan xizmatdan foydalanishda davom etish yangi shartlarni qabul qilganingizni bildiradi."
   }
 }
