@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import RopAIConfigDialog from "@/components/proMarket/RopAIConfigDialog";
+import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 import { apiUrl } from "@/lib/api";
 
 const C = {
@@ -33,8 +34,26 @@ const C = {
   purple: "#A855F7",
 };
 
-const brandLogo = (domain) =>
-  `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+function GoogleSheetsIcon({ size = 24 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="#0F9D58"
+        d="M37 45H11a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h19l10 10v29a3 3 0 0 1-3 3z"
+      />
+      <path fill="#87CEAC" d="M30 13h10L30 3v10z" />
+      <path
+        fill="#F1F1F1"
+        d="M31 23H17a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V24a1 1 0 0 0-1-1zm-7.5 12H18v-3h5.5v3zm0-5H18v-3h5.5v3zm0-5H18v-3h5.5v3zm6.5 10h-5.5v-3H30v3zm0-5h-5.5v-3H30v3zm0-5h-5.5v-3H30v3z"
+      />
+    </svg>
+  );
+}
 
 const APPS = [
   {
@@ -80,7 +99,7 @@ const APPS = [
   {
     id: "google-sheets",
     name: "Google Sheets",
-    logo: brandLogo("sheets.google.com"),
+    iconNode: GoogleSheetsIcon,
     bg: "#0D2B1D",
     desc: "Google Sheets bilan ikki tomonlama sinxronlash",
     badge: "free",
@@ -127,15 +146,31 @@ const TABS = [
   { key: "installed", label: "O'rnatilgan" },
 ];
 
-function ConnectedPill({ active }) {
-  const s = active
-    ? { bg: "#0D3320", color: "#27AE60", border: "#1A5C3A", text: "Ulangan" }
-    : {
-        bg: "#2A1A00",
-        color: "#F59E0B",
-        border: "#5C3A00",
-        text: "Pauzada",
-      };
+function ConnectedPill({ state = "disconnected" }) {
+  const variants = {
+    connected: {
+      bg: "#0D3320",
+      color: "#27AE60",
+      border: "#1A5C3A",
+      text: "Ulangan",
+      glow: true,
+    },
+    paused: {
+      bg: "#2A1A00",
+      color: "#F59E0B",
+      border: "#5C3A00",
+      text: "Pauzada",
+      glow: false,
+    },
+    disconnected: {
+      bg: "#1A2235",
+      color: "#8A9BB5",
+      border: "#2E3D55",
+      text: "Ulanmagan",
+      glow: false,
+    },
+  };
+  const s = variants[state] || variants.disconnected;
   return (
     <span
       style={{
@@ -159,49 +194,9 @@ function ConnectedPill({ active }) {
           height: 5,
           borderRadius: "50%",
           background: s.color,
-          boxShadow: active ? `0 0 6px ${s.color}` : "none",
+          boxShadow: s.glow ? `0 0 6px ${s.color}` : "none",
         }}
       />
-      {s.text}
-    </span>
-  );
-}
-
-function Badge({ type }) {
-  const m = {
-    free: {
-      bg: "#0D3320",
-      color: "#27AE60",
-      border: "#1A5C3A",
-      text: "Bepul",
-    },
-    beta: {
-      bg: "#2A0D40",
-      color: "#C084FC",
-      border: "#4A1F70",
-      text: "Beta",
-    },
-    paid: {
-      bg: "#2A1A00",
-      color: "#F59E0B",
-      border: "#5C3A00",
-      text: "Pullik",
-    },
-  };
-  const s = m[type] || m.free;
-  return (
-    <span
-      style={{
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.border}`,
-        borderRadius: 20,
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "2px 8px",
-        whiteSpace: "nowrap",
-      }}
-    >
       {s.text}
     </span>
   );
@@ -212,13 +207,17 @@ function IntCard({ item, onToggle }) {
   const locked = !!item.locked;
   const interactive = !locked;
   const isRopAI = item.id === "rop-ai";
+  const isSheets = item.id === "google-sheets";
+  const isStateful = isRopAI || isSheets;
   const accent = locked
     ? C.purple
     : item.installed
       ? C.green
       : isRopAI
         ? C.purple
-        : C.blue;
+        : isSheets
+          ? C.green
+          : C.blue;
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -236,19 +235,6 @@ function IntCard({ item, onToggle }) {
         position: "relative",
       }}
     >
-      {item.installed && !locked && !isRopAI && (
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            width: 7,
-            height: 7,
-            background: C.green,
-            borderRadius: "50%",
-          }}
-        />
-      )}
       <div
         style={{
           display: "flex",
@@ -298,11 +284,15 @@ function IntCard({ item, onToggle }) {
             gap: 4,
           }}
         >
-          <Badge type={item.badge} />
-          {isRopAI && item.installed && <ConnectedPill active />}
-          {isRopAI && item.configured && !item.installed && (
-            <ConnectedPill active={false} />
-          )}
+          <ConnectedPill
+            state={
+              item.installed
+                ? "connected"
+                : item.configured
+                  ? "paused"
+                  : "disconnected"
+            }
+          />
         </div>
       </div>
       <div>
@@ -359,15 +349,15 @@ function IntCard({ item, onToggle }) {
           <>
             <Lock size={11} strokeWidth={2.6} /> Tez orada
           </>
-        ) : isRopAI ? (
+        ) : isStateful ? (
           <>
             <SettingsIcon size={11} strokeWidth={2.6} />{" "}
             {item.installed ? "Sozlamalar" : "Sozlash"}
           </>
         ) : item.installed ? (
-          "✓ O'rnatilgan"
+          "✓ Ulangan"
         ) : (
-          "Bepul o'rnatish"
+          "Ulash"
         )}
       </button>
     </div>
@@ -411,9 +401,43 @@ export default function ProMarket() {
   const [search, setSearch] = useState("");
   const [srOpen, setSrOpen] = useState(false);
   const [ropDialogOpen, setRopDialogOpen] = useState(false);
+  const [sheetsDialogOpen, setSheetsDialogOpen] = useState(false);
+  const projectId = Number(localStorage.getItem("projectId")) || 0;
+
+  const refreshSheetsState = async () => {
+    if (!projectId) return;
+    const token = localStorage.getItem("user");
+    try {
+      const res = await fetch(apiUrl(`lead-sync/config/${projectId}`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const text = await res.text();
+      if (!text) return;
+      const payload = JSON.parse(text);
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+      const hasAny = list.length > 0;
+      const hasActive = list.some((c) => c?.active ?? c?.isActive);
+      setItems((prev) => ({
+        ...prev,
+        "google-sheets": {
+          ...prev["google-sheets"],
+          configured: hasAny,
+          installed: hasActive,
+        },
+      }));
+    } catch {
+      // sukutda
+    }
+  };
 
   useEffect(() => {
-    const projectId = Number(localStorage.getItem("projectId")) || 0;
     if (!projectId) return;
     const token = localStorage.getItem("user");
     let cancelled = false;
@@ -454,10 +478,11 @@ export default function ProMarket() {
         // sukutda — sahifa baribir yuklanaveradi
       }
     })();
+    refreshSheetsState();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectId]);
 
   const showToast = (icon, msg) => {
     setToast({ icon, msg });
@@ -467,6 +492,10 @@ export default function ProMarket() {
   const toggleInstall = (id) => {
     if (id === "rop-ai") {
       setRopDialogOpen(true);
+      return;
+    }
+    if (id === "google-sheets") {
+      setSheetsDialogOpen(true);
       return;
     }
     setItems((prev) => {
@@ -500,9 +529,9 @@ export default function ProMarket() {
 
   const searchRes =
     search.trim().length > 1
-      ? APPS.filter((i) =>
-          i.name.toLowerCase().includes(search.toLowerCase()),
-        ).slice(0, 6)
+      ? list
+          .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+          .slice(0, 6)
       : [];
 
   const renderContent = () => {
@@ -718,11 +747,11 @@ export default function ProMarket() {
                       {i.name}
                     </div>
                     <div style={{ fontSize: 10, color: C.textMuted }}>
-                      {i.badge === "free"
-                        ? "Bepul"
-                        : i.badge === "beta"
-                          ? "Beta"
-                          : "Pullik"}
+                      {i.installed
+                        ? "Ulangan"
+                        : i.configured
+                          ? "Pauzada"
+                          : "Ulanmagan"}
                     </div>
                   </div>
                 </div>
@@ -782,6 +811,19 @@ export default function ProMarket() {
         open={ropDialogOpen}
         onOpenChange={setRopDialogOpen}
         onSaved={handleRopAISaved}
+      />
+
+      <LeadSyncDialog
+        open={sheetsDialogOpen}
+        onOpenChange={(open) => {
+          setSheetsDialogOpen(open);
+          if (!open) refreshSheetsState();
+        }}
+        projectId={projectId}
+        onImportDone={() => {
+          showToast(CheckCircle2, "Leadlar import qilindi");
+          refreshSheetsState();
+        }}
       />
     </div>
   );
