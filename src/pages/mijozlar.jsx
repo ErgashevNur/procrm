@@ -39,6 +39,8 @@ import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
 import KotibamLoader from "@/components/KotibamLoader";
 
+//test
+
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
 const TRASH_DROPPABLE_ID = "__lead_trash__";
 
