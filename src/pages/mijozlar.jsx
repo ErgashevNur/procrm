@@ -12,7 +12,6 @@ import {
   Upload,
   Download,
   MoreHorizontal,
-  FileSpreadsheet,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -38,7 +37,6 @@ import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "@/lib/toast";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import HorizontalScrollDock from "@/components/HorizontalScrollDock";
-import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 import KotibamLoader from "@/components/KotibamLoader";
 
 const API = import.meta.env.VITE_VITE_API_KEY_PROHOME;
@@ -606,7 +604,6 @@ export default function Pipeline() {
   const [currentProject, setCurrentProject] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
   const [aiListening, setAiListening] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
   const [aiTranscript, setAiTranscript] = useState("");
@@ -2092,13 +2089,6 @@ export default function Pipeline() {
           )}
 
           <IconBtn
-            icon={FileSpreadsheet}
-            label="Google Sheets"
-            onClick={() => setSheetDialogOpen(true)}
-            className="bg-transparent hover:bg-white/[0.04] focus-visible:ring-0 focus-visible:outline-none active:bg-transparent"
-          />
-
-          <IconBtn
             icon={Plus}
             label="Yangi mijoz"
             onClick={handleOpenLeadFromAi}
@@ -2361,12 +2351,6 @@ export default function Pipeline() {
               </div>
             </DialogContent>
           </Dialog>
-          <LeadSyncDialog
-            open={sheetDialogOpen}
-            onOpenChange={setSheetDialogOpen}
-            projectId={currentProject?.id}
-            onImportDone={loadProject}
-          />
         </div>
       </div>
 
