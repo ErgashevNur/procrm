@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm i vite && vite",
+    "dev": "npm i vite && vite --host",
     "build": "vite build"
   },
   "dependencies": {

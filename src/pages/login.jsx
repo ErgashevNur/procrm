@@ -227,12 +227,16 @@ export default function Login() {
   const [touched, setTouched] = useState({ email: false, password: false });
   const navigate = useNavigate();
 
-  const handleBlur = (field) => {
+  const handleBlur = (field, overrideValue) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
+    const current =
+      overrideValue ?? (field === "email" ? email : password);
     setErrors((prev) => ({
       ...prev,
       [field]:
-        field === "email" ? getEmailError(email) : getPasswordError(password),
+        field === "email"
+          ? getEmailError(current)
+          : getPasswordError(current),
     }));
   };
 
@@ -423,7 +427,7 @@ export default function Login() {
                     id="email"
                     value={email}
                     onChange={(val) => handleChange("email", val)}
-                    onBlur={() => handleBlur("email")}
+                    onBlur={(_e, finalValue) => handleBlur("email", finalValue)}
                     aria-invalid={emailHasError ? "true" : "false"}
                     error={emailHasError}
                     placeholder="example"
