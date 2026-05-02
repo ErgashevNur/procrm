@@ -285,6 +285,7 @@ export default function Profile() {
     if (k === "language" && LANGUAGE_MAP[v]) {
       i18n.changeLanguage(LANGUAGE_MAP[v]);
       updateUserInStorage({ language: v });
+      updateUser({ language: v });
     }
   };
   const setPasswordField = (k) => (v) =>
