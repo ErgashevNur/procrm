@@ -1,150 +1,35 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n, { LANGUAGE_DISPLAY } from "../i18n";
 
-const features = [
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.3 24.3 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8 1.402 1.402c1 1 .03 2.798-1.442 2.465L15 18M5 14.5l-1.402 1.402c-1 1-.03 2.798 1.442 2.465L9 18" />
-      </svg>
-    ),
-    title: "AI Kotib",
-    desc: "Har bir qo'ng'iroq, xabar va vazifani AI avtomatik qayd etadi. Hech narsa esdan chiqmaydi.",
-  },
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-      </svg>
-    ),
-    title: "Real vaqt analitika",
-    desc: "Savdo hajmi, lead holati va jamoa samaradorligini jonli dashboard orqali kuzating.",
-  },
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-      </svg>
-    ),
-    title: "Jamoa boshqaruvi",
-    desc: "Har bir xodimga vazifa belgilang, kuzating va baholang — hamma bir tizimda.",
-  },
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3 1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-      </svg>
-    ),
-    title: "Lead pipeline",
-    desc: "Har bir mijoz qaysi bosqichda ekanini aniq ko'ring. Hech kim tushib qolmaydi.",
-  },
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-      </svg>
-    ),
-    title: "Aqlli eslatmalar",
-    desc: "Muhim uchrashuvlar, follow-uplar va deadline'larni AI o'zi eslatib turadi.",
-  },
-  {
-    icon: (
-      <svg
-        width="22"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-      >
-        <path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-      </svg>
-    ),
-    title: "Xavfsiz va tez",
-    desc: "Rol asosida ruxsat va tezkor serverlar bilan ma'lumotlaringiz doim himoyada.",
-  },
+const featureIcons = [
+  <svg key="f1" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.3 24.3 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8 1.402 1.402c1 1 .03 2.798-1.442 2.465L15 18M5 14.5l-1.402 1.402c-1 1-.03 2.798 1.442 2.465L9 18" />
+  </svg>,
+  <svg key="f2" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+  </svg>,
+  <svg key="f3" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+  </svg>,
+  <svg key="f4" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3 1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+  </svg>,
+  <svg key="f5" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+  </svg>,
+  <svg key="f6" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+    <path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>,
 ];
 
-const steps = [
-  {
-    num: "01",
-    title: "Ro'yxatdan o'ting",
-    desc: "30 soniyada bepul hisob oching.",
-  },
-  {
-    num: "02",
-    title: "Jamoangizni qo'shing",
-    desc: "Xodimlarni taklif qiling, rol va ruxsatlarni belgilang.",
-  },
-  {
-    num: "03",
-    title: "Leadlarni kiriting",
-    desc: "Mijozlarni qo'shing yoki mavjud CRM dan import qiling.",
-  },
-  {
-    num: "04",
-    title: "O'sishni kuzating",
-    desc: "AI tahlili va dashboard orqali natijani real vaqtda ko'ring.",
-  },
-];
+const stepNums = ["01", "02", "03", "04"];
 
-const testimonials = [
-  {
-    name: "Wenny Estate",
-    role: "CEO, TechUz",
-    initials: "JM",
-    color: "#0ea5e9",
-    text: "Kotibam bizning savdomizni 3 oyda ikki barobarga oshirdi. Pipeline va AI eslatmalar — eng zo'r xususiyat.",
-  },
-  {
-    name: "Kafsan Group",
-    role: "Sales Director, BrandHub",
-    initials: "NK",
-    color: "#8b5cf6",
-    text: "Ilgari Excel bilan boshim og'rirdi. Endi hamma narsa bir joyda, jamoa ham xursand, men ham.",
-  },
-  {
-    name: "Hengtai Group",
-    role: "Founder, DigitalFlow",
-    initials: "AT",
-    color: "#10b981",
-    text: "Eng yaxshi tomoni — real vaqt analitika. Qaysi menejer qancha lead yopayotganini darhol ko'raman.",
-  },
+const testimonialsMeta = [
+  { name: "Wenny Estate", role: "CEO, TechUz", initials: "JM", color: "#0ea5e9", textKey: "landing.testi1Text" },
+  { name: "Kafsan Group", role: "Sales Director, BrandHub", initials: "NK", color: "#8b5cf6", textKey: "landing.testi2Text" },
+  { name: "Hengtai Group", role: "Founder, DigitalFlow", initials: "AT", color: "#10b981", textKey: "landing.testi3Text" },
 ];
 
 const plans = [
@@ -192,6 +77,7 @@ const plans = [
 ];
 
 function Modal({ onClose }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -204,11 +90,11 @@ function Modal({ onClose }) {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = "Ismingizni kiriting";
+    if (!form.name.trim()) e.name = t("landing.modalNameError");
     if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      e.email = "To'g'ri email kiriting";
+      e.email = t("landing.modalEmailError");
     }
-    if (!form.phone.trim()) e.phone = "Telefon raqam kiriting";
+    if (!form.phone.trim()) e.phone = t("landing.modalPhoneError");
     return e;
   };
 
@@ -253,6 +139,7 @@ function Modal({ onClose }) {
         zIndex: 1000,
         padding: "1rem",
         backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
       }}
     >
       <div
@@ -302,7 +189,7 @@ function Modal({ onClose }) {
                 marginBottom: 8,
               }}
             >
-              Tabriklaymiz! 🎉
+              {t("landing.modalSuccessTitle")}
             </div>
             <p
               style={{
@@ -311,9 +198,9 @@ function Modal({ onClose }) {
                 lineHeight: 1.7,
               }}
             >
-              Hisobingiz yaratildi.
+              {t("landing.modalSuccessDesc1")}
               <br />
-              Email manzilingizga tasdiqlash xati yuborildi.
+              {t("landing.modalSuccessDesc2")}
             </p>
             <button
               onClick={onClose}
@@ -331,7 +218,7 @@ function Modal({ onClose }) {
                 fontFamily: "Inter, sans-serif",
               }}
             >
-              Davom etish →
+              {t("landing.modalContinue")}
             </button>
           </div>
         ) : (
@@ -355,7 +242,7 @@ function Modal({ onClose }) {
                     marginBottom: 6,
                   }}
                 >
-                  Bepul boshlash
+                  {t("landing.modalLabel")}
                 </div>
                 <div
                   style={{
@@ -365,7 +252,7 @@ function Modal({ onClose }) {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  Hisob oching
+                  {t("landing.modalTitle")}
                 </div>
                 <p
                   style={{
@@ -374,7 +261,7 @@ function Modal({ onClose }) {
                     marginTop: 6,
                   }}
                 >
-                  30 kun bepul. Karta talab etilmaydi.
+                  {t("landing.modalSubtitle")}
                 </p>
               </div>
               <button
@@ -395,26 +282,26 @@ function Modal({ onClose }) {
             {[
               {
                 key: "name",
-                label: "Ism Familiya",
-                placeholder: "Jasur Mirzayev",
+                label: t("landing.modalNameLabel"),
+                placeholder: t("landing.modalNamePlaceholder"),
                 type: "text",
               },
               {
                 key: "email",
-                label: "Email",
-                placeholder: "jasur@mail.com",
+                label: t("landing.modalEmailLabel"),
+                placeholder: t("landing.modalEmailPlaceholder"),
                 type: "email",
               },
               {
                 key: "phone",
-                label: "Telefon",
+                label: t("landing.modalPhoneLabel"),
                 placeholder: "+998 90 123 45 67",
                 type: "tel",
               },
               {
                 key: "company",
-                label: "Kompaniya (ixtiyoriy)",
-                placeholder: "TechUz LLC",
+                label: t("landing.modalCompanyLabel"),
+                placeholder: t("landing.modalCompanyPlaceholder"),
                 type: "text",
               },
             ].map(({ key, label, placeholder, type }) => (
@@ -475,7 +362,7 @@ function Modal({ onClose }) {
                 transition: "background .2s",
               }}
             >
-              {loading ? "Yuklanmoqda..." : "Ro'yxatdan o'tish →"}
+              {loading ? t("common.loading") : t("landing.modalSubmit")}
             </button>
           </>
         )}
@@ -485,14 +372,21 @@ function Modal({ onClose }) {
 }
 
 export default function LandingPage() {
+  const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === "undefined" ? 1280 : window.innerWidth,
   );
-  const [introPhase, setIntroPhase] = useState("big");
-  const [targetPos, setTargetPos] = useState({ top: 0, left: 0, fontSize: 15 });
-  const navTextRef = useRef(null);
+  const [introVisible, setIntroVisible] = useState(true);
+  const [introExiting, setIntroExiting] = useState(false);
+  const [heroReady, setHeroReady] = useState(false);
+  const [currentLang, setCurrentLang] = useState(i18n.language);
   const navigate = useNavigate();
+
+  const changeLang = (code) => {
+    i18n.changeLanguage(code);
+    setCurrentLang(code);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -501,40 +395,33 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  useEffect(() => {
-    const measure = () => {
-      if (navTextRef.current) {
-        const rect = navTextRef.current.getBoundingClientRect();
-        const styles = window.getComputedStyle(navTextRef.current);
-        setTargetPos({
-          top: rect.top,
-          left: rect.left,
-          fontSize: parseFloat(styles.fontSize),
-        });
-      }
+    let tw;
+    const onResize = () => {
+      clearTimeout(tw);
+      tw = setTimeout(() => setViewportWidth(window.innerWidth), 120);
     };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [viewportWidth]);
+    window.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(tw);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.scrollTo(0, 0);
-    const t1 = setTimeout(() => setIntroPhase("moving"), 2100);
-    const t2 = setTimeout(() => {
-      setIntroPhase("done");
+    const tExit = setTimeout(() => {
+      setIntroExiting(true);
+      setHeroReady(true);
+    }, 1500);
+    const tDone = setTimeout(() => {
+      setIntroVisible(false);
       document.body.style.overflow = prevOverflow;
-    }, 3250);
+    }, 2250);
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(tExit);
+      clearTimeout(tDone);
       document.body.style.overflow = prevOverflow;
     };
   }, []);
@@ -560,8 +447,8 @@ export default function LandingPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes fadeUp { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
-        .fu { animation: fadeUp .7s ease both; }
-        .d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.25s} .d4{animation-delay:.35s} .d5{animation-delay:.45s}
+        .fu { animation: fadeUp .75s ease both; }
+        .d1{animation-delay:.08s} .d2{animation-delay:.18s} .d3{animation-delay:.28s} .d4{animation-delay:.38s} .d5{animation-delay:.5s}
         .feat-card { transition: background .25s, border-color .25s; }
         .feat-card:hover { background: #141d2e !important; border-color: rgba(14,165,233,.25) !important; }
         .t-card { transition: border-color .25s; }
@@ -575,149 +462,62 @@ export default function LandingPage() {
         .btn-g { transition: border-color .2s, color .2s; }
         .btn-g:hover { border-color: rgba(255,255,255,.28) !important; color: #fff !important; }
         @keyframes introLetter {
-          0% { opacity: 0; transform: translateY(38px) scale(.6); }
-          60% { opacity: 1; }
+          0% { opacity: 0; transform: translateY(32px) scale(.65); }
+          55% { opacity: 1; }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes introShimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        @keyframes introSubtitleFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-        @keyframes introSubtitleIn {
-          0% { opacity: 0; letter-spacing: 1.2em; transform: translate(-50%, 8px); }
-          100% { opacity: 1; letter-spacing: .42em; transform: translate(-50%, 0); }
-        }
-        @keyframes introBadgeIn {
-          0% { opacity: 0; transform: translate(-50%, -8px); }
-          100% { opacity: 1; transform: translate(-50%, 0); }
-        }
-        @keyframes introBackdrop { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes introOrb1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(60px, -50px) scale(1.1); }
-        }
-        @keyframes introOrb2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-70px, 60px) scale(1.15); }
-        }
-        @keyframes introOrb3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(50px, 70px) scale(.95); }
-        }
-        @keyframes introScan {
-          0% { transform: translateY(-100%); opacity: 0; }
-          25% { opacity: 1; }
-          75% { opacity: 1; }
-          100% { transform: translateY(100vh); opacity: 0; }
-        }
-        @keyframes introGridFade {
-          0% { opacity: 0; }
-          100% { opacity: .25; }
-        }
-        .intro-orb { position: absolute; border-radius: 50%; filter: blur(55px); pointer-events: none; will-change: transform; }
         .intro-letter { display: inline-block; will-change: transform, opacity; }
       `}</style>
 
-      {introPhase !== "done" && (
+      {introVisible && (
         <div
           aria-hidden="true"
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9997,
+            zIndex: 9998,
             pointerEvents: "none",
-            opacity: introPhase === "big" ? 1 : 0,
-            transition: "opacity 1s ease",
-            overflow: "hidden",
+            background:
+              "radial-gradient(ellipse at 50% 50%, #0a1322 0%, #070b12 70%)",
+            opacity: introExiting ? 0 : 1,
+            filter: introExiting ? "blur(18px)" : "blur(0px)",
+            transition: "opacity .65s ease, filter .65s ease",
+            willChange: "opacity, filter",
           }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(135deg,#070b12 0%,#0a0f1c 55%,#080d17 100%)",
-              animation: "introBackdrop .5s ease both",
-            }}
-          />
-          <div
-            className="intro-orb"
-            style={{
-              width: "min(42vw, 460px)",
-              height: "min(42vw, 460px)",
-              background: "rgba(14,165,233,.5)",
-              top: "10%",
-              left: "8%",
-              animation: "introOrb1 12s ease-in-out infinite",
-              opacity: 0.5,
-            }}
-          />
-          <div
-            className="intro-orb"
-            style={{
-              width: "min(38vw, 420px)",
-              height: "min(38vw, 420px)",
-              background: "rgba(139,92,246,.4)",
-              bottom: "12%",
-              right: "10%",
-              animation: "introOrb2 14s ease-in-out infinite",
-              opacity: 0.45,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(7,11,18,.85) 95%)",
-            }}
-          />
-        </div>
+        />
       )}
 
-      {introPhase !== "done" && (
+      {introVisible && (
         <div
           style={{
             position: "fixed",
-            top: `calc(50% - clamp(5rem, 11vw, 9rem))`,
+            top: "50%",
             left: "50%",
-            transform: "translateX(-50%)",
             zIndex: 9999,
             pointerEvents: "none",
-            opacity: introPhase === "big" ? 1 : 0,
-            transition: "opacity .35s ease",
-          }}
-        ></div>
-      )}
-
-      {introPhase !== "done" && (
-        <div
-          style={{
-            position: "fixed",
-            top: introPhase === "big" ? "50%" : `${targetPos.top}px`,
-            left: introPhase === "big" ? "50%" : `${targetPos.left}px`,
-            transform:
-              introPhase === "big"
-                ? "translate(-50%, -50%)"
-                : "translate(0, 0)",
-            fontSize:
-              introPhase === "big"
-                ? "clamp(3.4rem, 13vw, 8.5rem)"
-                : `${targetPos.fontSize}px`,
-            fontWeight: introPhase === "big" ? 800 : 700,
-            letterSpacing: introPhase === "big" ? "-0.045em" : "-0.01em",
+            transformOrigin: "center center",
+            transform: introExiting
+              ? "translate(-50%, -50%) translate(-32vw, -36vh) scale(.18)"
+              : "translate(-50%, -50%) scale(1)",
+            opacity: introExiting ? 0 : 1,
+            transition:
+              "transform .65s cubic-bezier(.65,.05,.36,1), opacity .5s ease .1s",
+            willChange: "transform, opacity",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "clamp(3.2rem, 12vw, 7.5rem)",
+            fontWeight: 800,
+            letterSpacing: "-0.045em",
             lineHeight: 1,
             color: "#fff",
-            fontFamily: "'Inter', sans-serif",
-            zIndex: 9999,
-            pointerEvents: "none",
             whiteSpace: "nowrap",
-            transition:
-              "top 1.05s cubic-bezier(.7,.05,.25,1), left 1.05s cubic-bezier(.7,.05,.25,1), font-size 1.05s cubic-bezier(.7,.05,.25,1), letter-spacing 1.05s ease, transform 1.05s cubic-bezier(.7,.05,.25,1)",
             textShadow:
-              introPhase === "big"
-                ? "0 0 50px rgba(14,165,233,.5), 0 4px 24px rgba(0,0,0,.35)"
-                : "none",
+              "0 0 40px rgba(14,165,233,.35), 0 4px 20px rgba(0,0,0,.3)",
           }}
         >
           {"Kotibam".split("").map((ch, i) => (
@@ -725,10 +525,7 @@ export default function LandingPage() {
               key={i}
               className="intro-letter"
               style={{
-                animation:
-                  introPhase === "big"
-                    ? `introLetter .9s cubic-bezier(.2,.7,.3,1) ${i * 70}ms both`
-                    : undefined,
+                animation: `introLetter .75s cubic-bezier(.2,.7,.3,1) ${i * 75}ms both`,
               }}
             >
               {ch}
@@ -737,30 +534,28 @@ export default function LandingPage() {
         </div>
       )}
 
-      {introPhase !== "done" && (
+      {introVisible && (
         <div
           style={{
             position: "fixed",
-            top: `calc(50% + clamp(2.4rem, 8vw, 5.5rem))`,
+            top: `calc(50% + clamp(2.2rem, 7vw, 4.8rem))`,
             left: "50%",
-            transform: "translateX(-50%)",
             zIndex: 9999,
             pointerEvents: "none",
-            opacity: introPhase === "big" ? 1 : 0,
-            transition: "opacity .3s ease",
+            opacity: introExiting ? 0 : 1,
+            transform: "translateX(-50%)",
+            transition: "opacity .35s ease",
             fontFamily: "'Inter', sans-serif",
             fontSize: isMobile ? 10 : 12,
             fontWeight: 500,
             color: "rgba(186,230,253,.85)",
             whiteSpace: "nowrap",
             textTransform: "uppercase",
-            animation:
-              introPhase === "big"
-                ? "introSubtitleIn 1s cubic-bezier(.2,.7,.3,1) .85s both"
-                : undefined,
+            letterSpacing: ".42em",
+            animation: "introSubtitleFade .5s ease .35s both",
           }}
         >
-          Biznesingizning aqlli kotibi
+          {t("landing.introSubtitle")}
         </div>
       )}
 
@@ -778,7 +573,8 @@ export default function LandingPage() {
           background: scrolled ? "rgba(7,11,18,.96)" : "rgba(7,11,18,.5)",
           borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,.07)" : "transparent"}`,
           backdropFilter: "blur(20px)",
-          transition: "all .3s",
+          WebkitBackdropFilter: "blur(20px)",
+          transition: "background .3s, border-color .3s",
         }}
       >
         <div
@@ -818,15 +614,14 @@ export default function LandingPage() {
             />
           </div>
           <span
-            ref={navTextRef}
             style={{
               fontSize: isMobile ? 14 : 15,
               fontWeight: 700,
               color: "#fff",
               letterSpacing: "-0.01em",
               whiteSpace: "nowrap",
-              opacity: introPhase === "done" ? 1 : 0,
-              transition: "opacity .25s ease",
+              opacity: introExiting ? 1 : 0,
+              transition: "opacity .45s ease .1s",
             }}
           >
             Kotibam
@@ -836,11 +631,37 @@ export default function LandingPage() {
         <div
           style={{
             display: "flex",
-            gap: isMobile ? 8 : 10,
+            alignItems: "center",
+            gap: isMobile ? 6 : 8,
             width: "auto",
             flexShrink: 0,
           }}
         >
+          {!isMobile && (
+            <div style={{ display: "flex", gap: 2 }}>
+              {Object.entries(LANGUAGE_DISPLAY).map(([code, name]) => (
+                <button
+                  key={code}
+                  onClick={() => changeLang(code)}
+                  style={{
+                    background: currentLang === code ? "rgba(14,165,233,.15)" : "transparent",
+                    border: currentLang === code ? "1px solid rgba(14,165,233,.3)" : "1px solid transparent",
+                    color: currentLang === code ? "#38bdf8" : "rgba(255,255,255,.35)",
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all .2s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             className="btn-g"
             onClick={() => navigate("/login")}
@@ -857,7 +678,7 @@ export default function LandingPage() {
               whiteSpace: "nowrap",
             }}
           >
-            Kirish
+            {t("landing.navLogin")}
           </button>
           <button
             className="btn-s"
@@ -875,7 +696,7 @@ export default function LandingPage() {
               whiteSpace: "nowrap",
             }}
           >
-            Ro'yxatdan o'tish
+            {t("landing.navRegister")}
           </button>
         </div>
       </nav>
@@ -886,6 +707,9 @@ export default function LandingPage() {
           textAlign: "center",
           position: "relative",
           overflow: "hidden",
+          opacity: heroReady ? 1 : 0,
+          filter: heroReady ? "blur(0px)" : "blur(18px)",
+          transition: "opacity .65s ease, filter .65s ease",
         }}
       >
         <div
@@ -893,13 +717,14 @@ export default function LandingPage() {
             position: "absolute",
             top: -120,
             left: "50%",
-            transform: "translateX(-50%)",
+            transform: "translateX(-50%) translateZ(0)",
             width: isMobile ? 380 : 700,
             height: isMobile ? 380 : 700,
             borderRadius: "50%",
             background: "rgba(14,165,233,.08)",
             filter: "blur(80px)",
             pointerEvents: "none",
+            willChange: "transform",
           }}
         />
         <div
@@ -913,6 +738,8 @@ export default function LandingPage() {
             background: "rgba(99,102,241,.06)",
             filter: "blur(60px)",
             pointerEvents: "none",
+            willChange: "transform",
+            transform: "translateZ(0)",
           }}
         />
         <div
@@ -926,11 +753,13 @@ export default function LandingPage() {
             background: "rgba(16,185,129,.05)",
             filter: "blur(55px)",
             pointerEvents: "none",
+            willChange: "transform",
+            transform: "translateZ(0)",
           }}
         />
 
         <div
-          className="fu d1"
+          className=""
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -959,12 +788,12 @@ export default function LandingPage() {
               textTransform: "uppercase",
             }}
           >
-            O'zbekistondagi №1 AI CRM
+            {t("landing.heroBadge")}
           </span>
         </div>
 
         <h1
-          className="fu d2"
+          className=""
           style={{
             fontSize: "clamp(2.6rem, 6vw, 5rem)",
             fontWeight: 800,
@@ -974,13 +803,13 @@ export default function LandingPage() {
             color: "#fff",
           }}
         >
-          Biznesingizning
+          {t("landing.heroTitle1")}
           <br />
-          <span style={{ color: "#0ea5e9" }}>aqlli kotibi</span>
+          <span style={{ color: "#0ea5e9" }}>{t("landing.heroTitle2")}</span>
         </h1>
 
         <p
-          className="fu d3"
+          className=""
           style={{
             maxWidth: 580,
             margin: "0 auto 2.8rem",
@@ -990,13 +819,13 @@ export default function LandingPage() {
             fontWeight: 300,
           }}
         >
-          Kotibam — savdo jamoalari uchun yaratilgan CRM platforma.
+          {t("landing.heroDesc1")}
           <br />
-          Leadlar, vazifalar, tahlil va AI kotib — hammasi bitta tizimda.
+          {t("landing.heroDesc2")}
         </p>
 
         <div
-          className="fu d4"
+          className=""
           style={{
             display: "flex",
             gap: "0.9rem",
@@ -1019,12 +848,12 @@ export default function LandingPage() {
               cursor: "pointer",
             }}
           >
-            Bepul boshlash →
+            {t("landing.heroCta")}
           </button>
         </div>
 
         <div
-          className="fu d5"
+          className=""
           style={{
             display: "grid",
             gridTemplateColumns: isMobile
@@ -1040,27 +869,20 @@ export default function LandingPage() {
           }}
         >
           {[
-            ["500+", "Faol kompaniya"],
-            ["98%", "Mijoz mamnuniyati"],
-            ["3x", "Savdo o'sishi"],
-            ["24/7", "AI ishlaydi"],
-          ].map(([num, label]) => (
+            ["500+", t("landing.stat1")],
+            ["98%",  t("landing.stat2")],
+            ["3x",   t("landing.stat3")],
+            ["24/7", t("landing.stat4")],
+          ].map(([num, label], idx) => (
             <div
-              key={label}
+              key={idx}
               style={{
                 minWidth: 120,
                 padding: isMobile ? "1.2rem 0.8rem" : "1.5rem 1rem",
                 textAlign: "center",
                 background: "#0d1220",
-                borderRight:
-                  !isMobile && label !== "AI ishlaydi"
-                    ? "1px solid rgba(255,255,255,.07)"
-                    : "none",
-                borderBottom:
-                  isMobile &&
-                  (label === "Faol kompaniya" || label === "Mijoz mamnuniyati")
-                    ? "1px solid rgba(255,255,255,.07)"
-                    : "none",
+                borderRight: !isMobile && idx < 3 ? "1px solid rgba(255,255,255,.07)" : "none",
+                borderBottom: isMobile && idx < 2 ? "1px solid rgba(255,255,255,.07)" : "none",
               }}
             >
               <div
@@ -1105,7 +927,7 @@ export default function LandingPage() {
               marginBottom: 12,
             }}
           >
-            Imkoniyatlar
+            {t("landing.featLabel")}
           </div>
           <h2
             style={{
@@ -1116,7 +938,7 @@ export default function LandingPage() {
               marginBottom: 12,
             }}
           >
-            Biznesingiz uchun hamma narsa
+            {t("landing.featTitle")}
           </h2>
           <p
             style={{
@@ -1127,7 +949,7 @@ export default function LandingPage() {
               fontWeight: 300,
             }}
           >
-            Bir platformada — AI kotib, pipeline, tahlil va jamoa boshqaruvi.
+            {t("landing.featDesc")}
           </p>
         </div>
 
@@ -1146,9 +968,9 @@ export default function LandingPage() {
             overflow: "hidden",
           }}
         >
-          {features.map((f) => (
+          {featureIcons.map((icon, i) => (
             <div
-              key={f.title}
+              key={i}
               className="feat-card"
               style={{
                 background: "#0b1018",
@@ -1170,7 +992,7 @@ export default function LandingPage() {
                   marginBottom: "1.2rem",
                 }}
               >
-                {f.icon}
+                {icon}
               </div>
               <div
                 style={{
@@ -1180,7 +1002,7 @@ export default function LandingPage() {
                   marginBottom: 8,
                 }}
               >
-                {f.title}
+                {t(`landing.f${i + 1}Title`)}
               </div>
               <p
                 style={{
@@ -1190,7 +1012,7 @@ export default function LandingPage() {
                   fontWeight: 300,
                 }}
               >
-                {f.desc}
+                {t(`landing.f${i + 1}Desc`)}
               </p>
             </div>
           ))}
@@ -1212,7 +1034,7 @@ export default function LandingPage() {
               marginBottom: 12,
             }}
           >
-            Qanday ishlaydi
+            {t("landing.howLabel")}
           </div>
           <h2
             style={{
@@ -1222,7 +1044,7 @@ export default function LandingPage() {
               color: "#fff",
             }}
           >
-            4 qadamda tayyor
+            {t("landing.howTitle")}
           </h2>
         </div>
 
@@ -1239,8 +1061,8 @@ export default function LandingPage() {
             margin: "0 auto",
           }}
         >
-          {steps.map((s) => (
-            <div key={s.num}>
+          {stepNums.map((num, i) => (
+            <div key={num}>
               <div
                 style={{
                   fontSize: "3.2rem",
@@ -1251,7 +1073,7 @@ export default function LandingPage() {
                   marginBottom: "0.8rem",
                 }}
               >
-                {s.num}
+                {num}
               </div>
               <div
                 style={{
@@ -1270,7 +1092,7 @@ export default function LandingPage() {
                   marginBottom: 8,
                 }}
               >
-                {s.title}
+                {t(`landing.step${i + 1}Title`)}
               </div>
               <p
                 style={{
@@ -1280,7 +1102,7 @@ export default function LandingPage() {
                   fontWeight: 300,
                 }}
               >
-                {s.desc}
+                {t(`landing.step${i + 1}Desc`)}
               </p>
             </div>
           ))}
@@ -1305,7 +1127,7 @@ export default function LandingPage() {
               marginBottom: 12,
             }}
           >
-            Mijozlar fikri
+            {t("landing.testiLabel")}
           </div>
           <h2
             style={{
@@ -1315,7 +1137,7 @@ export default function LandingPage() {
               color: "#fff",
             }}
           >
-            Ular allaqachon o'sdi
+            {t("landing.testiTitle")}
           </h2>
         </div>
 
@@ -1326,9 +1148,9 @@ export default function LandingPage() {
             gap: "1.2rem",
           }}
         >
-          {testimonials.map((t) => (
+          {testimonialsMeta.map((tm) => (
             <div
-              key={t.name}
+              key={tm.name}
               className="t-card"
               style={{
                 background: "#0b1018",
@@ -1357,7 +1179,7 @@ export default function LandingPage() {
                   fontWeight: 300,
                 }}
               >
-                "{t.text}"
+                "{t(tm.textKey)}"
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div
@@ -1365,24 +1187,24 @@ export default function LandingPage() {
                     width: 38,
                     height: 38,
                     borderRadius: "50%",
-                    background: t.color + "22",
-                    border: `1px solid ${t.color}44`,
+                    background: tm.color + "22",
+                    border: `1px solid ${tm.color}44`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: t.color,
+                    color: tm.color,
                   }}
                 >
-                  {t.initials}
+                  {tm.initials}
                 </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>
-                    {t.name}
+                    {tm.name}
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>
-                    {t.role}
+                    {tm.role}
                   </div>
                 </div>
               </div>
@@ -1427,7 +1249,7 @@ export default function LandingPage() {
               position: "relative",
             }}
           >
-            Bugun boshlang — bepul
+            {t("landing.ctaTitle")}
           </h2>
 
           <button
@@ -1445,7 +1267,7 @@ export default function LandingPage() {
               position: "relative",
             }}
           >
-            Bepul ro'yxatdan o'tish →
+            {t("landing.ctaBtn")}
           </button>
         </div>
       </section>
@@ -1514,10 +1336,10 @@ export default function LandingPage() {
               (e.currentTarget.style.color = "rgba(255,255,255,.28)")
             }
           >
-            Maxfiylik siyosati
+            {t("landing.footerPrivacy")}
           </a>
           <span style={{ fontSize: 12, color: "rgba(255,255,255,.18)" }}>
-            © 2026 Kotibam. Barcha huquqlar himoyalangan.
+            {t("landing.footerRights")}
           </span>
         </div>
       </footer>
