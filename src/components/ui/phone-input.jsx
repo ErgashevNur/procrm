@@ -29,35 +29,26 @@ export function isValidUzPhone(value) {
   return extractLocalDigits(value).length === 9;
 }
 
-/**
- * PhoneInput — O'zbekiston telefon raqami uchun maxsus input.
- * +998 prefiksi chap tomonda ajratib ko'rsatiladi.
- * Foydalanuvchi faqat 9 ta lokal raqam yozadi: 90 123 45 67
- */
 export function PhoneInput({ value, onChange, error, className, id, ...props }) {
   const localDigits = extractLocalDigits(value);
   const displayValue = formatLocalDisplay(localDigits);
 
   function handleChange(e) {
-    const digits = extractLocalDigits(e.target.value);
-    onChange?.(digits ? `+998${digits}` : "");
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 9);
+    onChange?.(raw ? `+998${raw}` : "");
   }
 
   return (
     <div
       className={cn(
-        // Butun blok bitta input ko'rinishida
         "flex h-11 items-center overflow-hidden rounded-xl border transition-colors",
         "bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)),rgba(7,16,27,0.72)]",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-[18px]",
-        // Focus holati
         "focus-within:border-sky-500/50",
-        // Error holati
         error ? "border-rose-500/50 bg-rose-500/10" : "border-white/10",
         className,
       )}
     >
-      {/* +998 prefix — input bilan bitta blokda, z-index muammosi yo'q */}
       <span
         aria-hidden="true"
         className="flex h-full select-none items-center border-r border-white/12 px-3 text-sm font-semibold text-slate-300 shrink-0"
@@ -66,11 +57,11 @@ export function PhoneInput({ value, onChange, error, className, id, ...props }) 
       </span>
 
       <input
-        {...props}
-        id={id}
         type="tel"
         inputMode="numeric"
-        autoComplete="tel"
+        autoComplete="off"
+        {...props}
+        id={id}
         value={displayValue}
         onChange={handleChange}
         placeholder="90 123 45 67"
