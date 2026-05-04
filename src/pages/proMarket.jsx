@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 import RopAIConfigDialog from "@/components/proMarket/RopAIConfigDialog";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
+import FacebookConfigDialog from "@/components/proMarket/FacebookConfigDialog";
 import { apiUrl } from "@/lib/api";
+import { getFacebookConnections } from "@/services/facebookService";
 
 const C = {
   pageBg: "#1A2235",
@@ -209,7 +211,8 @@ function IntCard({ item, onToggle }) {
   const interactive = !locked;
   const isRopAI = item.id === "rop-ai";
   const isSheets = item.id === "google-sheets";
-  const isStateful = isRopAI || isSheets;
+  const isFacebook = item.id === "facebook";
+  const isStateful = isRopAI || isSheets || isFacebook;
   const accent = locked
     ? C.purple
     : item.installed
@@ -403,6 +406,7 @@ export default function ProMarket() {
   const [srOpen, setSrOpen] = useState(false);
   const [ropDialogOpen, setRopDialogOpen] = useState(false);
   const [sheetsDialogOpen, setSheetsDialogOpen] = useState(false);
+  const [fbDialogOpen, setFbDialogOpen] = useState(false);
   const projectId = Number(localStorage.getItem("projectId")) || 0;
 
   const refreshSheetsState = async () => {
@@ -430,6 +434,25 @@ export default function ProMarket() {
         "google-sheets": {
           ...prev["google-sheets"],
           configured: hasAny,
+          installed: hasActive,
+        },
+      }));
+    } catch {
+      // sukutda
+    }
+  };
+
+  const refreshFacebookState = async () => {
+    try {
+      const connections = await getFacebookConnections();
+      const hasActive = connections.some(
+        (c) => c?.status === true || String(c?.status).toLowerCase() === "active",
+      );
+      setItems((prev) => ({
+        ...prev,
+        facebook: {
+          ...prev.facebook,
+          configured: connections.length > 0,
           installed: hasActive,
         },
       }));
@@ -480,6 +503,7 @@ export default function ProMarket() {
       }
     })();
     refreshSheetsState();
+    refreshFacebookState();
     return () => {
       cancelled = true;
     };
@@ -497,6 +521,10 @@ export default function ProMarket() {
     }
     if (id === "google-sheets") {
       setSheetsDialogOpen(true);
+      return;
+    }
+    if (id === "facebook") {
+      setFbDialogOpen(true);
       return;
     }
     setItems((prev) => {
@@ -523,6 +551,14 @@ export default function ProMarket() {
       CheckCircle2,
       isActive ? "ROP AI yoqildi va sozlandi" : "ROP AI sozlamalari saqlandi",
     );
+  };
+
+  const handleFacebookSaved = () => {
+    setItems((prev) => ({
+      ...prev,
+      facebook: { ...prev.facebook, configured: true, installed: true },
+    }));
+    showToast(CheckCircle2, "Facebook integratsiyasi sozlandi!");
   };
 
   const list = APPS.map((i) => items[i.id] || i);
@@ -825,6 +861,15 @@ export default function ProMarket() {
           showToast(CheckCircle2, "Leadlar import qilindi");
           refreshSheetsState();
         }}
+      />
+
+      <FacebookConfigDialog
+        open={fbDialogOpen}
+        onOpenChange={(open) => {
+          setFbDialogOpen(open);
+          if (!open) refreshFacebookState();
+        }}
+        onSaved={handleFacebookSaved}
       />
     </div>
   );
