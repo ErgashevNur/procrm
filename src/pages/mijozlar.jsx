@@ -12,6 +12,7 @@ import {
   Upload,
   Download,
   MoreHorizontal,
+  History,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -32,6 +33,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { useExcelWorker } from "../hooks/Useexcelworker";
 import { MANAGEMENT_ROLES, ROLES, getCurrentRole } from "@/lib/rbac";
 import { toast } from "@/lib/toast";
@@ -193,6 +199,13 @@ function applyDrag(statuses, source, destination, draggableId) {
     }
     return status;
   });
+}
+
+function formatCommentDate(days) {
+  if (days === 0 || days === "0") return "Bugun";
+  const d = new Date();
+  d.setDate(d.getDate() - Number(days));
+  return d.toLocaleDateString("ru-RU");
 }
 
 function buildTaskBadgeMeta(rawValue) {
@@ -593,6 +606,10 @@ export default function Pipeline() {
   const actionsWrapRef = useRef(null);
   const searchInputRef = useRef(null);
 
+  const [viewedLeadIds] = useState(
+    () => new Set(JSON.parse(localStorage.getItem("viewedLeadIds") || "[]")),
+  );
+
   const [appState, setAppState] = useState("loading");
   const [projects, setProjects] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -813,6 +830,15 @@ export default function Pipeline() {
         return;
       }
     }
+
+    setStatuses((prev) =>
+      prev.map((status) => ({
+        ...status,
+        leads: status.leads.map((l) =>
+          l.id === leadId ? { ...l, isViewed: true } : l,
+        ),
+      })),
+    );
 
     navigate(`/leadDetails?leadId=${leadId}`);
   };
@@ -2084,6 +2110,34 @@ export default function Pipeline() {
             )}
           </div>
 
+          {/* Leadlarning tarixi! */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="rounded-md border border-gray-700 px-3 py-2.75 text-xs text-gray-300 transition-colors duration-150 hover:bg-[#21435b] hover:text-white disabled:opacity-40 disabled:hover:bg-transparent">
+                <History size={14} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              className="w-80 border border-[#2a4868] bg-[#0b1b29] p-0 text-white"
+            >
+              <div className="border-b border-[#1e3a52] px-4 py-3">
+                <p className="flex items-center gap-2 text-sm font-semibold">
+                  <History size={15} />
+                  Leadlar tarixi
+                </p>
+                <p className="mt-0.5 text-xs text-gray-400">
+                  Barcha leadlar bo'yicha o'zgarishlar tarixi
+                </p>
+              </div>
+              <div className="px-4 py-6 text-center text-sm text-gray-500">
+                {/* Lead tarixi kontent bu yerga keladi */}
+                Tez orada...
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {canManageStatuses && (
             <Link to="/addStatus">
               <IconBtn icon={Settings} label="Sozlamalar" />
@@ -2487,7 +2541,13 @@ export default function Pipeline() {
                                   onClick={() =>
                                     handleLeadOpen(lead.id, snapshot.isDragging)
                                   }
-                                  className={`cursor-pointer rounded-lg border border-[#2a4868]/30 bg-[#1a3552] p-3 text-sm text-white shadow-sm transition-all duration-150 hover:bg-[#21446a] ${
+                                  className={`cursor-pointer rounded-lg border p-3 text-sm text-white shadow-sm transition-all duration-150 ${
+                                    lead.comment
+                                      ? "border-green-400/40 bg-green-500/10 hover:bg-green-500/15"
+                                      : lead.isViewed
+                                        ? "border-green-500/30 bg-[#1a3d28] hover:bg-[#1f4a30]"
+                                        : "border-[#2a4868]/30 bg-[#1a3552] hover:bg-[#21446a]"
+                                  } ${
                                     snapshot.isDragging && trashActive
                                       ? "scale-[1.03] rotate-1 border-red-400/80 bg-red-900/70 shadow-xl ring-2 shadow-black/40 ring-red-500/40"
                                       : snapshot.isDragging
@@ -2499,14 +2559,28 @@ export default function Pipeline() {
                                     opacity: 1,
                                   }}
                                 >
-                                  {/* Ism */}
-                                  <div className="font-medium">
-                                    {lead.firstName} {lead.lastName}
+                                  {/* Ism + commentDate (top-right) */}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="font-medium">
+                                      {lead.firstName} {lead.lastName}
+                                    </div>
+                                    {lead.comment && lead.commentDate !== null && lead.commentDate !== undefined && (
+                                      <div className="shrink-0 text-[10px] text-green-400/70">
+                                        {formatCommentDate(lead.commentDate)}
+                                      </div>
+                                    )}
                                   </div>
                                   {/* Telefon */}
                                   <div className="mt-0.5 text-xs opacity-50">
                                     {lead.phone}
                                   </div>
+
+                                  {/* Comment */}
+                                  {lead.comment && (
+                                    <div className="mt-1.5 line-clamp-3 text-[11px] leading-relaxed text-green-300/90">
+                                      {lead.comment}
+                                    </div>
+                                  )}
 
                                   {/* Manba */}
                                   {lead.leadSource?.name && (
@@ -2666,7 +2740,7 @@ export default function Pipeline() {
           </div>
         </DialogContent>
       </Dialog>
-      <HorizontalScrollDock targetRef={boardRef} />
+<HorizontalScrollDock targetRef={boardRef} />
     </div>
   );
 }

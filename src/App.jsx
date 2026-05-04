@@ -28,6 +28,7 @@ const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
 const FormPage = lazy(() => import("./pages/FormPage"));
 const GoogleAuthCallback = lazy(() => import("./pages/googleAuthCallback"));
+const FacebookCallback = lazy(() => import("./pages/facebookCallback"));
 const LandingPage = lazy(() => import("./pages/landingPage"));
 const Login = lazy(() => import("./pages/login"));
 const Register = lazy(() => import("./pages/register"));
@@ -134,6 +135,11 @@ const router = createBrowserRouter([
   {
     path: "/auth/google/callback",
     element: withLazy(<GoogleAuthCallback />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
+    path: "/facebook/callback",
+    element: withLazy(<FacebookCallback />),
     errorElement: withLazy(<AppErrorFallback />),
   },
   {
