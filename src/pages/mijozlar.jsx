@@ -2613,7 +2613,18 @@ export default function Pipeline() {
                             : "Bo'sh"}
                         </div>
                       ) : (
-                        col.leads.map((lead, index) => (
+                        [...col.leads]
+                          .sort((a, b) => {
+                            const aVal = Number(a.taskRemainingDays);
+                            const bVal = Number(b.taskRemainingDays);
+                            const aOverdue = !isNaN(aVal) && aVal < 0;
+                            const bOverdue = !isNaN(bVal) && bVal < 0;
+                            if (aOverdue && !bOverdue) return -1;
+                            if (!aOverdue && bOverdue) return 1;
+                            if (aOverdue && bOverdue) return aVal - bVal;
+                            return 0;
+                          })
+                          .map((lead, index) => (
                           <Draggable
                             key={lead.id}
                             draggableId={String(lead.id)}
