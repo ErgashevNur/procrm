@@ -19,6 +19,7 @@ import {
   Pencil,
   Trash2,
   Check,
+  Smile,
 } from "lucide-react";
 import {
   Select,
@@ -584,14 +585,22 @@ function EventCard({ event, headers, onRefresh, canDelete = true }) {
 
         {editing && (
           <div className="space-y-2.5">
-            <textarea
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              rows={3}
-              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
-              placeholder={isTask ? "Vazifa matni..." : "Izoh matni..."}
-              autoFocus
-            />
+            <div className="relative">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={3}
+                className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 pr-10 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                placeholder={isTask ? "Vazifa matni..." : "Izoh matni..."}
+                autoFocus
+              />
+              <div className="absolute right-2 top-2">
+                <EmojiPicker
+                  position="top"
+                  onSelect={(emoji) => setEditText((t) => t + emoji)}
+                />
+              </div>
+            </div>
             {isTask && (
               <div className="flex flex-wrap gap-2">
                 <div className="flex items-center gap-1.5">
@@ -647,6 +656,293 @@ function EventCard({ event, headers, onRefresh, canDelete = true }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── EMOJI PICKER ─────────────────────────────────────────────────────────────
+const EMOJI_CATS = [
+  {
+    id: "smileys",
+    label: "😊",
+    title: "Mimikalar",
+    emojis: [
+      "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍",
+      "🤩","😘","😗","😚","😙","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🤫","🤔",
+      "🤐","🤨","😐","😑","😶","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴",
+      "😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯","😎","🤓","🧐","😕",
+      "😟","🙁","☹️","😮","😲","😳","🥺","😦","😧","😨","😰","😥","😢","😭","😱",
+      "😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️",
+      "💩","🤡","👹","👺","👻","👽","👾","🤖","😺","😸","😹","😻","😼","😽","🙀",
+    ],
+  },
+  {
+    id: "gestures",
+    label: "👋",
+    title: "Qo'l",
+    emojis: [
+      "👋","🤚","🖐","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉",
+      "👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲",
+      "🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🧠","👀",
+      "👁","👅","👄","🫀","🫁","🦷","🦴",
+    ],
+  },
+  {
+    id: "nature",
+    label: "🌸",
+    title: "Tabiat",
+    emojis: [
+      "🌱","🌿","☘️","🍀","🎋","🎍","🍃","🍂","🍁","🍄","🌾","💐","🌷","🌹","🥀",
+      "🌺","🌸","🌼","🌻","🌞","🌝","🌛","🌜","🌚","🌕","🌖","🌗","🌘","🌑","🌒",
+      "🌓","🌔","🌙","🌟","⭐","🌠","🌌","☀️","🌤","⛅","🌥","☁️","🌦","🌧","⛈",
+      "🌩","🌨","❄️","☃️","⛄","🌬","💨","💧","💦","🌊","🌀","🌈","⚡","🔥","💥",
+      "🌍","🌎","🌏","🪐","💫","✨","🎇","🎆","🌋","🏔","🏕","🏖","🏝","🌅","🌄",
+      "🦋","🐝","🐞","🐛","🦗","🕷","🦂","🐢","🦎","🐍","🦕","🦖","🐬","🐳","🦈",
+      "🦁","🐯","🐻","🐼","🦊","🐺","🦝","🦌","🐘","🦒","🦓","🦧","🦍","🐒","🐸",
+    ],
+  },
+  {
+    id: "food",
+    label: "🍕",
+    title: "Taom",
+    emojis: [
+      "🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍒","🍑","🥭","🍍","🥥",
+      "🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶","🧄","🧅","🥔","🍠","🥐","🥖","🍞",
+      "🧀","🥚","🍳","🥞","🧇","🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🌮","🌯",
+      "🥙","🧆","🍱","🍣","🍤","🍥","🥮","🍡","🥟","🥠","🥡","🦪","🍦","🍧","🍨",
+      "🍩","🍪","🎂","🍰","🧁","🥧","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵",
+      "🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾",
+    ],
+  },
+  {
+    id: "travel",
+    label: "✈️",
+    title: "Sayohat",
+    emojis: [
+      "🚗","🚕","🚙","🚌","🏎","🚓","🚑","🚒","🚐","🛻","🚚","🚜","🏍","🛵","🚲",
+      "🛴","🛹","✈️","🛩","🛫","🛬","🪂","💺","🚁","🛰","🚀","🛸","⚓","⛵","🚤",
+      "🛥","🛳","🚢","🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏭",
+      "🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩","🕋","⛲","⛺","🌁","🌃",
+      "🌄","🌅","🌆","🌇","🌉","♨️","🎠","🎡","🎢","🎪","🗺","🧭","🌐",
+    ],
+  },
+  {
+    id: "objects",
+    label: "💡",
+    title: "Narsalar",
+    emojis: [
+      "⌚","📱","💻","⌨️","🖥","🖨","🖱","💾","💿","📀","📷","📸","📹","🎥","📽",
+      "📞","☎️","📟","📠","📺","📻","🧭","⏱","⏲","⏰","🕰","⌛","⏳","📡","🔋",
+      "🔌","💡","🔦","🕯","🪔","🧯","💰","💳","💎","⚖️","🧲","🪜","🔧","🔨","⚒",
+      "🛠","⛏","🪚","🔩","🪛","🔑","🗝","🔐","🔒","🔓","📦","📫","📬","📭","📮",
+      "📅","📆","📇","📋","📁","📂","🗂","📓","📔","📒","📕","📗","📘","📙","📚",
+      "📖","🔖","🏷","📊","📈","📉","🖊","🖋","✒️","🖌","🖍","📝","✏️","🔍","🔎",
+      "🔬","🔭","💉","🩹","🩺","💊","🩻","🧪","🧬","🧫","🧲","🪤","🎭","🎨","🖼",
+    ],
+  },
+  {
+    id: "activities",
+    label: "🎉",
+    title: "Faoliyat",
+    emojis: [
+      "🎉","🎊","🎈","🎁","🎀","🏆","🥇","🥈","🥉","🎖","🎗","🎫","🎟","🎪","🤹",
+      "🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺","🎸","🪕","🎻","🎲",
+      "♟","🎯","🎳","🏹","🎣","🤿","🏋️","🤸","🤺","🥊","🥋","🥅","🏒","🏑","🏏",
+      "🏓","🎾","🥏","🏐","🏀","🏈","⚽","⚾","🥎","🏉","🎱","🏓","🏸","⛳","🎿",
+      "🛷","🥌","🎮","🕹","🎰","🎲","🧩","🪅","🪆","🪃","🎠","🎡","🎢","🎪",
+    ],
+  },
+  {
+    id: "symbols",
+    label: "#️⃣",
+    title: "Belgilar",
+    emojis: [
+      "❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","❤️‍🔥","❤️‍🩹","💔","❣️","💕","💞",
+      "💓","💗","💖","💘","💝","💟","☮️","✝️","☯️","🕎","🔯","💯","✅","❌","⭕",
+      "❓","❔","❕","❗","‼️","⁉️","🔴","🟠","🟡","🟢","🔵","🟣","⚫","⚪","🟥",
+      "🟧","🟨","🟩","🟦","🟪","⬛","⬜","🔶","🔷","🔸","🔹","🔺","🔻","💠","🔘",
+      "🔲","🔳","▪️","▫️","◾","◽","◼️","◻️","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️",
+      "◀️","⏪","⏮️","🔼","⏫","🔽","⏬","⏸️","⏹️","⏺️","🎦","🔅","🔆","📶","📳",
+      "♀️","♂️","⚧","✖️","➕","➖","➗","♾️","💲","💱","♻️","⚜️","🔱","📛","🔰",
+      "⚠️","🚫","🔞","📵","🆕","🆗","🆙","🆒","🔔","🔕","🎵","🎶","📣","📢",
+    ],
+  },
+];
+
+const RECENT_KEY = "emoji_recent";
+const MAX_RECENT = 32;
+
+function getRecentEmojis() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentEmoji(emoji) {
+  try {
+    const prev = getRecentEmojis().filter((e) => e !== emoji);
+    localStorage.setItem(RECENT_KEY, JSON.stringify([emoji, ...prev].slice(0, MAX_RECENT)));
+  } catch {}
+}
+
+function EmojiPicker({ onSelect, position = "top" }) {
+  const [open, setOpen] = useState(false);
+  const [catId, setCatId] = useState("smileys");
+  const [search, setSearch] = useState("");
+  const [recent, setRecent] = useState([]);
+  const ref = useRef(null);
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const handleOpen = () => {
+    setOpen((o) => {
+      if (!o) {
+        setRecent(getRecentEmojis());
+        setSearch("");
+        setTimeout(() => searchRef.current?.focus(), 50);
+      }
+      return !o;
+    });
+  };
+
+  const handleSelect = (emoji) => {
+    saveRecentEmoji(emoji);
+    setRecent(getRecentEmojis());
+    onSelect(emoji);
+  };
+
+  const allEmojis = EMOJI_CATS.flatMap((c) => c.emojis);
+  const filtered = search.trim()
+    ? allEmojis.filter((e) => e.includes(search.trim()))
+    : null;
+
+  const displayEmojis = filtered
+    ? filtered
+    : catId === "recent"
+      ? recent
+      : (EMOJI_CATS.find((c) => c.id === catId)?.emojis ?? []);
+
+  const tabs = [
+    ...(recent.length > 0 ? [{ id: "recent", label: "🕐", title: "So'nggi" }] : []),
+    ...EMOJI_CATS.map((c) => ({ id: c.id, label: c.label, title: c.title })),
+  ];
+
+  const activeCatTitle =
+    search.trim()
+      ? "Qidiruv natijalari"
+      : tabs.find((t) => t.id === catId)?.title ?? "";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/10 hover:text-yellow-400"
+        title="Emoji qo'shish"
+        style={{ color: open ? "#facc15" : undefined }}
+      >
+        <Smile size={16} />
+      </button>
+
+      {open && (
+        <div
+          className={`absolute ${position === "top" ? "bottom-full mb-2" : "top-full mt-2"} right-0 z-50 overflow-hidden rounded-2xl shadow-2xl`}
+          style={{
+            width: 320,
+            background: "#0b1e30",
+            border: "1px solid rgba(255,255,255,0.09)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
+          }}
+        >
+          {/* Search */}
+          <div
+            className="flex items-center gap-2 border-b px-3 py-2.5"
+            style={{ borderColor: "rgba(255,255,255,0.06)" }}
+          >
+            <span className="text-sm text-gray-600">🔍</span>
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Emoji qidirish..."
+              className="flex-1 bg-transparent text-xs text-white placeholder-gray-600 outline-none"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-xs text-gray-600 hover:text-white"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Category tabs */}
+          {!search.trim() && (
+            <div
+              className="flex items-center gap-0.5 overflow-x-auto border-b px-2 py-1.5"
+              style={{ borderColor: "rgba(255,255,255,0.06)" }}
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  title={tab.title}
+                  onClick={() => setCatId(tab.id)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base transition-all"
+                  style={{
+                    background: catId === tab.id ? "rgba(59,130,246,0.18)" : "transparent",
+                    outline: catId === tab.id ? "1px solid rgba(59,130,246,0.3)" : "none",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Category label */}
+          <div className="px-3 pt-2 pb-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-700">
+              {activeCatTitle}
+            </span>
+          </div>
+
+          {/* Emoji grid */}
+          <div
+            className="grid grid-cols-8 gap-px p-2"
+            style={{ maxHeight: 200, overflowY: "auto" }}
+          >
+            {displayEmojis.length > 0 ? (
+              displayEmojis.map((emoji, i) => (
+                <button
+                  key={`${emoji}-${i}`}
+                  type="button"
+                  onClick={() => handleSelect(emoji)}
+                  className="flex aspect-square items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-white/10"
+                  style={{ lineHeight: 1 }}
+                >
+                  {emoji}
+                </button>
+              ))
+            ) : (
+              <div className="col-span-8 py-6 text-center text-xs text-gray-600">
+                {search.trim() ? "Emoji topilmadi" : "Hali yo'q"}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -933,6 +1229,23 @@ function InputBar({ onSubmit, sending }) {
   const [taskDate, setTaskDate] = useState("");
   const textareaRef = useRef(null);
 
+  const insertEmoji = (emoji) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setText((t) => t + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -1029,6 +1342,9 @@ function InputBar({ onSubmit, sending }) {
               className="flex-1 resize-none bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
               style={{ lineHeight: "1.6", maxHeight: 130 }}
             />
+            <div className="mt-0.5 shrink-0">
+              <EmojiPicker position="top" onSelect={insertEmoji} />
+            </div>
           </div>
           <button
             onClick={submit}
