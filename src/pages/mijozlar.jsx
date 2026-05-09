@@ -2615,14 +2615,16 @@ export default function Pipeline() {
                       ) : (
                         [...col.leads]
                           .sort((a, b) => {
-                            const aVal = Number(a.taskRemainingDays);
-                            const bVal = Number(b.taskRemainingDays);
-                            const aOverdue = !isNaN(aVal) && aVal < 0;
-                            const bOverdue = !isNaN(bVal) && bVal < 0;
-                            if (aOverdue && !bOverdue) return -1;
-                            if (!aOverdue && bOverdue) return 1;
-                            if (aOverdue && bOverdue) return aVal - bVal;
-                            return 0;
+                            const aRaw = a.taskRemainingDays;
+                            const bRaw = b.taskRemainingDays;
+                            const aHas = aRaw !== null && aRaw !== undefined && !isNaN(Number(aRaw));
+                            const bHas = bRaw !== null && bRaw !== undefined && !isNaN(Number(bRaw));
+                            // task yo'q leadlar eng pastda
+                            if (!aHas && !bHas) return 0;
+                            if (!aHas) return 1;
+                            if (!bHas) return -1;
+                            // muddati o'tgan (manfiy) → tepada, qolganlar kun bo'yicha o'sish tartibida
+                            return Number(aRaw) - Number(bRaw);
                           })
                           .map((lead, index) => (
                           <Draggable
