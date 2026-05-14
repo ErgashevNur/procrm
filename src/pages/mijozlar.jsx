@@ -519,6 +519,14 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString("uz-UZ");
 }
 
+function formatMoneyShort(value) {
+  const n = Number(value || 0);
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} mlrd`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")} mln`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")} ming`;
+  return n.toLocaleString("uz-UZ");
+}
+
 function orderStatusesByOrder(statusList, order) {
   if (!order || !order.length) return statusList;
   const indexMap = new Map(statusList.map((status) => [status.id, status]));
@@ -661,6 +669,7 @@ export default function Pipeline() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [dailyLimit, setDailyLimit] = useState(null);
   const role = getCurrentRole();
   const canManageStatuses = MANAGEMENT_ROLES.includes(role);
   const canDeleteLeads = [ROLES.SUPERADMIN, ROLES.ROP].includes(role);
@@ -1641,6 +1650,16 @@ export default function Pipeline() {
     [],
   );
 
+  useEffect(() => {
+    async function fetchDailyLimit() {
+      const res = await apiFetch(`${API}/lead-limit/daily`);
+      if (!res || !res.ok) return;
+      const json = await res.json();
+      if (json?.data) setDailyLimit(json.data);
+    }
+    fetchDailyLimit();
+  }, []);
+
   const isFiltering = hasActiveSearch;
   const visibleStatuses = searchStatuses ?? statuses;
   const fallbackTotalLeads = statuses.reduce((a, s) => a + s.leads.length, 0);
@@ -2072,6 +2091,29 @@ export default function Pipeline() {
           </div>
         </div>
 
+        {/* Daily lead limit badge */}
+        {dailyLimit && (
+          <div className="flex shrink-0 items-center gap-3 rounded-md border border-[#2a4868] bg-[#0a1929] px-3 py-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500">Kunlik limit:</span>
+              <span className="font-semibold text-white">{dailyLimit.limit}</span>
+            </div>
+            <div className="h-3 w-px bg-[#2a4868]" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500">Bajarildi:</span>
+              <span
+                className={`font-semibold ${
+                  dailyLimit.count >= dailyLimit.limit
+                    ? "text-red-400"
+                    : "text-green-400"
+                }`}
+              >
+                {dailyLimit.count}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Right: stats + action buttons */}
         <div className="flex shrink-0 items-center gap-2">
           {/* Mijoz soni + filter natijasi */}
@@ -2082,11 +2124,11 @@ export default function Pipeline() {
                 mijoz
                 <span className="mx-1">•</span>
                 <span className="text-green-400">
-                  {Number(totalFilteredBudjet).toLocaleString()} so'm
+                  {formatMoneyShort(totalFilteredBudjet)} so'm
                 </span>
                 <span className="mx-1 text-gray-600">/</span>
                 <span className="text-green-400/80">
-                  {Number(totalSumBase).toLocaleString()} so'm
+                  {formatMoneyShort(totalSumBase)} so'm
                 </span>
               </>
             ) : (
@@ -2094,7 +2136,7 @@ export default function Pipeline() {
                 <span className="text-white">{totalAll}</span> mijoz
                 <span className="mx-1">/</span>
                 <span className="text-green-400">
-                  {Number(totalSumBase).toLocaleString()} so'm
+                  {formatMoneyShort(totalSumBase)} so'm
                 </span>
               </>
             )}

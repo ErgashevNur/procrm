@@ -2,21 +2,37 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFacebook,
+  faGoogle,
+  faHubspot,
   faInstagram,
+  faNotion,
+  faSlack,
+  faTelegram,
   faWhatsapp,
+  faZoom,
 } from "@fortawesome/free-brands-svg-icons";
 import {
+  BarChart2,
+  Bell,
   Bot,
   CheckCircle2,
-  Lock,
+  Cpu,
+  Gauge,
+  Globe,
+  Headphones,
+  MessageSquare,
   Package,
+  Phone,
   Search,
   Settings as SettingsIcon,
+  Webhook,
   XCircle,
+  Zap,
 } from "lucide-react";
 import RopAIConfigDialog from "@/components/proMarket/RopAIConfigDialog";
 import LeadSyncDialog from "@/components/mijozlar/LeadSyncDialog";
 import FacebookConfigDialog from "@/components/proMarket/FacebookConfigDialog";
+import LeadLimitDialog from "@/components/proMarket/LeadLimitDialog";
 import { apiUrl } from "@/lib/api";
 import { getFacebookConnections } from "@/services/facebookService";
 
@@ -106,6 +122,161 @@ const APPS = [
     bg: "#0D2B1D",
     desc: "Google Sheets bilan ikki tomonlama sinxronlash",
     badge: "free",
+    installed: false,
+  },
+  {
+    id: "lead-limit",
+    name: "Lead Limit",
+    iconNode: Gauge,
+    iconColor: "#4D8EF5",
+    bg: "#0D1E35",
+    desc: "Sales-managerlar uchun kunlik lead gaplashish limitini belgilang",
+    badge: "free",
+    installed: false,
+  },
+
+  // ── Tez kunda ──
+  {
+    id: "telegram",
+    name: "Telegram",
+    faIcon: faTelegram,
+    iconColor: "#2AABEE",
+    bg: "#0D1E35",
+    desc: "Telegram bot orqali keladigan so'rovlarni CRMga ulang",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "zapier",
+    name: "Zapier",
+    iconNode: Zap,
+    iconColor: "#FF4A00",
+    bg: "#2A1500",
+    desc: "5000+ ilova bilan avtomatik integratsiya quring",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    faIcon: faSlack,
+    iconColor: "#4A154B",
+    bg: "#1A0A1F",
+    desc: "Slack kanallarga lead hodisalari va bildirishnomalarini yuboring",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "gmail",
+    name: "Gmail",
+    faIcon: faGoogle,
+    iconColor: "#EA4335",
+    bg: "#2A0D0D",
+    desc: "Gmail orqali leadlar bilan email muloqotini kuzating",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "zoom",
+    name: "Zoom",
+    faIcon: faZoom,
+    iconColor: "#2D8CFF",
+    bg: "#0D1A2A",
+    desc: "Zoom qo'ng'iroqlarini leadlar bilan bog'lang va yozing",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "sms",
+    name: "SMS Gateway",
+    iconNode: MessageSquare,
+    iconColor: "#F59E0B",
+    bg: "#1A1200",
+    desc: "Platniy SMS xizmatlar orqali leadlarga avtoxabar yuboring",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "call-tracking",
+    name: "Call Tracking",
+    iconNode: Phone,
+    iconColor: "#10B981",
+    bg: "#071A12",
+    desc: "Qo'ng'iroqlarni yozib oling va leadga avtomatik bog'lang",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "webhook",
+    name: "Webhook",
+    iconNode: Webhook,
+    iconColor: "#A78BFA",
+    bg: "#150D26",
+    desc: "Har qanday tizim bilan real-time webhook integratsiyasi",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "analytics",
+    name: "Analytics",
+    iconNode: BarChart2,
+    iconColor: "#06B6D4",
+    bg: "#071A1F",
+    desc: "Sotuv funnel va konversiya statistikasini chuqur tahlil qiling",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    faIcon: faNotion,
+    iconColor: "#FFFFFF",
+    bg: "#111111",
+    desc: "Notion sahifalariga lead ma'lumotlarini avtomatik yuklang",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    faIcon: faHubspot,
+    iconColor: "#FF7A59",
+    bg: "#1F0D05",
+    desc: "HubSpot CRM bilan ikki tomonlama kontakt sinxronizatsiyasi",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "calendar",
+    name: "Google Calendar",
+    faIcon: faGoogle,
+    iconColor: "#4285F4",
+    bg: "#0D1535",
+    desc: "Uchrashuvlarni avtomatik kalendarga qo'shing va eslatmalar oling",
+    badge: "soon",
+    locked: true,
+    installed: false,
+  },
+  {
+    id: "ai-assistant",
+    name: "AI Assistant",
+    iconNode: Cpu,
+    iconColor: "#C084FC",
+    bg: "#160D26",
+    desc: "Leadlar bilan suhbatni AI yordamida tahlil qiling va tavsiyalar oling",
+    badge: "soon",
+    locked: true,
     installed: false,
   },
 ];
@@ -212,7 +383,8 @@ function IntCard({ item, onToggle }) {
   const isRopAI = item.id === "rop-ai";
   const isSheets = item.id === "google-sheets";
   const isFacebook = item.id === "facebook";
-  const isStateful = isRopAI || isSheets || isFacebook;
+  const isLeadLimit = item.id === "lead-limit";
+  const isStateful = isRopAI || isSheets || isFacebook || isLeadLimit;
   const accent = locked
     ? C.purple
     : item.installed
@@ -237,8 +409,35 @@ function IntCard({ item, onToggle }) {
         flexDirection: "column",
         gap: 10,
         position: "relative",
+        overflow: "hidden",
       }}
     >
+      {locked && hov && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(30,30,35,0.82)",
+            backdropFilter: "blur(2px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 10,
+            zIndex: 10,
+          }}
+        >
+          <span
+            style={{
+              color: "#9CA3AF",
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: 0.3,
+            }}
+          >
+            Tez kunda
+          </span>
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -259,26 +458,6 @@ function IntCard({ item, onToggle }) {
           }}
         >
           <BrandIcon item={item} size={24} />
-          {locked && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: -5,
-                right: -5,
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                background: "#0F1922",
-                border: `1.5px solid ${C.purple}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
-              }}
-            >
-              <Lock size={11} color={C.purple} strokeWidth={2.6} />
-            </div>
-          )}
         </div>
         <div
           style={{
@@ -288,15 +467,17 @@ function IntCard({ item, onToggle }) {
             gap: 4,
           }}
         >
-          <ConnectedPill
-            state={
-              item.installed
-                ? "connected"
-                : item.configured
-                  ? "paused"
-                  : "disconnected"
-            }
-          />
+          {!locked && (
+            <ConnectedPill
+              state={
+                item.installed
+                  ? "connected"
+                  : item.configured
+                    ? "paused"
+                    : "disconnected"
+              }
+            />
+          )}
         </div>
       </div>
       <div>
@@ -351,7 +532,7 @@ function IntCard({ item, onToggle }) {
       >
         {locked ? (
           <>
-            <Lock size={11} strokeWidth={2.6} /> Tez orada
+            <SettingsIcon size={11} strokeWidth={2.6} /> Sozlash
           </>
         ) : isStateful ? (
           <>
@@ -407,6 +588,7 @@ export default function ProMarket() {
   const [ropDialogOpen, setRopDialogOpen] = useState(false);
   const [sheetsDialogOpen, setSheetsDialogOpen] = useState(false);
   const [fbDialogOpen, setFbDialogOpen] = useState(false);
+  const [limitDialogOpen, setLimitDialogOpen] = useState(false);
   const projectId = Number(localStorage.getItem("projectId")) || 0;
 
   const refreshSheetsState = async () => {
@@ -525,6 +707,10 @@ export default function ProMarket() {
     }
     if (id === "facebook") {
       setFbDialogOpen(true);
+      return;
+    }
+    if (id === "lead-limit") {
+      setLimitDialogOpen(true);
       return;
     }
     setItems((prev) => {
@@ -870,6 +1056,14 @@ export default function ProMarket() {
           if (!open) refreshFacebookState();
         }}
         onSaved={handleFacebookSaved}
+      />
+
+      <LeadLimitDialog
+        open={limitDialogOpen}
+        onClose={() => setLimitDialogOpen(false)}
+        onSaved={() =>
+          showToast(CheckCircle2, "Kunlik lead limiti yangilandi!")
+        }
       />
     </div>
   );
