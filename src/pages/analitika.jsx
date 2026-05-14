@@ -17,8 +17,12 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Line,
   Pie,
   PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -302,6 +306,15 @@ export default function Analitika() {
   const projectId = localStorage.getItem("projectId");
   const projectName = localStorage.getItem("projectName");
 
+  const [limitRange, setLimitRange] = useState(() => {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 29);
+    return { from: formatYMD(from), to: formatYMD(to) };
+  });
+  const [limitData, setLimitData] = useState([]);
+  const [limitLoading, setLimitLoading] = useState(false);
+
   useEffect(() => {
     setTrendRange(defaultRangeByType(trendType));
   }, [trendType]);
@@ -378,6 +391,30 @@ export default function Analitika() {
     load();
   }, [navigate, projectId, trendRange.from, trendRange.to, trendType]);
 
+  useEffect(() => {
+    setLimitLoading(true);
+    apiFetch(`${API}/lead-limit/analytics?from=${limitRange.from}&to=${limitRange.to}`)
+      .then((res) => res?.json())
+      .then((json) => {
+        const raw = Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json?.data?.items)
+            ? json.data.items
+            : Array.isArray(json)
+              ? json
+              : [];
+        setLimitData(
+          raw.map((d) => ({
+            date: String(d.date ?? "").slice(5),
+            count: Number(d.count ?? 0),
+            limit: Number(d.limit ?? 0),
+          })),
+        );
+      })
+      .catch(() => setLimitData([]))
+      .finally(() => setLimitLoading(false));
+  }, [limitRange.from, limitRange.to]);
+
   const analytics = useMemo(() => {
     const totalDeals = rows.reduce((sum, row) => sum + row.leadCount, 0);
     const totalAmount = rows.reduce((sum, row) => sum + row.totalBudget, 0);
@@ -438,6 +475,149 @@ export default function Analitika() {
       </div>
 
       <div className="relative mx-auto max-w-6xl space-y-5">
+        {/* ── Lead Limit Analytics ── */}
+        <section className="crm-card crm-hairline">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <SectionHeader
+              kicker="Monitoring"
+              title="Kunlik lead limit bajarilishi"
+              description="Sales-managerlar har kuni qancha lead bilan gaplashganini kuzating."
+            />
+            <div className="flex items-center gap-2">
+              {[
+                { label: "7 kun", days: 6 },
+                { label: "30 kun", days: 29 },
+                { label: "90 kun", days: 89 },
+              ].map(({ label, days }) => {
+                const to = formatYMD(new Date());
+                const from = (() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() - days);
+                  return formatYMD(d);
+                })();
+                const active = limitRange.from === from && limitRange.to === to;
+                return (
+                  <button
+                    key={label}
+                    onClick={() => setLimitRange({ from, to })}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-blue-500/40 bg-blue-500/10 text-blue-400"
+                        : "border-white/8 text-[color:var(--crm-muted)] hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={limitRange.from}
+                  max={limitRange.to}
+                  onChange={(e) =>
+                    setLimitRange((r) => ({ ...r, from: e.target.value }))
+                  }
+                  className="h-8 rounded-lg border border-white/8 bg-white/[0.03] px-2 text-xs text-gray-300 outline-none focus:border-blue-500/50"
+                  style={{ colorScheme: "dark" }}
+                />
+                <span className="text-[color:var(--crm-muted)]">—</span>
+                <input
+                  type="date"
+                  value={limitRange.to}
+                  min={limitRange.from}
+                  onChange={(e) =>
+                    setLimitRange((r) => ({ ...r, to: e.target.value }))
+                  }
+                  className="h-8 rounded-lg border border-white/8 bg-white/[0.03] px-2 text-xs text-gray-300 outline-none focus:border-blue-500/50"
+                  style={{ colorScheme: "dark" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {limitData.length > 0 && (
+            <div className="mb-5 grid grid-cols-3 gap-3">
+              {(() => {
+                const total = limitData.reduce((s, d) => s + d.count, 0);
+                const avg = Math.round(total / limitData.length);
+                const hit = limitData.filter(
+                  (d) => d.limit > 0 && d.count >= d.limit,
+                ).length;
+                return [
+                  { label: "Jami bajarildi", value: total, color: "#69a7ff" },
+                  { label: "Kunlik o'rtacha", value: avg, color: "#ff9f0a" },
+                  { label: "Limit to'lgan", value: `${hit} kun`, color: "#34c759" },
+                ].map(({ label, value, color }) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3"
+                  >
+                    <p className="text-xs text-[color:var(--crm-muted)]">{label}</p>
+                    <p className="mt-1 text-xl font-bold" style={{ color }}>
+                      {value}
+                    </p>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {limitLoading ? (
+            <div className="flex h-[300px] items-center justify-center">
+              <KotibamLoader minHeight="200px" className="border-0 bg-transparent" />
+            </div>
+          ) : limitData.length === 0 ? (
+            <EmptyState text="Tanlangan davr uchun limit ma'lumotlari topilmadi." />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={limitData} margin={{ top: 4, right: 8, bottom: 0, left: -10 }}>
+                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: "#8ca0b6", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fill: "#8ca0b6", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0b1929",
+                    border: "1px solid #1e3a52",
+                    borderRadius: 10,
+                    fontSize: 12,
+                    color: "#fff",
+                  }}
+                  formatter={(value, name) => [
+                    value,
+                    name === "count" ? "Bajarildi" : "Limit",
+                  ]}
+                />
+                <Bar
+                  dataKey="count"
+                  name="count"
+                  fill="#69a7ff"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={36}
+                />
+                <Line
+                  dataKey="limit"
+                  name="limit"
+                  stroke="#ff9f0a"
+                  strokeWidth={2}
+                  dot={false}
+                  strokeDasharray="5 4"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </section>
+
         <section className="crm-card crm-hairline overflow-hidden">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
