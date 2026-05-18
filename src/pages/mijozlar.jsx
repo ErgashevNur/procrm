@@ -2659,14 +2659,35 @@ export default function Pipeline() {
                           .sort((a, b) => {
                             const aRaw = a.taskRemainingDays;
                             const bRaw = b.taskRemainingDays;
-                            const aHas = aRaw !== null && aRaw !== undefined && !isNaN(Number(aRaw));
-                            const bHas = bRaw !== null && bRaw !== undefined && !isNaN(Number(bRaw));
-                            // task yo'q leadlar eng pastda
-                            if (!aHas && !bHas) return 0;
-                            if (!aHas) return 1;
-                            if (!bHas) return -1;
-                            // muddati o'tgan (manfiy) → tepada, qolganlar kun bo'yicha o'sish tartibida
-                            return Number(aRaw) - Number(bRaw);
+                            const aHasTask = aRaw !== null && aRaw !== undefined && !isNaN(Number(aRaw));
+                            const bHasTask = bRaw !== null && bRaw !== undefined && !isNaN(Number(bRaw));
+                            const aHasComment = !!a.comment;
+                            const bHasComment = !!b.comment;
+                            const aDays = aHasTask ? Number(aRaw) : null;
+                            const bDays = bHasTask ? Number(bRaw) : null;
+                            // Muddati o'tgan task → operator qayta aloqa qilishi kerak → yuqorida
+                            const aOverdue = aHasTask && aDays < 0;
+                            const bOverdue = bHasTask && bDays < 0;
+                            // "Diqqat kerak" guruhi: yangi lead YOKI muddati o'tgan
+                            const aNeedsAction = (!aHasTask && !aHasComment) || aOverdue;
+                            const bNeedsAction = (!bHasTask && !bHasComment) || bOverdue;
+                            if (aNeedsAction !== bNeedsAction) return aNeedsAction ? -1 : 1;
+                            if (aNeedsAction && bNeedsAction) {
+                              // Yangi (hech narsa yo'q) > muddati o'tgan
+                              const aNew = !aHasTask && !aHasComment;
+                              const bNew = !bHasTask && !bHasComment;
+                              if (aNew !== bNew) return aNew ? -1 : 1;
+                              // Ikkalasi ham o'tgan: ko'proq o'tgan → yuqorida
+                              if (aOverdue && bOverdue) return aDays - bDays;
+                              return 0;
+                            }
+                            // Ikkalasi ham "aktiv" (pastda): faqat comment → task bor dan yuqoriroq
+                            const aCommentOnly = aHasComment && !aHasTask;
+                            const bCommentOnly = bHasComment && !bHasTask;
+                            if (aCommentOnly !== bCommentOnly) return aCommentOnly ? -1 : 1;
+                            // Ikkalasi ham taskli: muddati yaqin → pastroq, uzoq → eng pastda
+                            if (aHasTask && bHasTask) return aDays - bDays;
+                            return Number(a.commentDate ?? 9999) - Number(b.commentDate ?? 9999);
                           })
                           .map((lead, index) => (
                           <Draggable
