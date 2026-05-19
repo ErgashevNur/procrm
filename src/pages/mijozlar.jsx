@@ -13,6 +13,8 @@ import {
   Download,
   MoreHorizontal,
   History,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -577,6 +579,16 @@ function normalizeLead(raw) {
   };
 }
 
+function parseBoardToStatuses(boardItems) {
+  return boardItems.map((item) => ({
+    id: Number(item.statusId),
+    name: item.statusName,
+    color: item.color,
+    type: item.type,
+    leads: item.type === "CANCELED" ? [] : (item.leads || []).map(normalizeLead),
+  }));
+}
+
 // ── Icon button — iconOnly: faqat icon, aks holda icon+text ──────────────────
 function IconBtn({
   icon: Icon,
@@ -650,6 +662,7 @@ export default function Pipeline() {
     isAvailableRecordedAudio,
   } = recorderControls;
 
+  const [revealedCanceledIds, setRevealedCanceledIds] = useState(new Set());
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -693,6 +706,23 @@ export default function Pipeline() {
         total: 0,
         loaded: 0,
         hasMore: true,
+        loading: false,
+      };
+    });
+    setStatusMeta(initial);
+  };
+
+  const initializeStatusMetaFromBoard = (boardItems) => {
+    const initial = {};
+    boardItems.forEach((item) => {
+      const isCanceled = item.type === "CANCELED";
+      const loaded = isCanceled ? 0 : (item.leads || []).length;
+      initial[Number(item.statusId)] = {
+        page: isCanceled ? 0 : 1,
+        limit: PAGE_LIMIT,
+        total: Number(item.total ?? 0),
+        loaded,
+        hasMore: isCanceled ? true : Boolean(item.hasMore),
         loading: false,
       };
     });
@@ -959,62 +989,54 @@ export default function Pipeline() {
     const init = async () => {
       try {
         if (savedId) {
-          const [projectsRes, statusesRes, sourcesRes, totalsRes] =
-            await Promise.all([
-              apiFetch(`${API}/projects`),
-              apiFetch(`${API}/status/${savedId}`),
-              apiFetch(`${API}/lead-source/${savedId}`),
-              apiFetch(`${API}/status/all/${savedId}`),
-            ]);
-          if (!projectsRes || !statusesRes) return;
-          if (!projectsRes.ok || !statusesRes.ok) {
+          const [projectsRes, boardRes, sourcesRes] = await Promise.all([
+            apiFetch(`${API}/projects`),
+            apiFetch(
+              `${API}/leeds/board?projectId=${savedId}&limit=${PAGE_LIMIT}`,
+            ),
+            apiFetch(`${API}/lead-source/${savedId}`),
+          ]);
+          if (!projectsRes) return;
+          if (!projectsRes.ok) {
             const msg = await extractApiMessage(
-              !projectsRes.ok ? projectsRes : statusesRes,
+              projectsRes,
               "Ma'lumotlar yuklanmadi",
             );
             showToast(msg, "error");
             setAppState("no-project");
             return;
           }
-          const [projectsData, statusesData, sourcesData, totalsData] =
-            await Promise.all([
-              parseJsonSafeResponse(projectsRes, []),
-              parseJsonSafeResponse(statusesRes, []),
-              sourcesRes?.ok
-                ? parseJsonSafeResponse(sourcesRes, [])
-                : Promise.resolve([]),
-              totalsRes?.ok
-                ? parseJsonSafeResponse(totalsRes, null)
-                : Promise.resolve(null),
-            ]);
-          const fallbackStatuses = Array.isArray(statusesData)
-            ? statusesData
-            : [];
-          const { payloadStatuses, order } = applyStatusTotals(
-            totalsData,
-            fallbackStatuses,
+          const [projectsData, boardData, sourcesData] = await Promise.all([
+            parseJsonSafeResponse(projectsRes, []),
+            boardRes?.ok ? parseJsonSafeResponse(boardRes, null) : Promise.resolve(null),
+            sourcesRes?.ok
+              ? parseJsonSafeResponse(sourcesRes, [])
+              : Promise.resolve([]),
+          ]);
+          const boardItems = Array.isArray(boardData?.data) ? boardData.data : [];
+          const normalizedStatuses = parseBoardToStatuses(boardItems);
+          const totalLeads = boardItems.reduce(
+            (sum, item) => sum + Number(item.total ?? 0),
+            0,
           );
-          const statusSnapshot = payloadStatuses.length
-            ? payloadStatuses
-            : fallbackStatuses;
-          const normalizedStatuses = orderStatusesByOrder(
-            statusSnapshot.map((s) => ({
-              ...s,
-              id: Number(s.id),
-              leads: [],
-            })),
-            order,
-          );
+          setStatusTotals({
+            totalSum: 0,
+            totalLeads,
+            order: [],
+            metrics: Object.fromEntries(
+              boardItems.map((item) => [
+                Number(item.statusId),
+                { leadCount: Number(item.total ?? 0), leadBudjet: 0 },
+              ]),
+            ),
+          });
           setProjects(Array.isArray(projectsData) ? projectsData : []);
           setStatuses(normalizedStatuses);
-          initializeStatusMeta(normalizedStatuses);
+          initializeStatusMetaFromBoard(boardItems);
           setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
           await loadOperatorsForProject(savedId);
           setCurrentProject({ id: savedId, name: savedName });
           setAppState("ready");
-          await Promise.all(
-            normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
-          );
         } else {
           const res = await apiFetch(`${API}/projects`);
           if (!res) return;
@@ -1045,57 +1067,43 @@ export default function Pipeline() {
     localStorage.setItem("projectName", project.name);
     setCurrentProject({ id: project.id, name: project.name });
     try {
-      const [statusesRes, sourcesRes, totalsRes] = await Promise.all([
-        apiFetch(`${API}/status/${project.id}`),
+      const [boardRes, sourcesRes] = await Promise.all([
+        apiFetch(
+          `${API}/leeds/board?projectId=${project.id}&limit=${PAGE_LIMIT}`,
+        ),
         apiFetch(`${API}/lead-source/${project.id}`),
-        apiFetch(`${API}/status/all/${project.id}`),
       ]);
-      if (!statusesRes) return;
-      if (!statusesRes.ok) {
-        const msg = await extractApiMessage(
-          statusesRes,
-          "Statuslar yuklanmadi",
-        );
-        showToast(msg, "error");
-        setAppState("no-project");
-        return;
-      }
-      const [statusesData, sourcesData, totalsData] = await Promise.all([
-        parseJsonSafeResponse(statusesRes, []),
+      const [boardData, sourcesData] = await Promise.all([
+        boardRes?.ok ? parseJsonSafeResponse(boardRes, null) : Promise.resolve(null),
         sourcesRes?.ok
           ? parseJsonSafeResponse(sourcesRes, [])
           : Promise.resolve([]),
-        totalsRes?.ok
-          ? parseJsonSafeResponse(totalsRes, null)
-          : Promise.resolve(null),
       ]);
-      const fallbackStatuses = Array.isArray(statusesData) ? statusesData : [];
-      const { payloadStatuses, order } = applyStatusTotals(
-        totalsData,
-        fallbackStatuses,
+      const boardItems = Array.isArray(boardData?.data) ? boardData.data : [];
+      const normalizedStatuses = parseBoardToStatuses(boardItems);
+      const totalLeads = boardItems.reduce(
+        (sum, item) => sum + Number(item.total ?? 0),
+        0,
       );
-      const statusSnapshot = payloadStatuses.length
-        ? payloadStatuses
-        : fallbackStatuses;
-      const normalizedStatuses = orderStatusesByOrder(
-        statusSnapshot.map((s) => ({
-          ...s,
-          id: Number(s.id),
-          leads: [],
-        })),
-        order,
-      );
+      setStatusTotals({
+        totalSum: 0,
+        totalLeads,
+        order: [],
+        metrics: Object.fromEntries(
+          boardItems.map((item) => [
+            Number(item.statusId),
+            { leadCount: Number(item.total ?? 0), leadBudjet: 0 },
+          ]),
+        ),
+      });
       setStatuses(normalizedStatuses);
-      initializeStatusMeta(normalizedStatuses);
+      initializeStatusMetaFromBoard(boardItems);
       setLeadSource(Array.isArray(sourcesData) ? sourcesData : []);
       await loadOperatorsForProject(project.id);
       setSearchParams({ ...DEFAULT_SEARCH_PARAMS });
       setSearchStatuses(null);
       setSearchSummary(null);
       setAppState("ready");
-      await Promise.all(
-        normalizedStatuses.map((s) => fetchLeadsByStatus(s.id, 1, false)),
-      );
     } catch (err) {
       console.error("Loyiha yuklanmadi:", err);
       showToast("Loyiha ma\'lumotlari yuklanmadi", "error");
@@ -2553,17 +2561,20 @@ export default function Pipeline() {
           className="flex flex-1 gap-4 overflow-x-auto overflow-y-hidden p-6"
           style={{ alignItems: "flex-start" }}
         >
-          {visibleStatuses.map((col) => (
+          {visibleStatuses.map((col) => {
+            const isCanceled = col.type === "CANCELED";
+            const isRevealed = revealedCanceledIds.has(col.id);
+            const statusMetric = statusTotals.metrics?.[col.id] || {};
+            const totalCount = Number(
+              statusMetric.leadCount ?? col.leads.length ?? 0,
+            );
+            return (
             <div
               key={col.id}
               className="flex shrink-0 flex-col"
               style={{ width: 300 }}
             >
               {(() => {
-                const statusMetric = statusTotals.metrics?.[col.id] || {};
-                const totalCount = Number(
-                  statusMetric.leadCount ?? col.leads.length ?? 0,
-                );
                 const totalBudjet = Number(statusMetric.leadBudjet ?? 0);
                 const filteredCount = col.leads.length;
                 const filteredBudjet = (col.leads || []).reduce(
@@ -2578,11 +2589,48 @@ export default function Pipeline() {
                   >
                     <div className="flex items-center justify-between bg-[#153043] px-4 py-3 font-semibold text-white">
                       <span className="truncate text-sm">{col.name}</span>
-                      <span className="rounded-full bg-gray-700 px-2.5 py-0.5 text-xs">
-                        {isFiltering
-                          ? `${filteredCount}/${totalCount}`
-                          : totalCount}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {isCanceled && (
+                          <button
+                            onClick={() => {
+                              if (!isRevealed) {
+                                setRevealedCanceledIds(
+                                  (prev) => new Set([...prev, col.id]),
+                                );
+                                fetchLeadsByStatus(col.id, 1, false);
+                              } else {
+                                setRevealedCanceledIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(col.id);
+                                  return next;
+                                });
+                                setStatuses((prev) =>
+                                  prev.map((s) =>
+                                    s.id === col.id ? { ...s, leads: [] } : s,
+                                  ),
+                                );
+                              }
+                            }}
+                            className="text-gray-400 hover:text-gray-200 transition-colors"
+                            title={
+                              isRevealed
+                                ? "Leadlarni yashirish"
+                                : "Leadlarni ko'rsatish"
+                            }
+                          >
+                            {isRevealed ? (
+                              <Eye size={14} />
+                            ) : (
+                              <EyeOff size={14} />
+                            )}
+                          </button>
+                        )}
+                        <span className="rounded-full bg-gray-700 px-2.5 py-0.5 text-xs">
+                          {isFiltering
+                            ? `${filteredCount}/${totalCount}`
+                            : totalCount}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between bg-[#11263a] px-4 py-2 text-[11px] text-gray-300">
                       <span>
@@ -2646,7 +2694,20 @@ export default function Pipeline() {
                         overflowY: "auto",
                       }}
                     >
-                      {col.leads.length === 0 ? (
+                      {isCanceled && !isRevealed ? (
+                        <button
+                          onClick={() => {
+                            setRevealedCanceledIds(
+                              (prev) => new Set([...prev, col.id]),
+                            );
+                            fetchLeadsByStatus(col.id, 1, false);
+                          }}
+                          className="w-full rounded-lg border-2 border-dashed border-red-900/40 p-6 text-center text-xs text-red-400/60 transition-colors hover:border-red-700/50 hover:text-red-400"
+                        >
+                          <EyeOff size={18} className="mx-auto mb-2 opacity-50" />
+                          {totalCount} ta lead yashirilgan
+                        </button>
+                      ) : col.leads.length === 0 ? (
                         <div
                           className={`rounded-lg border-2 border-dashed p-6 text-center text-xs transition-colors ${snapshot.isDraggingOver ? "border-blue-400/60 bg-blue-900/10 text-blue-400" : "border-[#2a4868]/40 text-gray-500"}`}
                         >
@@ -2818,7 +2879,8 @@ export default function Pipeline() {
                 )}
               </Droppable>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {canDeleteLeads && (
