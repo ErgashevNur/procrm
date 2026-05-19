@@ -20,6 +20,16 @@ import {
   Trash2,
   Check,
   Smile,
+  Zap,
+  XCircle,
+  Building2,
+  PhoneCall,
+  PhoneMissed,
+  RotateCcw,
+  Home,
+  CircleDot,
+  Banknote,
+  Bookmark,
 } from "lucide-react";
 import {
   Select,
@@ -1222,11 +1232,33 @@ function TaskDatePicker({ value, onChange }) {
   );
 }
 
+function getStatusIcon(name = "", type) {
+  if (type === "NEW") return Zap;
+  if (type === "SUCCESS") return CheckCircle2;
+  if (type === "CANCELED") return XCircle;
+  if (type === "PENDING") return Clock;
+  const n = name.toLowerCase();
+  if (/ofis.*kel|keldi|kelya/.test(n)) return Building2;
+  if (/ofis.*chaqir|chaqiril/.test(n)) return PhoneCall;
+  if (/ko.tarmadi|ko\'tarmadi/.test(n)) return PhoneMissed;
+  if (/qayta|aloqa|gaplash/.test(n)) return RotateCcw;
+  if (/tayyor|uy/.test(n)) return Home;
+  if (/subsidiya|moliya/.test(n)) return Banknote;
+  if (/bron/.test(n)) return Bookmark;
+  if (/yangi|new/.test(n)) return Zap;
+  if (/muvaffaq|yutdi|success/.test(n)) return CheckCircle2;
+  if (/bekor|cancel|rad/.test(n)) return XCircle;
+  if (/jarayon|pending|kutish/.test(n)) return Clock;
+  return CircleDot;
+}
+
 // ─── INPUT BAR ────────────────────────────────────────────────────────────────
-function InputBar({ onSubmit, sending }) {
+function InputBar({ onSubmit, sending, statuses = [], currentStatusId, onStatusChange }) {
   const [text, setText] = useState("");
   const [type, setType] = useState(INPUT_TYPES[0]);
   const [taskDate, setTaskDate] = useState("");
+  const [focused, setFocused] = useState(false);
+  const [hoveredStatus, setHoveredStatus] = useState(null);
   const textareaRef = useRef(null);
 
   const insertEmoji = (emoji) => {
@@ -1284,6 +1316,72 @@ function InputBar({ onSubmit, sending }) {
       }}
     >
       <div className="mx-auto max-w-3xl space-y-2.5">
+        {focused && statuses.length > 0 && (
+          <div
+            className="rounded-xl px-4 py-3"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+                Statusni o'zgartirish
+              </span>
+              {(hoveredStatus || statuses.find(s => Number(s.id) === Number(currentStatusId))) && (
+                <span
+                  className="text-[11px] font-medium"
+                  style={{
+                    color: (hoveredStatus ?? statuses.find(s => Number(s.id) === Number(currentStatusId)))?.color,
+                  }}
+                >
+                  {(hoveredStatus ?? statuses.find(s => Number(s.id) === Number(currentStatusId)))?.name}
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {statuses.map((s) => {
+                const isActive = Number(s.id) === Number(currentStatusId);
+                const Icon = getStatusIcon(s.name, s.type);
+                return (
+                  <div
+                    key={s.id}
+                    className="flex shrink-0 flex-col items-center gap-1"
+                  >
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (!isActive) onStatusChange?.(s.id);
+                      }}
+                      onMouseEnter={() => setHoveredStatus(s)}
+                      onMouseLeave={() => setHoveredStatus(null)}
+                      className="flex items-center justify-center rounded-full transition-all duration-200"
+                      style={{
+                        width: 36,
+                        height: 36,
+                        background: isActive ? s.color : "rgba(255,255,255,0.04)",
+                        color: isActive ? "#fff" : s.color,
+                        border: `1.5px solid ${isActive ? s.color : "rgba(255,255,255,0.08)"}`,
+                        boxShadow: isActive ? `0 0 12px ${s.color}50` : "none",
+                        opacity: hoveredStatus && !isActive && hoveredStatus.id !== s.id ? 0.45 : 1,
+                      }}
+                    >
+                      <Icon size={15} />
+                    </button>
+                    <span
+                      className="h-1 w-1 rounded-full transition-all duration-200"
+                      style={{
+                        background: isActive ? s.color : "transparent",
+                        boxShadow: isActive ? `0 0 4px ${s.color}` : "none",
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             {INPUT_TYPES.map((t) => {
@@ -1334,6 +1432,8 @@ function InputBar({ onSubmit, sending }) {
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
               }}
@@ -1388,6 +1488,7 @@ const LeadDetails = () => {
   const [dealData, setDealData] = useState(null);
   const [events, setEvents] = useState([]);
   const [leadSource, setLeadSource] = useState([]);
+  const [statuses, setStatuses] = useState([]);
   const [operators, setOperators] = useState([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState("");
   const [assigningOperator, setAssigningOperator] = useState(false);
@@ -1425,12 +1526,13 @@ const LeadDetails = () => {
     (async () => {
       try {
         // FIX 3: tasks alohida fetch yo'q — lead ichidagi tasks ishlatiladi
-        const [leadRes, descRes, sourceRes] = await Promise.all([
+        const [leadRes, descRes, sourceRes, statusRes] = await Promise.all([
           fetch(`${API}/leeds/${leadId}`, { headers }),
           fetch(`${API}/Description/lead/${leadId}?projectId=${projectId}`, {
             headers,
           }),
           fetch(`${API}/lead-source/${projectId}`, { headers }),
+          fetch(`${API}/status/${projectId}`, { headers }),
         ]);
 
         if (leadRes.status === 401) {
@@ -1439,15 +1541,17 @@ const LeadDetails = () => {
           return;
         }
 
-        const [lead, descs, sources] = await Promise.all([
+        const [lead, descs, sources, statusList] = await Promise.all([
           leadRes.json(),
           descRes.ok ? descRes.json() : [],
           sourceRes.ok ? sourceRes.json() : [],
+          statusRes.ok ? statusRes.json() : [],
         ]);
 
         const normalizedLeadTags = normalizeTags(lead?.tag);
         setDealData({ ...lead, tag: normalizedLeadTags });
         setLeadSource(Array.isArray(sources) ? sources : []);
+        setStatuses(Array.isArray(statusList) ? statusList : []);
         // FIX 3: lead.tasks ichidan olamiz
         setEvents(mergeEvents(descs, lead.tasks || []));
         const preAssignedId =
@@ -1645,6 +1749,23 @@ const LeadDetails = () => {
       toastError(err?.message || "Operator biriktirishda xatolik");
     } finally {
       setAssigningOperator(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatusId) => {
+    const prevDealData = dealData;
+    const newStatus = statuses.find((s) => Number(s.id) === Number(newStatusId));
+    if (!newStatus) return;
+    setDealData((prev) => ({ ...prev, statusId: newStatusId, status: newStatus }));
+    try {
+      const res = await fetch(
+        `${API}/leeds/status/${leadId}?statusId=${newStatusId}`,
+        { method: "PATCH", headers },
+      );
+      if (!res.ok) throw new Error();
+    } catch {
+      setDealData(prevDealData);
+      toastError("Status o'zgartirib bo'lmadi");
     }
   };
 
@@ -2101,11 +2222,12 @@ const LeadDetails = () => {
         >
           {dealData?.status && (
             <div
-              className="rounded-full px-4 py-1.5 text-xs font-semibold text-white"
+              className="max-w-[260px] truncate rounded-full px-4 py-1.5 text-xs font-semibold text-white"
               style={{
                 background: dealData.status.color || "#3b82f6",
                 boxShadow: `0 2px 12px ${dealData.status.color || "#3b82f6"}50`,
               }}
+              title={dealData.status.name}
             >
               {dealData.status.name}
             </div>
@@ -2152,7 +2274,13 @@ const LeadDetails = () => {
           </div>
         </div>
 
-        <InputBar onSubmit={handlePostDesc} sending={sending} />
+        <InputBar
+          onSubmit={handlePostDesc}
+          sending={sending}
+          statuses={statuses}
+          currentStatusId={dealData?.statusId || dealData?.status?.id}
+          onStatusChange={handleStatusChange}
+        />
       </div>
     </div>
   );
