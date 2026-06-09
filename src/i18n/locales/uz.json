@@ -47,7 +47,6 @@
     "selectAll": "Hammasini tanlash",
     "language": "Til"
   },
-
   "sidebar": {
     "dashboard": "Dashboard",
     "leads": "Leadlar",
@@ -62,7 +61,6 @@
     "noProject": "Loyiha tanlanmagan",
     "newNotification": "yangi"
   },
-
   "header": {
     "dashboard": "Dashboard",
     "leads": "Leadlar",
@@ -80,7 +78,6 @@
     "companies": "Kompaniyalar",
     "crmMarket": "CRM Market"
   },
-
   "profile": {
     "title": "Profil sozlamalari",
     "personalInfo": "Shaxsiy ma'lumotlar",
@@ -113,14 +110,14 @@
       "passwordMismatch": "Yangi parol va tasdiq bir xil emas"
     }
   },
-
   "settings": {
     "title": "Sozlamalar",
     "sections": {
       "billing": "Hisob va to'lov",
       "users": "Foydalanuvchilar",
       "integrations": "Chatlar va messenjerlar",
-      "support": "Qo'llab-quvvatlash"
+      "support": "Qo'llab-quvvatlash",
+      "visitors": "Tashrif buyuruvchilar"
     },
     "billing": {
       "pricingPlans": "Tarif rejalari",
@@ -216,9 +213,23 @@
       "companyPlaceholder": "Kompaniya yoki loyiha nomi"
     },
     "saved": "Saqlandi ✅",
-    "error": "Xatolik ❌"
+    "error": "Xatolik ❌",
+    "visitors": {
+      "addVisitor": "Yangi visitor",
+      "addDescription": "Ofisga tashrif buyurgan odamni ro'yxatga oling",
+      "visitorName": "Ism Familiya",
+      "namePlaceholder": "Masalan: Jasur Abdullayev",
+      "addButton": "Qo'shish",
+      "listTitle": "Visitorlar ro'yxati",
+      "noVisitors": "Hali visitor yo'q",
+      "connectedLeads": "ta lead bilan bog'liq",
+      "visitorAdded": "Visitor qo'shildi ✅",
+      "visitorUpdated": "Visitor yangilandi ✅",
+      "visitorDeleted": "Visitor o'chirildi",
+      "deleteError": "Avval leadlardan ajratib oling",
+      "nameRequired": "Ism kiritish majburiy"
+    }
   },
-
   "dashboard": {
     "periodLabels": {
       "all": "Umumiy ko'rinish",
@@ -272,14 +283,12 @@
     "leadConversion": "Lead konversiyasi",
     "leadConversionDesc": "Jami leadlar qaysi holatda qancha ekanini ko'rsatadi."
   },
-
   "statusMeta": {
     "new": "Yangi",
     "pending": "Kutilmoqda",
     "success": "Muvaffaqiyatli",
     "canceled": "Bekor qilingan"
   },
-
   "leads": {
     "title": "Leadlar",
     "addLead": "Lead qo'shish",
@@ -296,13 +305,11 @@
     "noLeads": "Leadlar yo'q",
     "search": "Qidirish..."
   },
-
   "tasks": {
     "title": "Tasklar",
     "addTask": "Task qo'shish",
     "noTasks": "Tasklar yo'q"
   },
-
   "companies": {
     "title": "Kompaniyalar",
     "addCompany": "Yangi kompaniya",
@@ -321,7 +328,6 @@
     "deletedSuccess": "Kompaniya o'chirildi",
     "loadError": "Kompaniyalar yuklanmadi"
   },
-
   "status": {
     "title": "Statuslar",
     "addStatus": "Yangi status",
@@ -332,7 +338,6 @@
     "deletedSuccess": "Status o'chirildi ✅",
     "orderSaved": "Tartib saqlandi ✅"
   },
-
   "leadSource": {
     "title": "Lead manbalari",
     "addSource": "Yangi lead manbasi qo'shish",
@@ -342,12 +347,10 @@
     "added": "Qo'shilgan",
     "connectSocial": "Ijtimoiy tarmoqlarni ulash"
   },
-
   "analytics": {
     "title": "Analitika",
     "leads": "lead"
   },
-
   "sms": {
     "title": "SMS / Rassilka",
     "templateName": "Template nomi",
@@ -356,17 +359,14 @@
     "noTemplate": "Template topilmadi",
     "insufficientPermission": "Ruxsat yetarli emas"
   },
-
   "kanban": {
     "title": "Kanban Board",
     "noLeads": "Leadlar yo'q"
   },
-
   "error": {
     "title": "Xatolik yuz berdi",
     "goHome": "Bosh sahifaga qaytish"
   },
-
   "login": {
     "slides": {
       "slide1Title": "AI yordamchi ish ritmini ushlab turadi",
@@ -387,12 +387,10 @@
     "loggingIn": "Kirilmoqda...",
     "invalidCredentials": "Email yoki parol noto'g'ri"
   },
-
   "project": {
     "selectProject": "Loyiha tanlang",
     "noProjects": "Loyihalar yo'q"
   },
-
   "forms": {
     "createdSuccess": "Forma muvaffaqiyatli yaratildi!",
     "updatedSuccess": "Forma muvaffaqiyatli yangilandi!",
@@ -400,13 +398,11 @@
     "loadError": "Formalarni yuklab bo'lmadi",
     "headerImageAdded": "Header rasmi qo'shildi"
   },
-
   "notification": {
     "title": "Bildirishnomalar",
     "noNotifications": "Bildirishnoma yo'q",
     "markAllRead": "Hammasini o'qildi"
   },
-
   "privacy": {
     "title": "Maxfiylik siyosati",
     "subtitle": "Sizning ma'lumotlaringiz xavfsizligi va maxfiyligiga to'liq mas'ulmiz",
