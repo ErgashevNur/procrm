@@ -24,6 +24,7 @@ import {
   ImagePlus,
   Eye,
   EyeOff,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -39,6 +40,7 @@ import {
   canDeleteData,
   getCurrentRole,
   isSuperAdminLikeRole,
+  MANAGEMENT_ROLES,
 } from "@/lib/rbac";
 import { apiUrl } from "@/lib/api";
 
@@ -63,6 +65,7 @@ async function apiFetch(url, options = {}) {
 const SECTION_KEYS = [
   { key: "billing", icon: CreditCard },
   { key: "users", icon: Users2 },
+  { key: "visitors", icon: UserCheck, roles: MANAGEMENT_ROLES },
   { key: "integrations", icon: MessageCircle },
   { key: "support", icon: Headset },
 ];
@@ -171,14 +174,18 @@ function RoleBadge({ role }) {
 export default function Settings() {
   const { t } = useTranslation();
 
-  const SECTIONS = SECTION_KEYS.map(({ key, icon }) => ({
-    key,
-    label: t(`settings.sections.${key}`),
-    icon,
-  }));
-
   const role = getCurrentRole();
   const canDeleteUsers = canDeleteData(role);
+
+  const SECTIONS = SECTION_KEYS
+    .filter(({ roles: allowed }) => !allowed || allowed.includes(role))
+    .map(({ key, icon }) => ({
+      key,
+      label: t(`settings.sections.${key}`),
+      icon,
+    }));
+
+  const canManageVisitors = MANAGEMENT_ROLES.includes(role);
   const projectId = localStorage.getItem("projectId");
   const projectName = localStorage.getItem("projectName") || "";
   const companyId = (() => {
@@ -243,6 +250,16 @@ export default function Settings() {
     daily: true,
     weekly: false,
   });
+
+  // ── Visitors ──────────────────────────────────────────────────────────
+  const [visitors, setVisitors] = useState([]);
+  const [visitorsLoading, setVisitorsLoading] = useState(false);
+  const [vName, setVName] = useState("");
+  const [addingVisitor, setAddingVisitor] = useState(false);
+  const [editVisitorId, setEditVisitorId] = useState(null);
+  const [editVisitorName, setEditVisitorName] = useState("");
+  const [updatingVisitorId, setUpdatingVisitorId] = useState(null);
+  const [deletingVisitorId, setDeletingVisitorId] = useState(null);
 
   // ── Integrations ──────────────────────────────────────────────────────
   const [integrations, setIntegrations] = useState({
@@ -330,9 +347,95 @@ export default function Settings() {
     }
   };
 
+  const loadVisitors = async () => {
+    setVisitorsLoading(true);
+    try {
+      const res = await apiFetch(apiUrl("lead-visitor/visitor/all"));
+      if (!res?.ok) throw new Error();
+      const data = await res.json();
+      setVisitors(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error(t("common.loading"));
+    } finally {
+      setVisitorsLoading(false);
+    }
+  };
+
+  const handleAddVisitor = async (e) => {
+    e.preventDefault();
+    if (!vName.trim()) {
+      toast.error(t("settings.visitors.nameRequired"));
+      return;
+    }
+    setAddingVisitor(true);
+    try {
+      const res = await apiFetch(apiUrl("lead-visitor/visitor"), {
+        method: "POST",
+        body: JSON.stringify({ fullName: vName.trim() }),
+      });
+      if (!res?.ok) throw new Error();
+      setVName("");
+      toast.success(t("settings.visitors.visitorAdded"));
+      await loadVisitors();
+    } catch {
+      toast.error(t("settings.error"));
+    } finally {
+      setAddingVisitor(false);
+    }
+  };
+
+  const startEditVisitor = (visitor) => {
+    setEditVisitorId(visitor.id);
+    setEditVisitorName(visitor.fullName);
+  };
+
+  const cancelEditVisitor = () => {
+    setEditVisitorId(null);
+    setEditVisitorName("");
+  };
+
+  const handleUpdateVisitor = async (id) => {
+    if (!editVisitorName.trim()) return;
+    setUpdatingVisitorId(id);
+    try {
+      const res = await apiFetch(apiUrl(`lead-visitor/visitor/${id}`), {
+        method: "PATCH",
+        body: JSON.stringify({ fullName: editVisitorName.trim() }),
+      });
+      if (!res?.ok) throw new Error();
+      toast.success(t("settings.visitors.visitorUpdated"));
+      await loadVisitors();
+      cancelEditVisitor();
+    } catch {
+      toast.error(t("settings.error"));
+    } finally {
+      setUpdatingVisitorId(null);
+    }
+  };
+
+  const handleDeleteVisitor = async (id) => {
+    setDeletingVisitorId(id);
+    try {
+      const res = await apiFetch(apiUrl(`lead-visitor/visitor/${id}`), {
+        method: "DELETE",
+      });
+      if (res?.status === 400) {
+        toast.error(t("settings.visitors.deleteError"));
+        return;
+      }
+      if (!res?.ok) throw new Error();
+      setVisitors((prev) => prev.filter((v) => v.id !== id));
+      toast.success(t("settings.visitors.visitorDeleted"));
+    } catch {
+      toast.error(t("settings.error"));
+    } finally {
+      setDeletingVisitorId(null);
+    }
+  };
+
   useEffect(() => {
-    if (active !== "users") return;
-    loadUsers();
+    if (active === "users") loadUsers();
+    else if (active === "visitors") loadVisitors();
   }, [active]);
 
   // ── Save handlers ─────────────────────────────────────────────────────
@@ -938,6 +1041,147 @@ export default function Settings() {
                             )}
                           </button>
                         </div>
+                      </div>
+                    ))
+                  )}
+                </Section>
+              </>
+            )}
+
+            {/* ════ TASHRIF BUYURUVCHILAR ════ */}
+            {active === "visitors" && (
+              <>
+                {canManageVisitors && (
+                  <Section
+                    title={t("settings.visitors.addVisitor")}
+                    description={t("settings.visitors.addDescription")}
+                  >
+                    <form onSubmit={handleAddVisitor} noValidate>
+                      <FieldRow label={t("settings.visitors.visitorName")}>
+                        <StyledInput
+                          value={vName}
+                          onChange={setVName}
+                          placeholder={t("settings.visitors.namePlaceholder")}
+                        />
+                      </FieldRow>
+                      <div className="flex justify-stretch bg-[#0f2030] px-4 py-4 sm:justify-end sm:px-6">
+                        <button
+                          type="submit"
+                          disabled={addingVisitor}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40 sm:w-auto"
+                        >
+                          {addingVisitor ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <UserPlus size={13} />
+                          )}
+                          {t("settings.visitors.addButton")}
+                        </button>
+                      </div>
+                    </form>
+                  </Section>
+                )}
+
+                <Section title={t("settings.visitors.listTitle")}>
+                  {visitorsLoading ? (
+                    <div className="flex justify-center bg-[#0f2030] py-10">
+                      <Loader2 size={24} className="animate-spin text-blue-400" />
+                    </div>
+                  ) : visitors.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 bg-[#0f2030] py-12 text-center">
+                      <Users size={28} className="text-gray-700" />
+                      <p className="text-sm text-gray-600">
+                        {t("settings.visitors.noVisitors")}
+                      </p>
+                    </div>
+                  ) : (
+                    visitors.map((visitor) => (
+                      <div
+                        key={visitor.id}
+                        className="flex items-center gap-4 bg-[#0f2030] px-6 py-4 transition-colors hover:bg-[#112636]"
+                      >
+                        <div
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                          style={{
+                            background: "linear-gradient(135deg,#0ea5e9,#3b82f6)",
+                          }}
+                        >
+                          {visitor.fullName?.[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {editVisitorId === visitor.id ? (
+                            <input
+                              type="text"
+                              value={editVisitorName}
+                              onChange={(e) => setEditVisitorName(e.target.value)}
+                              autoFocus
+                              className="rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                            />
+                          ) : (
+                            <>
+                              <p className="truncate text-sm text-white">
+                                {visitor.fullName}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {visitor._count?.leadVisitors || 0}{" "}
+                                {t("settings.visitors.connectedLeads")}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          {visitor.createdAt
+                            ? new Date(visitor.createdAt).toLocaleDateString("ru-RU")
+                            : "—"}
+                        </span>
+                        {canManageVisitors && (
+                          <div className="ml-1 flex items-center gap-1">
+                            {editVisitorId === visitor.id ? (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateVisitor(visitor.id)}
+                                  disabled={updatingVisitorId === visitor.id}
+                                  className="shrink-0 text-emerald-400 transition-colors hover:text-emerald-300 disabled:opacity-40"
+                                >
+                                  {updatingVisitorId === visitor.id ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                  ) : (
+                                    <Save size={15} />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={cancelEditVisitor}
+                                  className="shrink-0 text-gray-500 transition-colors hover:text-white"
+                                >
+                                  <X size={15} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => startEditVisitor(visitor)}
+                                className="shrink-0 text-gray-500 transition-colors hover:text-blue-400"
+                              >
+                                <Pen size={15} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteVisitor(visitor.id)}
+                              disabled={deletingVisitorId === visitor.id}
+                              className="shrink-0 text-gray-700 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                              title={
+                                (visitor._count?.leadVisitors || 0) > 0
+                                  ? t("settings.visitors.deleteError")
+                                  : "O'chirish"
+                              }
+                            >
+                              {deletingVisitorId === visitor.id ? (
+                                <Loader2 size={15} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={15} />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}

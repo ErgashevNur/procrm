@@ -47,7 +47,6 @@
     "selectAll": "Выбрать всё",
     "language": "Язык"
   },
-
   "sidebar": {
     "dashboard": "Dashboard",
     "leads": "Лиды",
@@ -62,7 +61,6 @@
     "noProject": "Проект не выбран",
     "newNotification": "новых"
   },
-
   "header": {
     "dashboard": "Dashboard",
     "leads": "Лиды",
@@ -80,7 +78,6 @@
     "companies": "Компании",
     "crmMarket": "CRM Market"
   },
-
   "profile": {
     "title": "Настройки профиля",
     "personalInfo": "Личные данные",
@@ -113,14 +110,14 @@
       "passwordMismatch": "Новый пароль и подтверждение не совпадают"
     }
   },
-
   "settings": {
     "title": "Настройки",
     "sections": {
       "billing": "Счёт и оплата",
       "users": "Пользователи",
       "integrations": "Чаты и мессенджеры",
-      "support": "Поддержка"
+      "support": "Поддержка",
+      "visitors": "Посетители"
     },
     "billing": {
       "pricingPlans": "Тарифные планы",
@@ -216,9 +213,23 @@
       "companyPlaceholder": "Название компании или проекта"
     },
     "saved": "Сохранено ✅",
-    "error": "Ошибка ❌"
+    "error": "Ошибка ❌",
+    "visitors": {
+      "addVisitor": "Новый посетитель",
+      "addDescription": "Зарегистрируйте посетителя, пришедшего в офис",
+      "visitorName": "ФИО",
+      "namePlaceholder": "Например: Jasur Abdullayev",
+      "addButton": "Добавить",
+      "listTitle": "Список посетителей",
+      "noVisitors": "Посетителей пока нет",
+      "connectedLeads": "связанных лидов",
+      "visitorAdded": "Посетитель добавлен ✅",
+      "visitorUpdated": "Посетитель обновлён ✅",
+      "visitorDeleted": "Посетитель удалён",
+      "deleteError": "Сначала открепите от лидов",
+      "nameRequired": "Введите имя"
+    }
   },
-
   "dashboard": {
     "periodLabels": {
       "all": "Общий обзор",
@@ -272,14 +283,12 @@
     "leadConversion": "Конверсия лидов",
     "leadConversionDesc": "Показывает, в каком статусе находится какое количество лидов."
   },
-
   "statusMeta": {
     "new": "Новый",
     "pending": "Ожидание",
     "success": "Успешно",
     "canceled": "Отменён"
   },
-
   "leads": {
     "title": "Лиды",
     "addLead": "Добавить лид",
@@ -296,13 +305,11 @@
     "noLeads": "Нет лидов",
     "search": "Поиск..."
   },
-
   "tasks": {
     "title": "Задачи",
     "addTask": "Добавить задачу",
     "noTasks": "Нет задач"
   },
-
   "companies": {
     "title": "Компании",
     "addCompany": "Новая компания",
@@ -321,7 +328,6 @@
     "deletedSuccess": "Компания удалена",
     "loadError": "Не удалось загрузить компании"
   },
-
   "status": {
     "title": "Статусы",
     "addStatus": "Новый статус",
@@ -332,7 +338,6 @@
     "deletedSuccess": "Статус удалён ✅",
     "orderSaved": "Порядок сохранён ✅"
   },
-
   "leadSource": {
     "title": "Источники лидов",
     "addSource": "Добавить источник лида",
@@ -342,12 +347,10 @@
     "added": "Добавлено",
     "connectSocial": "Подключить социальные сети"
   },
-
   "analytics": {
     "title": "Аналитика",
     "leads": "лид"
   },
-
   "sms": {
     "title": "SMS / Рассылка",
     "templateName": "Название шаблона",
@@ -356,17 +359,14 @@
     "noTemplate": "Шаблон не найден",
     "insufficientPermission": "Недостаточно прав"
   },
-
   "kanban": {
     "title": "Kanban Board",
     "noLeads": "Нет лидов"
   },
-
   "error": {
     "title": "Произошла ошибка",
     "goHome": "Вернуться на главную"
   },
-
   "login": {
     "slides": {
       "slide1Title": "ИИ-помощник поддерживает рабочий ритм",
@@ -387,12 +387,10 @@
     "loggingIn": "Вход...",
     "invalidCredentials": "Неверный email или пароль"
   },
-
   "project": {
     "selectProject": "Выберите проект",
     "noProjects": "Нет проектов"
   },
-
   "forms": {
     "createdSuccess": "Форма успешно создана!",
     "updatedSuccess": "Форма успешно обновлена!",
@@ -400,13 +398,11 @@
     "loadError": "Не удалось загрузить формы",
     "headerImageAdded": "Заголовочное изображение добавлено"
   },
-
   "notification": {
     "title": "Уведомления",
     "noNotifications": "Нет уведомлений",
     "markAllRead": "Отметить все прочитанными"
   },
-
   "privacy": {
     "title": "Политика конфиденциальности",
     "subtitle": "Мы полностью несём ответственность за безопасность и конфиденциальность ваших данных",
