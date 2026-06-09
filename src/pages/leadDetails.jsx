@@ -32,6 +32,9 @@ import {
   Bookmark,
   Mic,
   Square,
+  UserCheck,
+  UserPlus,
+  Loader2,
 } from "lucide-react";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import {
