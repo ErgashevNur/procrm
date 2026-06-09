@@ -1657,6 +1657,14 @@ const LeadDetails = () => {
   const [activeTab, setActiveTab] = useState("asosiy");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
+  const [leadVisitors, setLeadVisitors] = useState([]);
+  const [leadVisitorsLoading, setLeadVisitorsLoading] = useState(false);
+  const [allVisitors, setAllVisitors] = useState([]);
+  const [allVisitorsLoading, setAllVisitorsLoading] = useState(false);
+  const [attachVisitorId, setAttachVisitorId] = useState("");
+  const [attachingVisitor, setAttachingVisitor] = useState(false);
+  const [detachingId, setDetachingId] = useState(null);
   const taskSoundRef = useRef(null);
 
   // FIX 2: tag editing — array state
@@ -1681,6 +1689,74 @@ const LeadDetails = () => {
     return [...descList, ...taskList].sort(
       (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     );
+  };
+
+  const loadLeadVisitors = async () => {
+    setLeadVisitorsLoading(true);
+    try {
+      const res = await fetch(`${API}/lead-visitor/lead/${leadId}`, { headers });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setLeadVisitors(Array.isArray(data) ? data : []);
+    } catch {
+      // silent
+    } finally {
+      setLeadVisitorsLoading(false);
+    }
+  };
+
+  const loadAllVisitors = async () => {
+    setAllVisitorsLoading(true);
+    try {
+      const res = await fetch(`${API}/lead-visitor/visitor/all`, { headers });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAllVisitors(Array.isArray(data) ? data : []);
+    } catch {
+      // silent
+    } finally {
+      setAllVisitorsLoading(false);
+    }
+  };
+
+  const handleAttachVisitor = async () => {
+    if (!attachVisitorId) return;
+    setAttachingVisitor(true);
+    try {
+      const res = await fetch(`${API}/lead-visitor/attach`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          leadsId: Number(leadId),
+          visitorIds: [Number(attachVisitorId)],
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setAttachVisitorId("");
+      await loadLeadVisitors();
+      toastSuccess("Visitor biriktirildi ✅");
+    } catch {
+      toastError("Xatolik ❌");
+    } finally {
+      setAttachingVisitor(false);
+    }
+  };
+
+  const handleDetachVisitor = async (leadVisitorId) => {
+    setDetachingId(leadVisitorId);
+    try {
+      const res = await fetch(`${API}/lead-visitor/detach/${leadVisitorId}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (!res.ok) throw new Error();
+      setLeadVisitors((prev) => prev.filter((v) => v.id !== leadVisitorId));
+      toastSuccess("Visitor ajratildi");
+    } catch {
+      toastError("Xatolik ❌");
+    } finally {
+      setDetachingId(null);
+    }
   };
 
   useEffect(() => {
@@ -1729,7 +1805,13 @@ const LeadDetails = () => {
         setLoading(false);
       }
     })();
+    loadLeadVisitors();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "visitorlar") return;
+    if (allVisitors.length === 0 && !allVisitorsLoading) loadAllVisitors();
+  }, [activeTab]);
 
   useEffect(() => {
     const audio = new Audio("/POST_task.mp3");
@@ -2078,7 +2160,7 @@ const LeadDetails = () => {
           className="flex shrink-0 border-b"
           style={{ borderColor: "rgba(255,255,255,0.05)" }}
         >
-          {["Asosiy", "Tahrirlash"].map((tab) => (
+          {["Asosiy", "Tahrirlash", "Visitorlar"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
@@ -2090,6 +2172,11 @@ const LeadDetails = () => {
               }}
             >
               {tab}
+              {tab === "Visitorlar" && leadVisitors.length > 0 && (
+                <span className="ml-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">
+                  {leadVisitors.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -2374,6 +2461,122 @@ const LeadDetails = () => {
                 </div>
               </FieldGroup>
             </form>
+          )}
+
+          {/* ── VISITORLAR TAB ── */}
+          {activeTab === "visitorlar" && (
+            <div className="space-y-4 p-5">
+              {/* Attach section — faqat write ruxsati bor rollar uchun */}
+              {MANAGEMENT_ROLES.includes(role) && (
+                <div className="rounded-xl border border-[#1a3045] bg-[#0a1b2c] p-4">
+                  <p className="mb-3 text-xs font-semibold tracking-widest text-gray-500 uppercase">
+                    Visitor biriktirish
+                  </p>
+                  <div className="flex gap-2">
+                    <Select
+                      value={attachVisitorId}
+                      onValueChange={setAttachVisitorId}
+                      disabled={allVisitorsLoading || attachingVisitor}
+                    >
+                      <SelectTrigger className="h-9 flex-1 border-[#1e3a52] bg-[#071828] text-sm text-white focus-visible:ring-0">
+                        <SelectValue
+                          placeholder={
+                            allVisitorsLoading ? "Yuklanmoqda..." : "Visitor tanlang..."
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="mt-1">
+                        {allVisitors
+                          .filter(
+                            (v) =>
+                              !leadVisitors.some((lv) => lv.visitor?.id === v.id),
+                          )
+                          .map((v) => (
+                            <SelectItem key={v.id} value={String(v.id)}>
+                              {v.fullName}
+                            </SelectItem>
+                          ))}
+                        {allVisitors.length === 0 && !allVisitorsLoading && (
+                          <div className="px-3 py-2 text-xs text-gray-500">
+                            Visitorlar yo'q
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      onClick={handleAttachVisitor}
+                      disabled={!attachVisitorId || attachingVisitor}
+                      className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-40"
+                    >
+                      {attachingVisitor ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <UserPlus size={13} />
+                      )}
+                      Qo'shish
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Visitors list */}
+              {leadVisitorsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 size={22} className="animate-spin text-blue-400" />
+                </div>
+              ) : leadVisitors.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                  <UserCheck size={28} className="text-gray-700" />
+                  <p className="text-sm text-gray-600">
+                    Bu leadga hali visitor biriktirilmagan
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {leadVisitors.map((lv) => (
+                    <div
+                      key={lv.id}
+                      className="flex items-center gap-3 rounded-xl border border-[#1a3045] bg-[#0a1b2c] px-4 py-3"
+                    >
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                        style={{
+                          background: "linear-gradient(135deg,#0ea5e9,#3b82f6)",
+                        }}
+                      >
+                        {lv.visitor?.fullName?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">
+                          {lv.visitor?.fullName || "—"}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(lv.createdAt).toLocaleDateString("ru-RU")}{" "}
+                          {new Date(lv.createdAt).toLocaleTimeString("ru-RU", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      {MANAGEMENT_ROLES.includes(role) && (
+                        <button
+                          onClick={() => handleDetachVisitor(lv.id)}
+                          disabled={detachingId === lv.id}
+                          className="shrink-0 text-gray-600 transition-colors hover:text-red-400 disabled:opacity-40"
+                          title="Ajratish"
+                        >
+                          {detachingId === lv.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <X size={14} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

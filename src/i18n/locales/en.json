@@ -47,7 +47,6 @@
     "selectAll": "Select all",
     "language": "Language"
   },
-
   "sidebar": {
     "dashboard": "Dashboard",
     "leads": "Leads",
@@ -62,7 +61,6 @@
     "noProject": "No project selected",
     "newNotification": "new"
   },
-
   "header": {
     "dashboard": "Dashboard",
     "leads": "Leads",
@@ -80,7 +78,6 @@
     "companies": "Companies",
     "crmMarket": "CRM Market"
   },
-
   "profile": {
     "title": "Profile Settings",
     "personalInfo": "Personal Information",
@@ -113,14 +110,14 @@
       "passwordMismatch": "New password and confirmation do not match"
     }
   },
-
   "settings": {
     "title": "Settings",
     "sections": {
       "billing": "Billing",
       "users": "Users",
       "integrations": "Chats & Messengers",
-      "support": "Support"
+      "support": "Support",
+      "visitors": "Visitors"
     },
     "billing": {
       "pricingPlans": "Pricing Plans",
@@ -216,9 +213,23 @@
       "companyPlaceholder": "Company or project name"
     },
     "saved": "Saved ✅",
-    "error": "Error ❌"
+    "error": "Error ❌",
+    "visitors": {
+      "addVisitor": "New Visitor",
+      "addDescription": "Register a visitor who came to the office",
+      "visitorName": "Full Name",
+      "namePlaceholder": "e.g. Jasur Abdullayev",
+      "addButton": "Add",
+      "listTitle": "Visitors List",
+      "noVisitors": "No visitors yet",
+      "connectedLeads": "linked leads",
+      "visitorAdded": "Visitor added ✅",
+      "visitorUpdated": "Visitor updated ✅",
+      "visitorDeleted": "Visitor deleted",
+      "deleteError": "Detach from leads first",
+      "nameRequired": "Name is required"
+    }
   },
-
   "dashboard": {
     "periodLabels": {
       "all": "Overall View",
@@ -272,14 +283,12 @@
     "leadConversion": "Lead Conversion",
     "leadConversionDesc": "Shows how many leads are in each status."
   },
-
   "statusMeta": {
     "new": "New",
     "pending": "Pending",
     "success": "Successful",
     "canceled": "Cancelled"
   },
-
   "leads": {
     "title": "Leads",
     "addLead": "Add Lead",
@@ -296,13 +305,11 @@
     "noLeads": "No leads",
     "search": "Search..."
   },
-
   "tasks": {
     "title": "Tasks",
     "addTask": "Add Task",
     "noTasks": "No tasks"
   },
-
   "companies": {
     "title": "Companies",
     "addCompany": "New Company",
@@ -321,7 +328,6 @@
     "deletedSuccess": "Company deleted",
     "loadError": "Failed to load companies"
   },
-
   "status": {
     "title": "Statuses",
     "addStatus": "New Status",
@@ -332,7 +338,6 @@
     "deletedSuccess": "Status deleted ✅",
     "orderSaved": "Order saved ✅"
   },
-
   "leadSource": {
     "title": "Lead Sources",
     "addSource": "Add New Lead Source",
@@ -342,12 +347,10 @@
     "added": "Added",
     "connectSocial": "Connect Social Networks"
   },
-
   "analytics": {
     "title": "Analytics",
     "leads": "lead"
   },
-
   "sms": {
     "title": "SMS / Mailing",
     "templateName": "Template Name",
@@ -356,17 +359,14 @@
     "noTemplate": "Template not found",
     "insufficientPermission": "Insufficient permissions"
   },
-
   "kanban": {
     "title": "Kanban Board",
     "noLeads": "No leads"
   },
-
   "error": {
     "title": "An error occurred",
     "goHome": "Return to home"
   },
-
   "login": {
     "slides": {
       "slide1Title": "AI assistant keeps work rhythm",
@@ -387,12 +387,10 @@
     "loggingIn": "Signing in...",
     "invalidCredentials": "Invalid email or password"
   },
-
   "project": {
     "selectProject": "Select project",
     "noProjects": "No projects"
   },
-
   "forms": {
     "createdSuccess": "Form created successfully!",
     "updatedSuccess": "Form updated successfully!",
@@ -400,13 +398,11 @@
     "loadError": "Failed to load forms",
     "headerImageAdded": "Header image added"
   },
-
   "notification": {
     "title": "Notifications",
     "noNotifications": "No notifications",
     "markAllRead": "Mark all as read"
   },
-
   "privacy": {
     "title": "Privacy Policy",
     "subtitle": "We are fully committed to the security and privacy of your data",

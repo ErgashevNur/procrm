@@ -47,7 +47,6 @@
     "selectAll": "全选",
     "language": "语言"
   },
-
   "sidebar": {
     "dashboard": "仪表板",
     "leads": "潜在客户",
@@ -62,7 +61,6 @@
     "noProject": "未选择项目",
     "newNotification": "新"
   },
-
   "header": {
     "dashboard": "仪表板",
     "leads": "潜在客户",
@@ -80,7 +78,6 @@
     "companies": "公司",
     "crmMarket": "CRM市场"
   },
-
   "profile": {
     "title": "个人资料设置",
     "personalInfo": "个人信息",
@@ -113,14 +110,14 @@
       "passwordMismatch": "新密码与确认密码不匹配"
     }
   },
-
   "settings": {
     "title": "设置",
     "sections": {
       "billing": "账单与付款",
       "users": "用户",
       "integrations": "聊天与消息",
-      "support": "支持"
+      "support": "支持",
+      "visitors": "访客"
     },
     "billing": {
       "pricingPlans": "价格方案",
@@ -216,9 +213,23 @@
       "companyPlaceholder": "公司或项目名称"
     },
     "saved": "已保存 ✅",
-    "error": "错误 ❌"
+    "error": "错误 ❌",
+    "visitors": {
+      "addVisitor": "新访客",
+      "addDescription": "登记来访客人",
+      "visitorName": "全名",
+      "namePlaceholder": "例如：Jasur Abdullayev",
+      "addButton": "添加",
+      "listTitle": "访客列表",
+      "noVisitors": "暂无访客",
+      "connectedLeads": "个关联线索",
+      "visitorAdded": "访客已添加 ✅",
+      "visitorUpdated": "访客已更新 ✅",
+      "visitorDeleted": "访客已删除",
+      "deleteError": "请先从线索中分离",
+      "nameRequired": "请输入姓名"
+    }
   },
-
   "dashboard": {
     "periodLabels": {
       "all": "总体概览",
@@ -272,14 +283,12 @@
     "leadConversion": "客户转化",
     "leadConversionDesc": "显示每个状态下有多少潜在客户。"
   },
-
   "statusMeta": {
     "new": "新",
     "pending": "待处理",
     "success": "成功",
     "canceled": "已取消"
   },
-
   "leads": {
     "title": "潜在客户",
     "addLead": "添加客户",
@@ -296,13 +305,11 @@
     "noLeads": "没有潜在客户",
     "search": "搜索..."
   },
-
   "tasks": {
     "title": "任务",
     "addTask": "添加任务",
     "noTasks": "没有任务"
   },
-
   "companies": {
     "title": "公司",
     "addCompany": "新公司",
@@ -321,7 +328,6 @@
     "deletedSuccess": "公司已删除",
     "loadError": "无法加载公司"
   },
-
   "status": {
     "title": "状态",
     "addStatus": "新状态",
@@ -332,7 +338,6 @@
     "deletedSuccess": "状态已删除 ✅",
     "orderSaved": "顺序已保存 ✅"
   },
-
   "leadSource": {
     "title": "客户来源",
     "addSource": "添加新客户来源",
@@ -342,12 +347,10 @@
     "added": "已添加",
     "connectSocial": "连接社交网络"
   },
-
   "analytics": {
     "title": "分析",
     "leads": "客户"
   },
-
   "sms": {
     "title": "短信/群发",
     "templateName": "模板名称",
@@ -356,17 +359,14 @@
     "noTemplate": "未找到模板",
     "insufficientPermission": "权限不足"
   },
-
   "kanban": {
     "title": "看板",
     "noLeads": "没有潜在客户"
   },
-
   "error": {
     "title": "发生错误",
     "goHome": "返回主页"
   },
-
   "login": {
     "slides": {
       "slide1Title": "AI助手保持工作节奏",
@@ -387,12 +387,10 @@
     "loggingIn": "登录中...",
     "invalidCredentials": "邮箱或密码无效"
   },
-
   "project": {
     "selectProject": "选择项目",
     "noProjects": "没有项目"
   },
-
   "forms": {
     "createdSuccess": "表单创建成功！",
     "updatedSuccess": "表单更新成功！",
@@ -400,13 +398,11 @@
     "loadError": "无法加载表单",
     "headerImageAdded": "标题图片已添加"
   },
-
   "notification": {
     "title": "通知",
     "noNotifications": "没有通知",
     "markAllRead": "全部标为已读"
   },
-
   "privacy": {
     "title": "隐私政策",
     "subtitle": "我们全力保障您的数据安全与隐私",
