@@ -30,10 +30,10 @@ import {
   CircleDot,
   Banknote,
   Bookmark,
-  UserCheck,
-  UserPlus,
-  Loader2,
+  Mic,
+  Square,
 } from "lucide-react";
+import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import {
   Select,
   SelectContent,
@@ -1256,13 +1256,25 @@ function getStatusIcon(name = "", type) {
 }
 
 // ─── INPUT BAR ────────────────────────────────────────────────────────────────
-function InputBar({ onSubmit, sending, statuses = [], currentStatusId, onStatusChange }) {
+function InputBar({ onSubmit, onVoiceSubmit, sending, statuses = [], currentStatusId, onStatusChange }) {
   const [text, setText] = useState("");
   const [type, setType] = useState(INPUT_TYPES[0]);
   const [taskDate, setTaskDate] = useState("");
   const [focused, setFocused] = useState(false);
   const [hoveredStatus, setHoveredStatus] = useState(null);
+  const [voiceMode, setVoiceMode] = useState(false);
   const textareaRef = useRef(null);
+
+  const recorderControls = useVoiceVisualizer();
+  const {
+    recordedBlob,
+    clearCanvas,
+    isRecordingInProgress,
+    isAvailableRecordedAudio,
+    startRecording,
+    stopRecording,
+    formattedDuration,
+  } = recorderControls;
 
   const insertEmoji = (emoji) => {
     const el = textareaRef.current;
@@ -1309,6 +1321,27 @@ function InputBar({ onSubmit, sending, statuses = [], currentStatusId, onStatusC
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
+  const enterVoiceMode = () => {
+    setFocused(false);
+    setVoiceMode(true);
+    setTimeout(() => startRecording(), 100);
+  };
+
+  const cancelVoice = () => {
+    if (isRecordingInProgress) stopRecording();
+    clearCanvas();
+    setVoiceMode(false);
+  };
+
+  const sendVoice = () => {
+    if (!recordedBlob) return;
+    onVoiceSubmit?.(recordedBlob);
+    clearCanvas();
+    setVoiceMode(false);
+  };
+
+  const canSendVoice = !isRecordingInProgress && (isAvailableRecordedAudio || Boolean(recordedBlob));
+
   return (
     <div
       className="sticky bottom-0 z-10 border-t px-5 py-4"
@@ -1319,7 +1352,7 @@ function InputBar({ onSubmit, sending, statuses = [], currentStatusId, onStatusC
       }}
     >
       <div className="mx-auto max-w-3xl space-y-2.5">
-        {focused && statuses.length > 0 && (
+        {!voiceMode && focused && statuses.length > 0 && (
           <div
             className="rounded-xl px-4 py-3"
             style={{
@@ -1385,92 +1418,218 @@ function InputBar({ onSubmit, sending, statuses = [], currentStatusId, onStatusC
             </div>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            {INPUT_TYPES.map((t) => {
-              const TIcon = t.icon;
-              const active = type.value === t.value;
-              return (
-                <button
-                  key={t.value}
-                  onClick={() => handleTypeChange(t)}
-                  className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all"
-                  style={{
-                    color: active ? t.color : "#4b5563",
-                    background: active ? `${t.color}12` : "transparent",
-                    border: `1px solid ${active ? `${t.color}25` : "transparent"}`,
-                  }}
-                >
-                  <TIcon size={12} />
-                  {t.label}
-                  {active && (
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: t.color }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {isTask && <TaskDatePicker value={taskDate} onChange={setTaskDate} />}
-          <span className="ml-auto text-[11px] text-gray-700">Ctrl+Enter</span>
-        </div>
 
-        <div className="flex items-end gap-2.5">
-          <div
-            className="flex flex-1 items-start gap-3 rounded-xl px-4 py-3 transition-all duration-200"
-            style={{
-              background: "#0c1e2e",
-              border: `1px solid ${text ? `${type.color}30` : "rgba(255,255,255,0.06)"}`,
-              boxShadow: text ? `0 0 0 3px ${type.color}08` : "none",
-            }}
-          >
-            <TypeIcon
-              size={15}
-              className="mt-0.5 shrink-0"
-              style={{ color: text ? type.color : "#374151" }}
-            />
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
-              }}
-              placeholder={type.placeholder}
-              rows={2}
-              className="flex-1 resize-none bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
-              style={{ lineHeight: "1.6", maxHeight: 130 }}
-            />
-            <div className="mt-0.5 shrink-0">
-              <EmojiPicker position="top" onSelect={insertEmoji} />
+        {!voiceMode && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {INPUT_TYPES.map((t) => {
+                const TIcon = t.icon;
+                const active = type.value === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    onClick={() => handleTypeChange(t)}
+                    className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all"
+                    style={{
+                      color: active ? t.color : "#4b5563",
+                      background: active ? `${t.color}12` : "transparent",
+                      border: `1px solid ${active ? `${t.color}25` : "transparent"}`,
+                    }}
+                  >
+                    <TIcon size={12} />
+                    {t.label}
+                    {active && (
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ background: t.color }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            {isTask && <TaskDatePicker value={taskDate} onChange={setTaskDate} />}
+            <span className="ml-auto text-[11px] text-gray-700">Ctrl+Enter</span>
           </div>
-          <button
-            onClick={submit}
-            disabled={!canSubmit}
-            className="flex shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
-            style={{
-              background: canSubmit
-                ? `linear-gradient(135deg, ${type.color}, ${type.color}88)`
-                : "rgba(255,255,255,0.04)",
-              border: `1px solid ${canSubmit ? `${type.color}35` : "rgba(255,255,255,0.05)"}`,
-              boxShadow: canSubmit ? `0 4px 16px ${type.color}35` : "none",
-            }}
-          >
-            {sending ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        )}
+
+        {voiceMode ? (
+          isRecordingInProgress ? (
+            /* ── Yozilmoqda ── */
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5"
+              style={{
+                background: "#0c1e2e",
+                border: "1px solid rgba(239,68,68,0.25)",
+                boxShadow: "0 0 0 3px rgba(239,68,68,0.05)",
+              }}
+            >
+              <button
+                onClick={cancelVoice}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300"
+                title="Bekor qilish"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-red-500" />
+                <div className="flex-1 overflow-hidden" style={{ height: 40 }}>
+                  <VoiceVisualizer
+                    controls={recorderControls}
+                    isControlPanelShown={false}
+                    isDownloadAudioButtonShown={false}
+                    height={40}
+                    barWidth={2}
+                    gap={1}
+                    barColor="#3b82f6"
+                    backgroundColor="transparent"
+                    rounded={2}
+                  />
+                </div>
+              </div>
+
+              <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                {formattedDuration || "00:00"}
+              </span>
+
+              <button
+                onClick={stopRecording}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition-all hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                  boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
+                }}
+                title="To'xtatish"
+              >
+                <Square size={14} fill="currentColor" />
+              </button>
+            </div>
+          ) : (
+            /* ── Ko'rish / Yuborish ── */
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5"
+              style={{
+                background: "#0c1e2e",
+                border: "1px solid rgba(59,130,246,0.2)",
+                boxShadow: "0 0 0 3px rgba(59,130,246,0.04)",
+              }}
+            >
+              <button
+                onClick={cancelVoice}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                title="O'chirish"
+              >
+                <Trash2 size={15} />
+              </button>
+
+              <div className="min-w-0 flex-1 overflow-hidden" style={{ height: 40 }}>
+                <VoiceVisualizer
+                  controls={recorderControls}
+                  isControlPanelShown={false}
+                  isDownloadAudioButtonShown={false}
+                  height={40}
+                  barWidth={2}
+                  gap={1}
+                  barColor="#3b82f6"
+                  barPlayedColor="#60a5fa"
+                  backgroundColor="transparent"
+                  rounded={2}
+                />
+              </div>
+
+              <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                {formattedDuration || "00:00"}
+              </span>
+
+              <button
+                onClick={sendVoice}
+                disabled={!canSendVoice}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  background: canSendVoice
+                    ? "linear-gradient(135deg, #3b82f6, #2563eb)"
+                    : "rgba(255,255,255,0.04)",
+                  boxShadow: canSendVoice ? "0 4px 14px rgba(59,130,246,0.35)" : "none",
+                }}
+                title="Yuborish"
+              >
+                <SendHorizonal size={16} />
+              </button>
+            </div>
+          )
+        ) : (
+          /* ── Matn kiritish ── */
+          <div className="flex items-end gap-2.5">
+            <div
+              className="flex flex-1 items-start gap-3 rounded-xl px-4 py-3 transition-all duration-200"
+              style={{
+                background: "#0c1e2e",
+                border: `1px solid ${text ? `${type.color}30` : "rgba(255,255,255,0.06)"}`,
+                boxShadow: text ? `0 0 0 3px ${type.color}08` : "none",
+              }}
+            >
+              <TypeIcon
+                size={15}
+                className="mt-0.5 shrink-0"
+                style={{ color: text ? type.color : "#374151" }}
+              />
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
+                }}
+                placeholder={type.placeholder}
+                rows={2}
+                className="flex-1 resize-none bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
+                style={{ lineHeight: "1.6", maxHeight: 130 }}
+              />
+              <div className="mt-0.5 shrink-0">
+                <EmojiPicker position="top" onSelect={insertEmoji} />
+              </div>
+            </div>
+
+            {text.trim() ? (
+              <button
+                onClick={submit}
+                disabled={!canSubmit}
+                className="flex shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
+                style={{
+                  background: canSubmit
+                    ? `linear-gradient(135deg, ${type.color}, ${type.color}88)`
+                    : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${canSubmit ? `${type.color}35` : "rgba(255,255,255,0.05)"}`,
+                  boxShadow: canSubmit ? `0 4px 16px ${type.color}35` : "none",
+                }}
+              >
+                {sending ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                ) : (
+                  <>
+                    <span>Yuborish</span>
+                    <SendHorizonal size={15} />
+                  </>
+                )}
+              </button>
             ) : (
-              <>
-                <span>Yuborish</span>
-                <SendHorizonal size={15} />
-              </>
+              <button
+                onClick={enterVoiceMode}
+                className="flex shrink-0 items-center justify-center rounded-xl px-5 py-3 text-gray-500 transition-all duration-200 hover:text-blue-400"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+                title="Ovoz yozish"
+              >
+                <Mic size={20} />
+              </button>
             )}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1715,6 +1874,11 @@ const LeadDetails = () => {
   };
 
   // Tasks POST: backend `date` key kutadi
+  const handleVoiceSubmit = (blob) => {
+    if (!blob) return;
+    toastSuccess("Ovoz yozuvi tayyor — API integratsiyasi kutilmoqda ⏳");
+  };
+
   const handlePostDesc = async (text, type, date) => {
     if (type === "tasks" && !date) {
       toastError("Task uchun muddatni tanlang");
@@ -2482,6 +2646,7 @@ const LeadDetails = () => {
 
         <InputBar
           onSubmit={handlePostDesc}
+          onVoiceSubmit={handleVoiceSubmit}
           sending={sending}
           statuses={statuses}
           currentStatusId={dealData?.statusId || dealData?.status?.id}
