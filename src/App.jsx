@@ -27,6 +27,7 @@ import ProMarket from "./pages/proMarket";
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
 const FormPage = lazy(() => import("./pages/FormPage"));
+const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
 const GoogleAuthCallback = lazy(() => import("./pages/googleAuthCallback"));
 const FacebookCallback = lazy(() => import("./pages/facebookCallback"));
 const LandingPage = lazy(() => import("./pages/landingPage"));
@@ -278,6 +279,11 @@ const router = createBrowserRouter([
   {
     path: ":projectName/form/:id",
     element: withLazy(<FormPage />),
+    errorElement: withLazy(<AppErrorFallback />),
+  },
+  {
+    path: ":projectName/lead/:id",
+    element: withLazy(<LeadFormPage />),
     errorElement: withLazy(<AppErrorFallback />),
   },
   {

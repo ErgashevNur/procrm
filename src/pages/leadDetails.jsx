@@ -53,6 +53,7 @@ import {
   MANAGEMENT_ROLES,
   ROLES,
   canDeleteData,
+  canDeleteTasksAndDescriptions,
   getCurrentRole,
 } from "@/lib/rbac";
 import KotibamLoader from "@/components/KotibamLoader";
@@ -1647,7 +1648,7 @@ const LeadDetails = () => {
   const projectId = localStorage.getItem("projectId");
   const role = getCurrentRole();
   const canAssignOperator = MANAGEMENT_ROLES.includes(role);
-  const canDeleteEntries = canDeleteData(role);
+  const canDeleteEntries = canDeleteTasksAndDescriptions(role);
   // FIX 1: userId = projectId bug tuzatildi — tasks lead ichidan keladi, alohida fetch yo'q
 
   const [dealData, setDealData] = useState(null);

@@ -19,6 +19,7 @@ import {
 import { toast } from "@/lib/toast";
 import { Link } from "react-router-dom";
 import KotibamLoader from "@/components/KotibamLoader";
+import { canDeleteTasksAndDescriptions, getCurrentRole } from "@/lib/rbac";
 import {
   Dialog,
   DialogContent,
@@ -142,6 +143,7 @@ function SortIcon({ field, sortBy, dir }) {
 export default function Tasks() {
   const token = localStorage.getItem("user");
   const projectId = localStorage.getItem("projectId");
+  const canDeleteTasks = canDeleteTasksAndDescriptions(getCurrentRole());
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -660,13 +662,15 @@ export default function Tasks() {
                                   />
                                 )}
                               </button>
-                              <button
-                                onClick={() => handleCancelTask(task)}
-                                disabled={task.status === "CANCELED"}
-                                className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-                              >
-                                <Ban size={13} />
-                              </button>
+                              {canDeleteTasks && (
+                                <button
+                                  onClick={() => handleCancelTask(task)}
+                                  disabled={task.status === "CANCELED"}
+                                  className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                                >
+                                  <Ban size={13} />
+                                </button>
+                              )}
                             </div>
 
                             <div className="mb-2 flex min-w-0 items-center gap-2">
@@ -995,13 +999,15 @@ export default function Tasks() {
 
                     {/* Delete */}
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleCancelTask(task)}
-                        disabled={task.status === "CANCELED"}
-                        className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-                      >
-                        <Ban size={13} />
-                      </button>
+                      {canDeleteTasks && (
+                        <button
+                          onClick={() => handleCancelTask(task)}
+                          disabled={task.status === "CANCELED"}
+                          className="text-gray-700 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <Ban size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

@@ -124,3 +124,8 @@ export function canDeleteData(role) {
   if (!isSupportedRole(role)) return false;
   return role !== ROLES.ADMIN;
 }
+
+export function canDeleteTasksAndDescriptions(role) {
+  if (!isSupportedRole(role)) return false;
+  return role !== ROLES.ADMIN && role !== ROLES.SALESMANAGER;
+}
