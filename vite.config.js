@@ -7,6 +7,8 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: 5173,
+    strictPort: false,
     allowedHosts: ["unhopingly-meteoritic-racheal.ngrok-free.dev"],
     proxy: {
       "/api/v1": {

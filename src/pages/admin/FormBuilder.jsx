@@ -19,6 +19,7 @@ function createEmptyField() {
     placeholder: "",
     required: false,
     options: [],
+    mapping: "",
   };
 }
 
@@ -165,6 +166,7 @@ export default function FormBuilder() {
               placeholder: f?.placeholder || "",
               required: Boolean(f?.required ?? f?.isRequired),
               options: normalizeFieldOptions(f?.options),
+              mapping: f?.mapping || "",
             }))
           : [createEmptyField()];
 
@@ -249,6 +251,18 @@ export default function FormBuilder() {
     );
   }
 
+  function moveField(id, direction) {
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id);
+      if (idx === -1) return prev;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      return next;
+    });
+  }
+
   async function handleSave() {
     const cleanTitle = title.trim();
     if (!cleanTitle) {
@@ -272,6 +286,7 @@ export default function FormBuilder() {
         fieldType: f.type.toUpperCase(),
         isRequired: f.required,
         order: index,
+        mapping: f.mapping || "OTHER",
         options:
           f.type === "select"
             ? (f.options || [])
@@ -557,14 +572,26 @@ export default function FormBuilder() {
 
             {/* Fields */}
             <div className="flex flex-col gap-3">
-              {fields.map((field) => (
-                <FieldEditor
-                  key={field.id}
-                  field={field}
-                  onChange={(changes) => updateField(field.id, changes)}
-                  onRemove={() => removeField(field.id)}
-                />
-              ))}
+              {fields.map((field, index) => {
+                const usedMappings = new Set(
+                  fields
+                    .filter((f) => f.id !== field.id && f.mapping)
+                    .map((f) => f.mapping),
+                );
+                return (
+                  <FieldEditor
+                    key={field.id}
+                    field={field}
+                    index={index}
+                    total={fields.length}
+                    onChange={(changes) => updateField(field.id, changes)}
+                    onRemove={() => removeField(field.id)}
+                    onMoveUp={() => moveField(field.id, "up")}
+                    onMoveDown={() => moveField(field.id, "down")}
+                    usedMappings={usedMappings}
+                  />
+                );
+              })}
             </div>
 
             {/* Add field + Save */}
