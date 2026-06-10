@@ -28,3 +28,17 @@ export function getPublicFormUrl(formId, options = {}) {
     (typeof window !== "undefined" ? window.location.origin : "");
   return `${origin}${getPublicFormPath(formId, options)}`;
 }
+
+export function getPublicLeadFormPath(formId, options = {}) {
+  const projectSlug = slugifyPathSegment(
+    options.projectSlug || getProjectSlugFromStorage(),
+  );
+  return `/${projectSlug}/lead/${formId}`;
+}
+
+export function getPublicLeadFormUrl(formId, options = {}) {
+  const origin =
+    options.origin ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  return `${origin}${getPublicLeadFormPath(formId, options)}`;
+}
