@@ -34,7 +34,7 @@ export default function PhoneInput({ value, onChange, disabled, placeholder }) {
         onChange={handleChange}
         disabled={disabled}
         placeholder={placeholder ?? "90 123 45 67"}
-        className="h-10 flex-1 bg-[#0d1e2e] px-3 text-sm text-white placeholder-[#456070] outline-none disabled:cursor-not-allowed"
+        className="h-10 flex-1 bg-[#0d1e2e] px-3 text-base md:text-sm text-white placeholder-[#456070] outline-none disabled:cursor-not-allowed"
       />
     </div>
   );
