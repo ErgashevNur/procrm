@@ -24,6 +24,9 @@ import {
 } from "@/lib/rbac";
 import ProMarket from "./pages/proMarket";
 
+const MiniShop = lazy(() => import("./pages/miniShop"));
+const PublicShop = lazy(() => import("./pages/publicShop"));
+
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const FormBuilder = lazy(() => import("./pages/admin/FormBuilder"));
 const FormPage = lazy(() => import("./pages/FormPage"));
@@ -183,6 +186,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "mini-shop",
+        element: (
+          <ProtectedRoute allowedRoles={CRM_ROLES}>
+            {withLazy(<MiniShop />)}
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "profile",
         element: withLazy(<Profile />),
       },
@@ -275,6 +286,11 @@ const router = createBrowserRouter([
         element: <RoleHomeRedirect />,
       },
     ],
+  },
+  {
+    path: "shop/:companyId",
+    element: withLazy(<PublicShop />),
+    errorElement: withLazy(<AppErrorFallback />),
   },
   {
     path: ":projectName/form/:id",
