@@ -12,7 +12,7 @@ export default defineConfig({
     allowedHosts: ["unhopingly-meteoritic-racheal.ngrok-free.dev"],
     proxy: {
       "/api/v1": {
-        target: "https://backend-b2b-dev.prohome.uz",
+        target: "https://backend.prohome.uz",
         changeOrigin: true,
         secure: true,
       },

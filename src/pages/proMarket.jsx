@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFacebook,
@@ -25,6 +26,7 @@ import {
   Phone,
   Search,
   Settings as SettingsIcon,
+  Store,
   Webhook,
   XCircle,
   Zap,
@@ -133,6 +135,17 @@ const APPS = [
     desc: "Sales-managerlar uchun kunlik lead gaplashish limitini belgilang",
     badge: "free",
     installed: false,
+  },
+  {
+    id: "mini-shop",
+    name: "Mini-Shop",
+    iconNode: Store,
+    iconColor: "#27AE60",
+    bg: "#0D2B1D",
+    desc: "O'z mahsulotlaringizni yuklang va xaridorlarga maxsus havola ulashing",
+    badge: "new",
+    installed: false,
+    isNavigate: true,
   },
 
   // ── Tez kunda ──
@@ -384,6 +397,7 @@ function IntCard({ item, onToggle }) {
   const isSheets = item.id === "google-sheets";
   const isFacebook = item.id === "facebook";
   const isLeadLimit = item.id === "lead-limit";
+  const isMiniShop = item.id === "mini-shop";
   const isStateful = isRopAI || isSheets || isFacebook || isLeadLimit;
   const accent = locked
     ? C.purple
@@ -391,7 +405,7 @@ function IntCard({ item, onToggle }) {
       ? C.green
       : isRopAI
         ? C.purple
-        : isSheets
+        : isSheets || isMiniShop
           ? C.green
           : C.blue;
   return (
@@ -534,6 +548,10 @@ function IntCard({ item, onToggle }) {
           <>
             <SettingsIcon size={11} strokeWidth={2.6} /> Sozlash
           </>
+        ) : isMiniShop ? (
+          <>
+            <Store size={11} strokeWidth={2.6} /> Ochish
+          </>
         ) : isStateful ? (
           <>
             <SettingsIcon size={11} strokeWidth={2.6} />{" "}
@@ -578,6 +596,7 @@ function Toast({ icon, msg }) {
 }
 
 export default function ProMarket() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState("all");
   const [items, setItems] = useState(
     APPS.reduce((a, i) => ({ ...a, [i.id]: { ...i } }), {}),
@@ -711,6 +730,10 @@ export default function ProMarket() {
     }
     if (id === "lead-limit") {
       setLimitDialogOpen(true);
+      return;
+    }
+    if (id === "mini-shop") {
+      navigate("/mini-shop");
       return;
     }
     setItems((prev) => {
