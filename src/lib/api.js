@@ -14,5 +14,10 @@ export function imageUrl(src) {
   if (!src) return null;
   if (/^(blob:|data:|https?:\/\/)/i.test(src)) return src;
   const clean = String(src).replace(/^\/+/, "").replace(/^image\//i, "");
+  // Dev da relative path ishlatiladi — Vite proxy same-origin qilib yuboradi
+  // va CORP bloklanishini oldini oladi
+  if (import.meta.env.DEV) {
+    return `/api/v1/image/${clean}`;
+  }
   return apiUrl(`image/${clean}`);
 }
