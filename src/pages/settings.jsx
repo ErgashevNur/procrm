@@ -25,6 +25,9 @@ import {
   Eye,
   EyeOff,
   UserCheck,
+  Smile,
+  Plus,
+  Pencil,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -66,9 +69,50 @@ const SECTION_KEYS = [
   { key: "billing", icon: CreditCard },
   { key: "users", icon: Users2 },
   { key: "visitors", icon: UserCheck, roles: MANAGEMENT_ROLES },
+  { key: "moods", icon: Smile, roles: MANAGEMENT_ROLES },
   { key: "integrations", icon: MessageCircle },
   { key: "support", icon: Headset },
 ];
+
+const MOOD_PRESET_COLORS = [
+  "#ef4444","#f97316","#f59e0b","#eab308",
+  "#84cc16","#22c55e","#10b981","#14b8a6",
+  "#06b6d4","#3b82f6","#6366f1","#8b5cf6",
+  "#a855f7","#ec4899","#f43f5e","#64748b",
+];
+
+function MoodColorPicker({ value, onChange }) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-8 gap-1.5">
+        {MOOD_PRESET_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className="h-6 w-6 rounded-md transition-all hover:scale-110"
+            style={{
+              background: c,
+              outline: value === c ? `2px solid ${c}` : "2px solid transparent",
+              outlineOffset: 2,
+            }}
+          />
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-600">Hex:</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#ffffff"
+          className="h-7 w-24 rounded-md border border-[#1e3a52] bg-[#071828] px-2 text-xs text-white outline-none focus:border-blue-500/50"
+        />
+        <span className="h-7 w-7 rounded-md border border-[#1a3045]" style={{ background: value || "#6b7280" }} />
+      </div>
+    </div>
+  );
+}
 
 // ── Small UI components ───────────────────────────────────────────────────
 function Section({ title, description, children }) {
@@ -261,6 +305,18 @@ export default function Settings() {
   const [updatingVisitorId, setUpdatingVisitorId] = useState(null);
   const [deletingVisitorId, setDeletingVisitorId] = useState(null);
 
+  // ── Moods ────────────────────────────────────────────────────────────
+  const [moods, setMoods] = useState([]);
+  const [moodsLoading, setMoodsLoading] = useState(false);
+  const [moodCreateName, setMoodCreateName] = useState("");
+  const [moodCreateColor, setMoodCreateColor] = useState("#3b82f6");
+  const [moodCreating, setMoodCreating] = useState(false);
+  const [moodEditId, setMoodEditId] = useState(null);
+  const [moodEditName, setMoodEditName] = useState("");
+  const [moodEditColor, setMoodEditColor] = useState("#3b82f6");
+  const [moodEditing, setMoodEditing] = useState(false);
+  const [moodDeletingId, setMoodDeletingId] = useState(null);
+
   // ── Integrations ──────────────────────────────────────────────────────
   const [integrations, setIntegrations] = useState({
     telegram: { connected: false, token: "" },
@@ -433,9 +489,94 @@ export default function Settings() {
     }
   };
 
+  const loadMoods = async () => {
+    setMoodsLoading(true);
+    try {
+      const res = await apiFetch(apiUrl("lead-mood"));
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      setMoods(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error("Kayfiyatlar yuklanmadi");
+    } finally {
+      setMoodsLoading(false);
+    }
+  };
+
+  const handleMoodCreate = async (e) => {
+    e.preventDefault();
+    if (!moodCreateName.trim()) return;
+    setMoodCreating(true);
+    try {
+      const res = await apiFetch(apiUrl("lead-mood"), {
+        method: "POST",
+        body: JSON.stringify({ name: moodCreateName.trim(), color: moodCreateColor }),
+      });
+      if (!res || !res.ok) throw new Error();
+      const data = await res.json();
+      setMoods((p) => [...p, data]);
+      setMoodCreateName("");
+      setMoodCreateColor("#3b82f6");
+      toast.success("Kayfiyat qo'shildi ✅");
+    } catch {
+      toast.error("Xatolik ❌");
+    } finally {
+      setMoodCreating(false);
+    }
+  };
+
+  const startMoodEdit = (mood) => {
+    setMoodEditId(mood.id);
+    setMoodEditName(mood.name);
+    setMoodEditColor(mood.color || "#3b82f6");
+  };
+
+  const cancelMoodEdit = () => {
+    setMoodEditId(null);
+    setMoodEditName("");
+    setMoodEditColor("#3b82f6");
+  };
+
+  const handleMoodUpdate = async (id) => {
+    if (!moodEditName.trim()) return;
+    setMoodEditing(true);
+    try {
+      const res = await apiFetch(apiUrl(`lead-mood/${id}`), {
+        method: "PATCH",
+        body: JSON.stringify({ name: moodEditName.trim(), color: moodEditColor }),
+      });
+      if (!res || !res.ok) throw new Error();
+      setMoods((p) =>
+        p.map((m) => (m.id === id ? { ...m, name: moodEditName.trim(), color: moodEditColor } : m)),
+      );
+      cancelMoodEdit();
+      toast.success("Yangilandi ✅");
+    } catch {
+      toast.error("Xatolik ❌");
+    } finally {
+      setMoodEditing(false);
+    }
+  };
+
+  const handleMoodDelete = async (id) => {
+    if (!window.confirm("O'chirilsinmi?")) return;
+    setMoodDeletingId(id);
+    try {
+      const res = await apiFetch(apiUrl(`lead-mood/${id}`), { method: "DELETE" });
+      if (!res || !res.ok) throw new Error();
+      setMoods((p) => p.filter((m) => m.id !== id));
+      toast.success("O'chirildi ✅");
+    } catch {
+      toast.error("O'chirishda xato ❌");
+    } finally {
+      setMoodDeletingId(null);
+    }
+  };
+
   useEffect(() => {
     if (active === "users") loadUsers();
     else if (active === "visitors") loadVisitors();
+    else if (active === "moods") loadMoods();
   }, [active]);
 
   // ── Save handlers ─────────────────────────────────────────────────────
@@ -1180,6 +1321,127 @@ export default function Settings() {
                                 <Trash2 size={15} />
                               )}
                             </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </Section>
+              </>
+            )}
+
+            {/* ════ MIJOZ KAYFIYATLARI ════ */}
+            {active === "moods" && (
+              <>
+                <Section
+                  title="Mijoz kayfiyatlari"
+                  description="Leadlarning shaxsiy xususiyatlarini belgilash uchun kayfiyat turlari"
+                >
+                  {/* Create form */}
+                  <form onSubmit={handleMoodCreate}>
+                    <div className="flex flex-wrap items-end gap-4 bg-[#0f2030] px-6 py-5">
+                      <div className="flex-1" style={{ minWidth: 180 }}>
+                        <p className="mb-1.5 text-xs text-gray-500">Kayfiyat nomi</p>
+                        <input
+                          value={moodCreateName}
+                          onChange={(e) => setMoodCreateName(e.target.value)}
+                          placeholder="Masalan: Jahldor, Qiziquvchan..."
+                          className="w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/50"
+                        />
+                      </div>
+                      <div>
+                        <p className="mb-1.5 text-xs text-gray-500">Rang</p>
+                        <MoodColorPicker value={moodCreateColor} onChange={setMoodCreateColor} />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={moodCreating || !moodCreateName.trim()}
+                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40"
+                        style={{ background: moodCreateColor || "#3b82f6" }}
+                      >
+                        {moodCreating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                        Qo'shish
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* List */}
+                  {moodsLoading ? (
+                    <div className="flex justify-center bg-[#0f2030] py-8">
+                      <Loader2 size={22} className="animate-spin text-blue-400" />
+                    </div>
+                  ) : moods.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 bg-[#0f2030] py-10 text-center">
+                      <Smile size={32} className="text-gray-700" />
+                      <p className="text-sm text-gray-600">Hali kayfiyat yo'q</p>
+                    </div>
+                  ) : (
+                    moods.map((mood) => (
+                      <div key={mood.id} className="bg-[#0f2030] px-6 py-4">
+                        {moodEditId === mood.id ? (
+                          <div className="flex flex-wrap items-end gap-3">
+                            <div className="flex-1" style={{ minWidth: 160 }}>
+                              <input
+                                value={moodEditName}
+                                onChange={(e) => setMoodEditName(e.target.value)}
+                                autoFocus
+                                className="w-full rounded-lg border border-[#1e3a52] bg-[#071828] px-3 py-2 text-sm text-white outline-none focus:border-blue-500/50"
+                              />
+                            </div>
+                            <MoodColorPicker value={moodEditColor} onChange={setMoodEditColor} />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleMoodUpdate(mood.id)}
+                                disabled={moodEditing || !moodEditName.trim()}
+                                className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-green-500 disabled:opacity-40"
+                              >
+                                {moodEditing ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                Saqlash
+                              </button>
+                              <button
+                                onClick={cancelMoodEdit}
+                                className="flex items-center gap-1.5 rounded-lg border border-[#1a3045] px-3 py-2 text-xs text-gray-400 transition-colors hover:text-white"
+                              >
+                                <X size={12} />
+                                Bekor
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-4">
+                            <span
+                              className="h-3 w-3 shrink-0 rounded-full"
+                              style={{ background: mood.color || "#6b7280" }}
+                            />
+                            <span
+                              className="rounded-lg px-3 py-1 text-sm font-semibold"
+                              style={{
+                                background: `${mood.color || "#6b7280"}18`,
+                                color: mood.color || "#9ca3af",
+                                border: `1px solid ${mood.color || "#6b7280"}35`,
+                              }}
+                            >
+                              {mood.name}
+                            </span>
+                            <div className="ml-auto flex items-center gap-1">
+                              <button
+                                onClick={() => startMoodEdit(mood)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-white/10 hover:text-blue-400"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleMoodDelete(mood.id)}
+                                disabled={moodDeletingId === mood.id}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-40"
+                              >
+                                {moodDeletingId === mood.id ? (
+                                  <Loader2 size={13} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={13} />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

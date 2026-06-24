@@ -1259,8 +1259,98 @@ function getStatusIcon(name = "", type) {
   return CircleDot;
 }
 
+// ─── MOOD PICKER ──────────────────────────────────────────────────────────────
+function MoodPicker({ moods = [], currentMood, onSelect, compact = false }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); if (moods.length) setOpen((o) => !o); }}
+        title={currentMood ? `Kayfiyat: ${currentMood.name} (o'zgartirish)` : "Mijoz kayfiyatini belgilash"}
+        className="mt-0.5 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold transition-all"
+        style={
+          currentMood
+            ? {
+                background: `${currentMood.color}18`,
+                border: `1px solid ${currentMood.color}45`,
+                color: currentMood.color,
+              }
+            : {
+                background: "rgba(255,255,255,0.04)",
+                border: "1px dashed rgba(255,255,255,0.12)",
+                color: "#4b5563",
+              }
+        }
+      >
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ background: currentMood ? currentMood.color : "#374151" }}
+        />
+        <span className="max-w-[72px] truncate">
+          {currentMood ? currentMood.name : "Kayfiyat"}
+        </span>
+      </button>
+
+      {open && moods.length > 0 && (
+        <div
+          className="absolute bottom-full left-0 z-50 mb-2 min-w-[170px] overflow-hidden rounded-xl py-1.5 shadow-2xl"
+          style={{
+            background: "#0b1e30",
+            border: "1px solid rgba(255,255,255,0.09)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.55)",
+          }}
+        >
+          <p className="px-3 pt-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-700">
+            Mijoz kayfiyati
+          </p>
+          {moods.map((m) => {
+            const active = currentMood?.id === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onSelect(m); setOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 transition-colors hover:bg-white/[0.05]"
+                style={{ background: active ? `${m.color}12` : "transparent" }}
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{
+                    background: m.color,
+                    boxShadow: active ? `0 0 6px ${m.color}80` : "none",
+                  }}
+                />
+                <span
+                  className="flex-1 text-left text-sm font-medium"
+                  style={{ color: active ? m.color : "#d1d5db" }}
+                >
+                  {m.name}
+                </span>
+                {active && (
+                  <Check size={12} style={{ color: m.color, flexShrink: 0 }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── INPUT BAR ────────────────────────────────────────────────────────────────
-function InputBar({ onSubmit, onVoiceSubmit, sending, statuses = [], currentStatusId, onStatusChange }) {
+function InputBar({ onSubmit, onVoiceSubmit, sending, statuses = [], currentStatusId, onStatusChange, currentMood, allMoods = [], onMoodChange }) {
   const [text, setText] = useState("");
   const [type, setType] = useState(INPUT_TYPES[0]);
   const [taskDate, setTaskDate] = useState("");
@@ -1356,6 +1446,35 @@ function InputBar({ onSubmit, onVoiceSubmit, sending, statuses = [], currentStat
       }}
     >
       <div className="mx-auto max-w-3xl space-y-2.5">
+        {!voiceMode && focused && currentMood && (
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              background: `${currentMood.color}10`,
+              border: `1px solid ${currentMood.color}40`,
+              boxShadow: `0 0 20px ${currentMood.color}12`,
+            }}
+          >
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full animate-pulse"
+              style={{ background: `${currentMood.color}25`, border: `1.5px solid ${currentMood.color}60` }}
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: currentMood.color }} />
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: `${currentMood.color}cc` }}>
+                Mijoz kayfiyati:
+              </span>
+              <span
+                className="rounded-lg px-2.5 py-0.5 text-sm font-bold text-white"
+                style={{ background: `${currentMood.color}30`, border: `1px solid ${currentMood.color}50` }}
+              >
+                {currentMood.name}
+              </span>
+            </div>
+          </div>
+        )}
+
         {!voiceMode && focused && statuses.length > 0 && (
           <div
             className="rounded-xl px-4 py-3"
@@ -1573,10 +1692,11 @@ function InputBar({ onSubmit, onVoiceSubmit, sending, statuses = [], currentStat
                 boxShadow: text ? `0 0 0 3px ${type.color}08` : "none",
               }}
             >
-              <TypeIcon
-                size={15}
-                className="mt-0.5 shrink-0"
-                style={{ color: text ? type.color : "#374151" }}
+              <MoodPicker
+                moods={allMoods}
+                currentMood={currentMood}
+                onSelect={onMoodChange}
+                compact
               />
               <textarea
                 ref={textareaRef}
@@ -1661,6 +1781,8 @@ const LeadDetails = () => {
   const [activeTab, setActiveTab] = useState("asosiy");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [allMoods, setAllMoods] = useState([]);
+  const [assigningMood, setAssigningMood] = useState(false);
 
   const [leadVisitors, setLeadVisitors] = useState([]);
   const [leadVisitorsLoading, setLeadVisitorsLoading] = useState(false);
@@ -1768,13 +1890,14 @@ const LeadDetails = () => {
     (async () => {
       try {
         // FIX 3: tasks alohida fetch yo'q — lead ichidagi tasks ishlatiladi
-        const [leadRes, descRes, sourceRes, statusRes] = await Promise.all([
+        const [leadRes, descRes, sourceRes, statusRes, moodsRes] = await Promise.all([
           fetch(`${API}/leeds/${leadId}`, { headers }),
           fetch(`${API}/Description/lead/${leadId}?projectId=${projectId}`, {
             headers,
           }),
           fetch(`${API}/lead-source/${projectId}`, { headers }),
           fetch(`${API}/status/${projectId}`, { headers }),
+          fetch(`${API}/lead-mood`, { headers }),
         ]);
 
         if (leadRes.status === 401) {
@@ -1783,12 +1906,14 @@ const LeadDetails = () => {
           return;
         }
 
-        const [lead, descs, sources, statusList] = await Promise.all([
+        const [lead, descs, sources, statusList, moodsList] = await Promise.all([
           leadRes.json(),
           descRes.ok ? descRes.json() : [],
           sourceRes.ok ? sourceRes.json() : [],
           statusRes.ok ? statusRes.json() : [],
+          moodsRes.ok ? moodsRes.json() : [],
         ]);
+        setAllMoods(Array.isArray(moodsList) ? moodsList : []);
 
         const normalizedLeadTags = normalizeTags(lead?.tag);
         setDealData({ ...lead, tag: normalizedLeadTags });
@@ -2022,6 +2147,26 @@ const LeadDetails = () => {
     }
   };
 
+  const handleAssignMood = async (moodOrId) => {
+    const id = typeof moodOrId === "object" ? moodOrId.id : moodOrId;
+    setAssigningMood(true);
+    try {
+      const res = await fetch(`${API}/lead-mood/lead`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ moodId: Number(id), leadId: Number(leadId) }),
+      });
+      if (!res.ok) throw new Error();
+      const selectedMood = typeof moodOrId === "object" ? moodOrId : allMoods.find((m) => String(m.id) === String(id));
+      setDealData((prev) => ({ ...prev, mood: selectedMood, moodId: Number(id) }));
+      toastSuccess("Mijoz kayfiyati yangilandi ✅");
+    } catch {
+      toastError("Xatolik ❌");
+    } finally {
+      setAssigningMood(false);
+    }
+  };
+
   // FIX 2: handleSubmit — tag array yuborish
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2228,6 +2373,31 @@ const LeadDetails = () => {
               </div>
               <InfoRow label="Loyiha" value={dealData?.project?.name} />
               <InfoRow label="Manba" value={dealData?.leadSource?.name} />
+              {/* Mood — faqat ko'rsatish, o'zgartirish pastki toolbarda */}
+              <div>
+                <p className="mb-1.5 text-[11px] text-gray-600 uppercase">
+                  Mijoz kayfiyati
+                </p>
+                {(() => {
+                  const mood = dealData?.mood || allMoods.find((m) => m.id === dealData?.moodId);
+                  return mood ? (
+                    <div
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5"
+                      style={{
+                        background: `${mood.color}18`,
+                        border: `1px solid ${mood.color}40`,
+                      }}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: mood.color }} />
+                      <span className="text-sm font-semibold" style={{ color: mood.color }}>
+                        {mood.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-600">—</span>
+                  );
+                })()}
+              </div>
               <div>
                 <p className="mb-0.5 text-[11px] text-gray-600 uppercase">
                   Budjet
@@ -2588,12 +2758,29 @@ const LeadDetails = () => {
       {/* ═══ RIGHT PANEL ═══ */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <div
-          className="flex shrink-0 items-center justify-end border-b px-5 py-3"
+          className="flex shrink-0 items-center justify-end gap-2 border-b px-5 py-3"
           style={{
             borderColor: "rgba(255,255,255,0.05)",
             background: "#071828",
           }}
         >
+          {(() => {
+            const mood = dealData?.mood || allMoods.find((m) => m.id === dealData?.moodId);
+            return mood ? (
+              <div
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  background: `${mood.color}18`,
+                  color: mood.color,
+                  border: `1px solid ${mood.color}40`,
+                }}
+                title={`Mijoz kayfiyati: ${mood.name}`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: mood.color }} />
+                {mood.name}
+              </div>
+            ) : null;
+          })()}
           {dealData?.status && (
             <div
               className="max-w-[260px] truncate rounded-full px-4 py-1.5 text-xs font-semibold text-white"
@@ -2655,6 +2842,9 @@ const LeadDetails = () => {
           statuses={statuses}
           currentStatusId={dealData?.statusId || dealData?.status?.id}
           onStatusChange={handleStatusChange}
+          currentMood={dealData?.mood || allMoods.find((m) => m.id === dealData?.moodId) || null}
+          allMoods={allMoods}
+          onMoodChange={handleAssignMood}
         />
       </div>
     </div>
