@@ -621,9 +621,35 @@ function IconBtn({
   );
 }
 
+// Ustun konteyneri to'liq balandlikka cho'zilgani uchun kam leadli ustunda
+// scroll umuman paydo bo'lmaydi — shu sabab IntersectionObserver orqali
+// "ko'rinib turgan" pastki chegarani kuzatib, qolgan sahifalarni avtomatik tortib olamiz.
+function ColumnLoadMoreSentinel({ getRoot, hasMore, loading, onLoadMore }) {
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (!hasMore || loading) return;
+    const root = getRoot();
+    const target = sentinelRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) onLoadMore();
+      },
+      { root, rootMargin: "200px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [getRoot, hasMore, loading, onLoadMore]);
+
+  return <div ref={sentinelRef} style={{ height: 1 }} />;
+}
+
 export default function Pipeline() {
   const navigate = useNavigate();
   const boardRef = useRef(null);
+  const columnScrollRefs = useRef({});
   const isDragging = useRef(false);
   const scrollRAF = useRef(null);
   const searchWrapRef = useRef(null);
@@ -1771,7 +1797,7 @@ export default function Pipeline() {
             <SelectTrigger className="w-64">
               <SelectValue placeholder="Loyihani tanlang" />
             </SelectTrigger>
-            <SelectContent className="mt-10">
+            <SelectContent position="popper">
               {projects.map((p) => (
                 <SelectItem key={p.id} value={p.name}>
                   {p.name}
@@ -1843,7 +1869,7 @@ export default function Pipeline() {
             <SelectTrigger className="w-56" style={{ height: "36px" }}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="mt-10">
+            <SelectContent position="popper">
               {projects.map((p) => (
                 <SelectItem key={p.id} value={p.name}>
                   {p.name}
@@ -1892,7 +1918,7 @@ export default function Pipeline() {
                         <SelectTrigger className="h-9 w-full bg-[#10263b]">
                           <SelectValue placeholder="Status tanlang" />
                         </SelectTrigger>
-                        <SelectContent className="mt-10">
+                        <SelectContent position="popper">
                           {statuses.map((s) => (
                             <SelectItem key={s.id} value={String(s.id)}>
                               {s.name}
@@ -1927,7 +1953,7 @@ export default function Pipeline() {
                         <SelectTrigger className="h-9 w-full bg-[#10263b]">
                           <SelectValue placeholder="Manba tanlang" />
                         </SelectTrigger>
-                        <SelectContent className="mt-10">
+                        <SelectContent position="popper">
                           {leadSource.map((s) => (
                             <SelectItem key={s.id} value={String(s.id)}>
                               {s.name}
@@ -1966,7 +1992,7 @@ export default function Pipeline() {
                             }
                           />
                         </SelectTrigger>
-                        <SelectContent className="mt-10 max-h-72">
+                        <SelectContent position="popper" className="max-h-72">
                           {operatorsList.map((operator) => (
                             <SelectItem
                               key={operator.id}
@@ -2437,7 +2463,7 @@ export default function Pipeline() {
                               <SelectTrigger>
                                 <SelectValue placeholder="Tanlang..." />
                               </SelectTrigger>
-                              <SelectContent className="mt-2">
+                              <SelectContent position="popper">
                                 {leadSource.length === 0 ? (
                                   <div className="px-2 py-1.5 text-xs text-gray-400">
                                     Manbalar topilmadi
@@ -2686,11 +2712,11 @@ export default function Pipeline() {
                     className={`rounded-lg transition-colors duration-150 ${snapshot.isDraggingOver ? "bg-[#1a3552]/60" : ""}`}
                   >
                     <div
+                      ref={(el) => { columnScrollRefs.current[col.id] = el; }}
                       onScroll={(e) => handleColumnScroll(col.id, e)}
                       className="flex flex-col gap-2.5 p-2"
                       style={{
-                        minHeight: 80,
-                        maxHeight: "calc(100vh - 245px)",
+                        height: "calc(100vh - 245px)",
                         overflowY: "auto",
                       }}
                     >
@@ -2872,6 +2898,20 @@ export default function Pipeline() {
                           <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                           Yuklanmoqda...
                         </div>
+                      )}
+                      {!hasActiveSearch && (!isCanceled || isRevealed) && (
+                        <ColumnLoadMoreSentinel
+                          getRoot={() => columnScrollRefs.current[col.id]}
+                          hasMore={Boolean(statusMeta[col.id]?.hasMore)}
+                          loading={Boolean(statusMeta[col.id]?.loading)}
+                          onLoadMore={() =>
+                            fetchLeadsByStatus(
+                              col.id,
+                              (statusMeta[col.id]?.page || 1) + 1,
+                              true,
+                            )
+                          }
+                        />
                       )}
                       {provided.placeholder}
                     </div>

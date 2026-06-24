@@ -43,6 +43,7 @@ const Kanban = lazy(() => import("./pages/kanban"));
 const Setting = lazy(() => import("./pages/settings"));
 const Tasks = lazy(() => import("./pages/task"));
 const LeadSource = lazy(() => import("./pages/leadSource"));
+const LeadMood = lazy(() => import("./pages/leadMood"));
 const LeadDetails = lazy(() => import("./pages/leadDetails"));
 const SmsRassilka = lazy(() => import("./pages/smsRassilka"));
 const AddStatus = lazy(() => import("./pages/addStatus"));
@@ -230,6 +231,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={CRM_ROLES}>
             <ProjectGate>{withLazy(<LeadSource />)}</ProjectGate>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "leadMood",
+        element: (
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            {withLazy(<LeadMood />)}
           </ProtectedRoute>
         ),
       },
