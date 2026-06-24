@@ -70,6 +70,7 @@ const NAV_TITLE_KEYS = {
   "/analitika": "sidebar.analytics",
   "/rassilka": "sidebar.smsRassilka",
   "/leadSource": "sidebar.leadSource",
+  "/leadMood": "sidebar.leadMood",
   "/projects": "sidebar.projects",
   "/companies": "sidebar.companies",
   "/crm-market": "sidebar.crmMarket",

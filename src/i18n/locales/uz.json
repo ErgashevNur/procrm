@@ -54,6 +54,7 @@
     "analytics": "Analitika",
     "smsRassilka": "Sms/Rassilka",
     "leadSource": "Lead manbasi",
+    "leadMood": "Mijoz kayfiyati",
     "projects": "Projectlar",
     "companies": "Kompaniyalar",
     "crmMarket": "CRM Market",
@@ -118,7 +119,8 @@
       "users": "Foydalanuvchilar",
       "integrations": "Chatlar va messenjerlar",
       "support": "Qo'llab-quvvatlash",
-      "visitors": "Tashrif buyuruvchilar"
+      "visitors": "Tashrif buyuruvchilar",
+      "moods": "Mijoz kayfiyatlari"
     },
     "billing": {
       "pricingPlans": "Tarif rejalari",

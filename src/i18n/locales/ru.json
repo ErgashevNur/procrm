@@ -54,6 +54,7 @@
     "analytics": "Аналитика",
     "smsRassilka": "SMS/Рассылка",
     "leadSource": "Источники лидов",
+    "leadMood": "Настроение клиента",
     "projects": "Проекты",
     "companies": "Компании",
     "crmMarket": "CRM Market",
@@ -118,7 +119,8 @@
       "users": "Пользователи",
       "integrations": "Чаты и мессенджеры",
       "support": "Поддержка",
-      "visitors": "Посетители"
+      "visitors": "Посетители",
+      "moods": "Настроение клиента"
     },
     "billing": {
       "pricingPlans": "Тарифные планы",

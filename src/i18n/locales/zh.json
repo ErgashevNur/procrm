@@ -54,6 +54,7 @@
     "analytics": "分析",
     "smsRassilka": "短信/群发",
     "leadSource": "客户来源",
+    "leadMood": "客户性格",
     "projects": "项目",
     "companies": "公司",
     "crmMarket": "CRM市场",
@@ -118,7 +119,8 @@
       "users": "用户",
       "integrations": "聊天与消息",
       "support": "支持",
-      "visitors": "访客"
+      "visitors": "访客",
+      "moods": "客户性格"
     },
     "billing": {
       "pricingPlans": "价格方案",

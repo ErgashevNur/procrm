@@ -54,6 +54,7 @@
     "analytics": "Analytics",
     "smsRassilka": "SMS/Mailing",
     "leadSource": "Lead Sources",
+    "leadMood": "Client Mood",
     "projects": "Projects",
     "companies": "Companies",
     "crmMarket": "CRM Market",
@@ -118,7 +119,8 @@
       "users": "Users",
       "integrations": "Chats & Messengers",
       "support": "Support",
-      "visitors": "Visitors"
+      "visitors": "Visitors",
+      "moods": "Client Moods"
     },
     "billing": {
       "pricingPlans": "Pricing Plans",
