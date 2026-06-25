@@ -32,15 +32,4 @@ export function disableDevTools() {
   methods.forEach((m) => {
     if (typeof console[m] === 'function') console[m] = noop;
   });
-
-  // DevTools ochilganligini aniqlash (oyna o'lchami farqi orqali)
-  const check = () => {
-    const widthDiff = window.outerWidth - window.innerWidth > 200;
-    const heightDiff = window.outerHeight - window.innerHeight > 200;
-    if (widthDiff || heightDiff) {
-      document.body.innerHTML = '';
-      window.location.replace(window.location.href);
-    }
-  };
-  setInterval(check, 1000);
 }
